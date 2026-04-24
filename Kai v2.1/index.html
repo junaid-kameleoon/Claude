@@ -527,7 +527,7 @@ export const checkout: CheckoutProps = {
                     <div className={cn(
                         "px-3.5 py-2.5 rounded-2xl text-[12px] leading-relaxed max-w-[95%]",
                         isUser
-                            ? "bg-indigo-100 text-indigo-900 border border-indigo-200 rounded-tr-sm font-medium"
+                            ? "bg-blue-50 text-blue-900 border border-blue-100 rounded-tr-sm font-medium"
                             : "bg-white text-gray-700 border border-gray-100 shadow-sm rounded-tl-sm"
                     )}>
                         {message.richContent ? message.richContent : <span className="whitespace-pre-wrap">{message.content}</span>}
@@ -892,14 +892,9 @@ export const checkout: CheckoutProps = {
                                                 }}
                                             />
                                             <div className="flex items-center justify-between mt-1">
-                                                <div className="flex items-center gap-1">
-                                                    <button onClick={() => setAllToolsOpen(true)} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400 transition-colors" title="Browse all tools">
-                                                        <Sparkles className="h-4 w-4" />
-                                                    </button>
-                                                    <button onClick={() => { setInput('/'); setShowSlashMenu(true); textareaRef.current?.focus(); }} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400 transition-colors" title="Slash commands">
-                                                        <span className="text-lg font-bold">/</span>
-                                                    </button>
-                                                </div>
+                                                <button onClick={() => setAllToolsOpen(true)} className="h-7 w-7 border-2 border-gray-300 rounded-md flex items-center justify-center text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors font-bold" title="Slash commands">
+                                                    /
+                                                </button>
                                                 <span className="text-[10px] text-gray-300 font-medium">↵ send · shift+↵ newline</span>
                                                 <button onClick={() => sendMessage(input)}
                                                     className={cn("h-7 w-7 rounded-full flex items-center justify-center transition-colors",
