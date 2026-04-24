@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:developers.kameleoon.com)",
+      "Bash(/Users/junaidgulzarmalik/.local/bin/claude mcp *)",
+      "Bash(npx -y mcp-remote@0.1.37 https://mcp.kameleoon.com/mcp 35535 --static-oauth-client-metadata '{ \"scope\": \"openid\" }')",
+      "Bash(gh auth *)",
+      "Bash(git --version)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://junaid-kameleoon.github.io/Claude/Kai%20v2.1/\")",
+      "mcp__3ef1dbd3-a854-47c9-ae85-e70746fad27d__slack_read_canvas"
+    ]
+  }
+}
