@@ -108,24 +108,31 @@
         const MCP_TOOLS = [...MAIN_TOOLS, ...ALL_TOOLS];
 
         const SUGGESTIONS = [
-            "What's winning on the Checkout test?",
+            "Query experiment results",
             "Clean up my stale flags",
-            "Pause the Pricing Page experiment",
+            "Pause an experiment",
+            "Ship a PBX variant to code",
         ];
 
         const getMockResponse = (text) => {
             const l = text.toLowerCase();
             // Advanced tools (rich responses)
-            if (l.includes('checkout') || l.includes('winning') || l.includes('insight') || l.includes('result') || l.includes('query'))
+            if (l.includes('query') && l.includes('result'))
+                return { tool: 'query_experiment_insights', label: 'Query Experiment Insights', type: 'queryfilter' };
+            if (l.includes('checkout') || l.includes('winning') || l.includes('insight') || l.includes('result'))
                 return { tool: 'query_experiment_insights', label: 'Query Experiment Insights', type: 'insights' };
             if (l.includes('stale') || l.includes('clean') || l.includes('audit') || l.includes('flags'))
                 return { tool: 'audit_and_cleanup_workspace', label: 'Audit & Cleanup Workspace', type: 'audit' };
+            if (l.includes('pause') && (l.includes('experiment') || l.includes('an ')))
+                return { tool: 'set_experiment_state', label: 'Set Experiment State', type: 'pausefilter' };
             if (l.includes('pause') || l.includes('stop') || l.includes('pricing page') || l.includes('state'))
                 return { tool: 'set_experiment_state', label: 'Set Experiment State', type: 'pause' };
             if (l.includes('simulate') || l.includes('assignment') || l.includes('user profile'))
                 return { tool: 'simulate_user_experience', label: 'Simulate User Experience', type: 'simulate' };
             if (l.includes('rollout') || l.includes('ramp') || l.includes('progressive'))
                 return { tool: 'manage_progressive_rollout', label: 'Manage Progressive Rollout', type: 'rollout' };
+            if (l.includes('ship') && l.includes('pbx') || l.includes('transpose') || l.includes('variant to code'))
+                return { tool: 'generate_variant_from_design', label: 'Ship Variant to Code', type: 'shipvariant' };
             if (l.includes('generate') || l.includes('variant') || l.includes('figma') || l.includes('design'))
                 return { tool: 'generate_variant_from_design', label: 'Generate Variant from Design', type: 'generate' };
             // Baseline tools (simple back-and-forth)
@@ -183,31 +190,40 @@
             </div>
         );
 
-        const AuditContent = () => (
-            <div>
-                <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
-                    Found <span className="font-semibold text-gray-800">4 stale items</span> in your workspace:
-                </p>
-                <div className="space-y-1.5 mb-3">
-                    {[
-                        { name: 'checkout-v1-legacy', sev: 'high', reason: '100% rolled out · 8 months old' },
-                        { name: 'hero-banner-test-q2', sev: 'high', reason: 'Concluded · never cleaned up' },
-                        { name: 'mobile-nav-experiment', sev: 'med', reason: 'Paused for 3+ months' },
-                        { name: 'pricing-table-old', sev: 'med', reason: 'Winner shipped · flag still live' },
-                    ].map(f => (
-                        <div key={f.name} className="flex items-center gap-2.5 p-2 bg-gray-50 rounded-lg border border-gray-100">
-                            <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${f.sev === 'high' ? 'bg-red-400' : 'bg-amber-400'}`} />
-                            <span className="text-[11px] font-mono font-medium text-gray-800 flex-1 truncate">{f.name}</span>
-                            <span className="text-[10px] text-gray-400 whitespace-nowrap">{f.reason}</span>
-                        </div>
-                    ))}
+        const AuditContent = () => {
+            const flags = ['checkout-v1-legacy', 'hero-banner-test-q2', 'mobile-nav-experiment', 'pricing-table-old'];
+            const [copied, setCopied] = React.useState(false);
+            const copyIds = () => {
+                navigator.clipboard.writeText(flags.join(', '));
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            };
+            return (
+                <div>
+                    <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
+                        Found <span className="font-semibold text-gray-800">4 stale items</span> in your workspace:
+                    </p>
+                    <div className="space-y-1.5 mb-3">
+                        {[
+                            { name: 'checkout-v1-legacy', sev: 'high', reason: '100% rolled out · 8 months old' },
+                            { name: 'hero-banner-test-q2', sev: 'high', reason: 'Concluded · never cleaned up' },
+                            { name: 'mobile-nav-experiment', sev: 'med', reason: 'Paused for 3+ months' },
+                            { name: 'pricing-table-old', sev: 'med', reason: 'Winner shipped · flag still live' },
+                        ].map(f => (
+                            <div key={f.name} className="flex items-center gap-2.5 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                                <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${f.sev === 'high' ? 'bg-red-400' : 'bg-amber-400'}`} />
+                                <span className="text-[11px] font-mono font-medium text-gray-800 flex-1 truncate">{f.name}</span>
+                                <span className="text-[10px] text-gray-400 whitespace-nowrap">{f.reason}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex gap-2">
+                        <button className="px-3 py-1.5 bg-primary text-white rounded text-[11px] font-semibold hover:bg-blue-700 transition-colors">Delete all stale flags</button>
+                        <button onClick={copyIds} className={`px-3 py-1.5 border rounded text-[11px] font-semibold transition-colors ${copied ? 'bg-green-50 border-green-200 text-green-600' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>{copied ? '✓ Copied' : 'Copy flag IDs'}</button>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                    <button className="px-3 py-1.5 bg-primary text-white rounded text-[11px] font-semibold hover:bg-blue-700 transition-colors">Delete all stale flags</button>
-                    <button className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Generate type patches</button>
-                </div>
-            </div>
-        );
+            );
+        };
 
         const PauseContent = () => (
             <div>
@@ -346,6 +362,137 @@
             );
         };
 
+        const QueryFilterContent = () => {
+            const [filter, setFilter] = React.useState(null);
+            const experiments = [
+                { name: 'Checkout Page Redesign', id: '#4089', status: 'Running', days: '3 days' },
+                { name: 'Pricing Table Test', id: '#4088', status: 'Running', days: '1 day' },
+                { name: 'Mobile Nav v2', id: '#4086', status: 'Concluded', days: '21 days' },
+            ];
+            return (
+                <div>
+                    {!filter ? (
+                        <>
+                            <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">Which timeframe? Or type an experiment name:</p>
+                            <div className="flex gap-2 mb-3">
+                                {['Last 7 days', 'Last 30 days'].map(f => (
+                                    <button key={f} onClick={() => setFilter(f)} className="px-3 py-1.5 bg-gray-100 hover:bg-primary/10 border border-gray-200 hover:border-primary/30 text-gray-600 hover:text-primary rounded text-[11px] font-semibold transition-colors">{f}</button>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">Experiments from <span className="font-semibold text-gray-800">{filter}</span>:</p>
+                            <div className="space-y-2 mb-3">
+                                {experiments.map(e => (
+                                    <div key={e.id} className="p-2.5 bg-gray-50 border border-gray-100 rounded-lg">
+                                        <div className="flex items-center justify-between mb-0.5">
+                                            <span className="text-[11px] font-semibold text-gray-900">{e.name}</span>
+                                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${e.status === 'Running' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}`}>{e.status}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] text-gray-400 font-mono">{e.id}</span>
+                                            <span className="text-[10px] text-gray-400">{e.days} ago</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={() => setFilter(null)} className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Change filter</button>
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        const PauseFilterContent = () => {
+            const [filter, setFilter] = React.useState(null);
+            const experiments = [
+                { name: 'Checkout Page Redesign', id: '#4089' },
+                { name: 'Pricing Table Test', id: '#4088' },
+                { name: 'Mobile Nav v2', id: '#4086' },
+            ];
+            return (
+                <div>
+                    {!filter ? (
+                        <>
+                            <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">Filter experiments or type a name:</p>
+                            <div className="flex gap-2 mb-3">
+                                {['Running', 'All'].map(f => (
+                                    <button key={f} onClick={() => setFilter(f)} className="px-3 py-1.5 bg-gray-100 hover:bg-primary/10 border border-gray-200 hover:border-primary/30 text-gray-600 hover:text-primary rounded text-[11px] font-semibold transition-colors">{f}</button>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-[12px] text-gray-600 mb-3 leading-relaxed"><span className="font-semibold text-gray-800">{filter}</span> experiments:</p>
+                            <div className="space-y-2 mb-3">
+                                {experiments.map(e => (
+                                    <div key={e.id} className="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-100 rounded-lg hover:bg-red-50 hover:border-red-100 transition-colors group cursor-pointer">
+                                        <div>
+                                            <div className="text-[11px] font-semibold text-gray-900">{e.name}</div>
+                                            <div className="text-[10px] text-gray-400 font-mono">{e.id}</div>
+                                        </div>
+                                        <button className="px-2.5 py-1 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-100 rounded opacity-0 group-hover:opacity-100 transition-opacity">Pause</button>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={() => setFilter(null)} className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Change filter</button>
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        const ShipVariantContent = () => {
+            const [codeFormat, setCodeFormat] = React.useState('react');
+            const code = {
+                react: `// Ship: Checkout Redesign v1.2
+import { Button } from '@ui/button';
+
+export function CheckoutPage() {
+  return (
+    <section className="checkout-wrapper">
+      <Button
+        className="btn-primary-v2"
+        onClick={handleCheckout}
+      >
+        Proceed to Payment
+      </Button>
+    </section>
+  );
+}`,
+                typescript: `interface CheckoutProps {
+  variantId: string;
+  timestamp: number;
+}
+
+export const checkout: CheckoutProps = {
+  variantId: "checkout-redesign-v1.2",
+  timestamp: Date.now()
+};`
+            };
+            return (
+                <div>
+                    <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
+                        <span className="font-semibold text-gray-800">Checkout Redesign</span> · Ready to ship <span className="text-green-600 font-semibold">↗</span>
+                    </p>
+                    <div className="flex gap-2 mb-3">
+                        {['react', 'typescript'].map(fmt => (
+                            <button key={fmt} onClick={() => setCodeFormat(fmt)} className={`px-2.5 py-1.5 text-[10px] font-semibold rounded border transition-colors ${codeFormat === fmt ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>{fmt.toUpperCase()}</button>
+                        ))}
+                    </div>
+                    <div className="mb-3 p-3 bg-gray-900 rounded-lg border border-gray-800 overflow-x-auto">
+                        <code className="font-mono text-[9px] text-gray-100 leading-relaxed whitespace-pre">{code[codeFormat]}</code>
+                    </div>
+                    <div className="space-y-2">
+                        <button className="w-full px-3 py-1.5 bg-primary text-white rounded text-[11px] font-semibold hover:bg-blue-700 transition-colors">Copy to clipboard</button>
+                        <button className="w-full px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Open in VS Code</button>
+                        <p className="text-[10px] text-gray-400 text-center">Or paste the command in your terminal to integrate</p>
+                    </div>
+                </div>
+            );
+        };
+
         const getRichContent = (type) => {
             if (type === 'insights') return <InsightsContent />;
             if (type === 'audit') return <AuditContent />;
@@ -353,6 +500,9 @@
             if (type === 'simulate') return <SimulateContent />;
             if (type === 'rollout') return <RolloutContent />;
             if (type === 'generate') return <GenerateContent />;
+            if (type === 'queryfilter') return <QueryFilterContent />;
+            if (type === 'pausefilter') return <PauseFilterContent />;
+            if (type === 'shipvariant') return <ShipVariantContent />;
             return null;
         };
 
@@ -654,10 +804,10 @@
                                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-1.5 pt-2">
                                                 {SUGGESTIONS.map((s, i) => (
                                                     <button key={i} onClick={() => sendMessage(s)}
-                                                        className="w-full text-left px-3 py-2.5 bg-gray-50 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg text-[12px] text-gray-600 hover:text-primary font-medium transition-all flex items-center justify-between group"
+                                                        className="w-full text-left px-3 py-2.5 bg-transparent hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-lg text-[12px] text-gray-500 hover:text-gray-700 font-normal transition-all flex items-center justify-between group"
                                                     >
                                                         <span>{s}</span>
-                                                        <ChevronRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-primary/40 shrink-0" />
+                                                        <ChevronRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-400 shrink-0" />
                                                     </button>
                                                 ))}
                                             </motion.div>
