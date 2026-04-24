@@ -71,12 +71,37 @@
         const cn = (...classes) => classes.filter(Boolean).join(' ');
 
         const MCP_TOOLS = [
-            { id: 'query_experiment_insights', icon: BarChart3, title: "Query experiment insights", desc: "Semantic breakdown of results, winner status & next steps" },
-            { id: 'set_experiment_state', icon: Settings2, title: "Set experiment state", desc: "Pause, resume, stop or archive one or more experiments" },
-            { id: 'audit_and_cleanup_workspace', icon: Sparkles, title: "Audit & clean up workspace", desc: "Find stale flags and concluded experiments ready for removal" },
-            { id: 'simulate_user_experience', icon: Search, title: "Simulate user assignment", desc: "See which variants a user profile would qualify for and why" },
-            { id: 'manage_progressive_rollout', icon: Zap, title: "Manage progressive rollout", desc: "Trigger safe ramps and set guardrails for feature flags" },
-            { id: 'generate_variant_from_design', icon: Wand2, title: "Generate variant from design", desc: "Turn a Figma URL or PBX prompt into HTML/React variant code" },
+            { id: 'query_experiment_insights', icon: BarChart3, title: "Query experiment insights", desc: "Semantic breakdown of results, winner status & next steps", category: 'advanced' },
+            { id: 'set_experiment_state', icon: Settings2, title: "Set experiment state", desc: "Pause, resume, stop or archive experiments", category: 'advanced' },
+            { id: 'audit_and_cleanup_workspace', icon: Sparkles, title: "Audit & clean up workspace", desc: "Find stale flags and concluded experiments", category: 'advanced' },
+            { id: 'simulate_user_experience', icon: Search, title: "Simulate user assignment", desc: "See which variants a user profile qualifies for", category: 'advanced' },
+            { id: 'manage_progressive_rollout', icon: Zap, title: "Manage progressive rollout", desc: "Trigger safe ramps and set guardrails", category: 'advanced' },
+            { id: 'generate_variant_from_design', icon: Wand2, title: "Generate variant from design", desc: "Turn a Figma URL into HTML/React code", category: 'advanced' },
+            // Lot 1 Baseline
+            { id: 'get_experiment_details', icon: BarChart3, title: "Get experiment details", desc: "Configuration and metadata retrieval", category: 'baseline' },
+            { id: 'list_experiments', icon: BarChart3, title: "List experiments", desc: "Searchable and filterable project overview", category: 'baseline' },
+            { id: 'get_variant_code', icon: Wand2, title: "Get variant code", desc: "Secure retrieval of implementation logic", category: 'baseline' },
+            { id: 'list_feature_flags', icon: Zap, title: "List feature flags", desc: "Real-time flag visibility", category: 'baseline' },
+            { id: 'get_feature_flag_details', icon: Settings2, title: "Get feature flag details", desc: "Environment-specific settings and rules", category: 'baseline' },
+            { id: 'create_feature_flag', icon: Plus, title: "Create feature flag", desc: "Native flag instantiation", category: 'baseline' },
+            { id: 'enable_disable_feature_flag', icon: Zap, title: "Enable/disable feature flag", desc: "Immediate state control", category: 'baseline' },
+            { id: 'delete_feature_flag', icon: X, title: "Delete feature flag", desc: "Cleanup of simple flag assets", category: 'baseline' },
+            { id: 'audit_recent_changes', icon: Sparkles, title: "Audit recent changes", desc: "Operational visibility and logs", category: 'baseline' },
+            { id: 'duplicate_feature_flag', icon: Plus, title: "Duplicate feature flag", desc: "Rapid iteration of flag logic", category: 'baseline' },
+            { id: 'get_experiment_results_summary', icon: BarChart3, title: "Get experiment results summary", desc: "High-level pulse/outcomes for AI parsing", category: 'baseline' },
+            // Lot 1 Advanced
+            { id: 'goal_list', icon: Sparkles, title: "List goals", desc: "View all tracking goals", category: 'advanced_ready' },
+            { id: 'goal_get', icon: Sparkles, title: "Get goal details", desc: "Retrieve specific goal configuration", category: 'advanced_ready' },
+            { id: 'goal_create', icon: Plus, title: "Create goal", desc: "Add new tracking goal", category: 'advanced_ready' },
+            { id: 'goal_delete', icon: X, title: "Delete goal", desc: "Remove a goal", category: 'advanced_ready' },
+            { id: 'segment_list', icon: Sparkles, title: "List segments", desc: "View all audience segments", category: 'advanced_ready' },
+            { id: 'segment_get', icon: Sparkles, title: "Get segment details", desc: "Retrieve segment configuration", category: 'advanced_ready' },
+            { id: 'segment_create', icon: Plus, title: "Create segment", desc: "Define new audience segment", category: 'advanced_ready' },
+            { id: 'targeting_rule_list', icon: Settings2, title: "List targeting rules", desc: "View all targeting rules", category: 'advanced_ready' },
+            { id: 'targeting_rule_create', icon: Plus, title: "Create targeting rule", desc: "Add new targeting rule", category: 'advanced_ready' },
+            { id: 'feature_flag_variation_create', icon: Plus, title: "Create flag variation", desc: "Add variant to feature flag", category: 'advanced_ready' },
+            { id: 'feature_flag_rule_targeted_create', icon: Settings2, title: "Create targeted rule", desc: "Set up targeted delivery rule", category: 'advanced_ready' },
+            { id: 'feature_flag_rule_progressive_create', icon: Zap, title: "Create progressive rule", desc: "Set up progressive rollout rule", category: 'advanced_ready' },
         ];
 
         const SUGGESTIONS = [
@@ -87,6 +112,7 @@
 
         const getMockResponse = (text) => {
             const l = text.toLowerCase();
+            // Advanced tools (rich responses)
             if (l.includes('checkout') || l.includes('winning') || l.includes('insight') || l.includes('result') || l.includes('query'))
                 return { tool: 'query_experiment_insights', label: 'Query Experiment Insights', type: 'insights' };
             if (l.includes('stale') || l.includes('clean') || l.includes('audit') || l.includes('flags'))
@@ -99,6 +125,23 @@
                 return { tool: 'manage_progressive_rollout', label: 'Manage Progressive Rollout', type: 'rollout' };
             if (l.includes('generate') || l.includes('variant') || l.includes('figma') || l.includes('design'))
                 return { tool: 'generate_variant_from_design', label: 'Generate Variant from Design', type: 'generate' };
+            // Baseline tools (simple back-and-forth)
+            if (l.includes('list') && (l.includes('experiment') || l.includes('flag')))
+                return { tool: 'list_experiments', label: 'List Experiments', type: 'followup', question: 'Searching for active experiments... would you like to filter by status, owner, or date range?' };
+            if (l.includes('get details') || l.includes('details'))
+                return { tool: 'get_experiment_details', label: 'Get Experiment Details', type: 'followup', question: 'Which experiment? (provide experiment ID or name)' };
+            if (l.includes('goal') || l.includes('tracking'))
+                return { tool: 'goal_list', label: 'List Goals', type: 'followup', question: 'Fetching tracking goals... found 12 goals. Need help with a specific one?' };
+            if (l.includes('segment') || l.includes('audience'))
+                return { tool: 'segment_list', label: 'List Segments', type: 'followup', question: 'Loading audience segments... how would you like to filter them?' };
+            if (l.includes('duplicate') || l.includes('copy'))
+                return { tool: 'duplicate_feature_flag', label: 'Duplicate Feature Flag', type: 'followup', question: 'Which flag should I duplicate? (provide flag key or name)' };
+            if (l.includes('delete') || l.includes('remove'))
+                return { tool: 'delete_feature_flag', label: 'Delete Feature Flag', type: 'followup', question: 'Which flag do you want to delete? (provide flag key — this action is permanent)' };
+            if (l.includes('code') || l.includes('implementation'))
+                return { tool: 'get_variant_code', label: 'Get Variant Code', type: 'followup', question: 'Which variant? (experiment ID + variant name)' };
+            if (l.includes('recent') || l.includes('history') || l.includes('changelog'))
+                return { tool: 'audit_recent_changes', label: 'Audit Recent Changes', type: 'followup', question: 'Pulling activity logs... showing changes from the last 7 days. Want to filter by user or action type?' };
             return null;
         };
 
@@ -387,6 +430,7 @@
             const [pbxModalOpen, setPbxModalOpen] = useState(false);
             const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
             const [chartModalOpen, setChartModalOpen] = useState(false);
+            const [allToolsOpen, setAllToolsOpen] = useState(false);
             const [view, setView] = useState("dashboard");
             const [typingState, setTypingState] = useState(null);
             const messagesEndRef = useRef(null);
@@ -414,20 +458,28 @@
                         setTypingState({ step: 'thinking' });
                         setTimeout(() => {
                             setTypingState(null);
-                            const richContent = getRichContent(mock.type);
-                            setMessages(prev => [...prev, {
-                                role: 'assistant',
-                                toolCall: { id: mock.tool, label: mock.label },
-                                content: '',
-                                richContent: richContent || <p className="text-[12px] text-gray-600 leading-relaxed">I don't have a live connection in this prototype. Try one of the suggestions to see a full tool response.</p>,
-                            }]);
+                            if (mock.type === 'followup') {
+                                setMessages(prev => [...prev, {
+                                    role: 'assistant',
+                                    toolCall: { id: mock.tool, label: mock.label },
+                                    content: mock.question,
+                                }]);
+                            } else {
+                                const richContent = getRichContent(mock.type);
+                                setMessages(prev => [...prev, {
+                                    role: 'assistant',
+                                    toolCall: { id: mock.tool, label: mock.label },
+                                    content: '',
+                                    richContent: richContent || <p className="text-[12px] text-gray-600 leading-relaxed">I don't have a live connection in this prototype. Try one of the suggestions to see a full tool response.</p>,
+                                }]);
+                            }
                         }, 800);
                     }, 1200);
                 } else {
                     setTypingState({ step: 'thinking' });
                     setTimeout(() => {
                         setTypingState(null);
-                        setMessages(prev => [...prev, { role: 'assistant', content: "I don't have a live connection in this prototype. Try one of the suggestions below the greeting to see a tool call in action — or type / to browse available tools." }]);
+                        setMessages(prev => [...prev, { role: 'assistant', content: "I don't have a live connection in this prototype. Try one of the suggestions or type / to browse available tools." }]);
                     }, 1100);
                 }
             };
@@ -548,7 +600,8 @@
                                             <span className="text-[10px] font-medium text-gray-400 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded">v2.1</span>
                                         </div>
                                         <div className="flex items-center gap-1">
-                                            <button className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400"><Wand2 className="h-4 w-4" /></button>
+                                            <button onClick={() => { setMessages([{role: 'assistant', content: "Hi Junaid! 👋\n\nI'm Kai, your experiment copilot. I can run tools directly — query results, pause experiments, audit stale flags, simulate user assignment, and more.\n\nType / to see available tools, or just ask me in plain language."}]); }} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400" title="Reset chat"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"/></svg></button>
+                                            <button className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400" title="Browse all tools" onClick={() => setAllToolsOpen(true)}><BarChart3 className="h-4 w-4" /></button>
                                             <button onClick={() => setKaiOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400"><X className="h-4 w-4" /></button>
                                         </div>
                                     </div>
@@ -704,6 +757,35 @@
                                         <p className="text-[11px] text-gray-500 font-medium leading-relaxed">{wf.desc}</p>
                                     </div>
                                 ))}
+                            </div>
+                        </Modal>
+
+                        <Modal isOpen={allToolsOpen} onClose={() => setAllToolsOpen(false)} title="All Tools" subtitle="Complete MCP tool directory">
+                            <div className="space-y-6">
+                                {['advanced', 'advanced_ready', 'baseline'].map(cat => {
+                                    const tools = MCP_TOOLS.filter(t => t.category === cat);
+                                    if (tools.length === 0) return null;
+                                    const catLabel = cat === 'advanced' ? 'Advanced Tools' : cat === 'advanced_ready' ? 'Lot 1 Advanced (Ready)' : 'Lot 1 Baseline';
+                                    return (
+                                        <div key={cat}>
+                                            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2.5">{catLabel}</h3>
+                                            <div className="space-y-1.5">
+                                                {tools.map((tool, i) => (
+                                                    <div key={i} onClick={() => { sendMessage(tool.title); setAllToolsOpen(false); }}
+                                                        className="flex items-start gap-2.5 p-2.5 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all group">
+                                                        <div className="mt-0.5 h-5 w-5 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary/10">
+                                                            <tool.icon className="h-2.5 w-2.5" />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="text-[11px] font-semibold text-gray-900">{tool.title}</div>
+                                                            <div className="text-[10px] text-gray-400 leading-tight">{tool.desc}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </Modal>
                     </main>
