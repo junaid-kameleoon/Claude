@@ -814,12 +814,7 @@ export const checkout: CheckoutProps = {
                                         <div ref={messagesEndRef} />
                                     </div>
 
-                                    <div className="p-3 bg-white border-t border-gray-100 relative shrink-0 space-y-3">
-                                        <button onClick={() => setAllToolsOpen(true)} className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-[11px] font-semibold text-gray-600 hover:text-gray-800 transition-colors">
-                                            <Sparkles className="h-3.5 w-3.5" />
-                                            Browse all tools
-                                            <ChevronRight className="h-3.5 w-3.5 ml-auto text-gray-300" />
-                                        </button>
+                                    <div className="p-3 bg-white border-t border-gray-100 relative shrink-0">
                                         <AnimatePresence>
                                             {showSlashMenu && hasSearchResults && (
                                                 <motion.div
@@ -897,6 +892,9 @@ export const checkout: CheckoutProps = {
                                                 }}
                                             />
                                             <div className="flex items-center justify-between mt-1">
+                                                <button onClick={() => setAllToolsOpen(true)} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400 transition-colors" title="Browse all tools">
+                                                    <Sparkles className="h-4 w-4" />
+                                                </button>
                                                 <span className="text-[10px] text-gray-300 font-medium">↵ send · shift+↵ newline</span>
                                                 <button onClick={() => sendMessage(input)}
                                                     className={cn("h-7 w-7 rounded-full flex items-center justify-center transition-colors",
