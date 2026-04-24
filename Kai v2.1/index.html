@@ -674,10 +674,11 @@ export const checkout: CheckoutProps = {
             const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(t =>
                 t.title.toLowerCase().startsWith(searchQuery) || t.title.toLowerCase().includes(searchQuery)
             );
-            const filteredAllTools = ALL_TOOLS.filter(t =>
+            const filteredAllTools = input === '/' ? [] : ALL_TOOLS.filter(t =>
                 t.title.toLowerCase().startsWith(searchQuery) || t.title.toLowerCase().includes(searchQuery)
             );
             const hasSearchResults = input.startsWith('/') && (filteredMainTools.length > 0 || filteredAllTools.length > 0);
+            const shouldAutoExpandAllTools = searchQuery.length > 0 && filteredAllTools.length > 0;
 
             const showSuggestions = !typingState && messages.length === 1;
 
@@ -877,12 +878,12 @@ export const checkout: CheckoutProps = {
                                                             <>
                                                                 <button onClick={() => setExpandedAllTools(!expandedAllTools)}
                                                                     className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 border-b border-gray-50 text-left transition-colors">
-                                                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expandedAllTools ? 'rotate-180' : ''}`} />
+                                                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expandedAllTools || shouldAutoExpandAllTools ? 'rotate-180' : ''}`} />
                                                                     <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">All Tools</span>
                                                                     <span className="text-[10px] text-gray-400 ml-auto">{filteredAllTools.length}</span>
                                                                 </button>
                                                                 <AnimatePresence>
-                                                                    {expandedAllTools && (
+                                                                    {(expandedAllTools || shouldAutoExpandAllTools) && (
                                                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
                                                                             {filteredAllTools.map((tool, i) => (
                                                                                 <div key={i} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
