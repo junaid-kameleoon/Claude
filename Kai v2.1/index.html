@@ -70,6 +70,25 @@
 
         const cn = (...classes) => classes.filter(Boolean).join(' ');
 
+        const QuickTooltip = ({ text, children }) => {
+            const [show, setShow] = React.useState(false);
+            return (
+                <div className="relative">
+                    <div onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+                        {children}
+                    </div>
+                    <AnimatePresence>
+                        {show && (
+                            <motion.div initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 2 }} transition={{ duration: 0.1 }} className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[11px] px-2 py-1 rounded whitespace-nowrap pointer-events-none">
+                                {text}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-1 h-1 bg-gray-800" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
         const MAIN_TOOLS = [
             { id: 'query_experiment_insights', icon: BarChart3, title: "Query experiment insights", desc: "Semantic breakdown of results, winner status & next steps" },
             { id: 'set_experiment_state', icon: Settings2, title: "Set experiment state", desc: "Pause, resume, stop or archive experiments" },
@@ -892,9 +911,11 @@ export const checkout: CheckoutProps = {
                                                 }}
                                             />
                                             <div className="flex items-center justify-between">
-                                                <button onClick={() => setAllToolsOpen(true)} className="h-6 w-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-300 hover:text-gray-400 hover:border-gray-300 transition-colors font-bold text-sm" title="Slash commands">
-                                                    /
-                                                </button>
+                                                <QuickTooltip text="Slash commands">
+                                                    <button onClick={() => setAllToolsOpen(true)} className="h-6 w-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-300 hover:text-gray-400 hover:border-gray-300 transition-colors font-bold text-sm">
+                                                        /
+                                                    </button>
+                                                </QuickTooltip>
                                                 <button onClick={() => sendMessage(input)}
                                                     className={cn("h-7 w-7 rounded-full flex items-center justify-center transition-colors",
                                                         input.trim() ? "bg-primary text-white hover:bg-blue-700" : "bg-gray-200 text-gray-400"
