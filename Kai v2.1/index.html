@@ -383,11 +383,24 @@
 
         const QueryFilterContent = () => {
             const [filter, setFilter] = React.useState(null);
+            const [selectedExp, setSelectedExp] = React.useState(null);
             const experiments = [
                 { name: 'Checkout Page Redesign', id: '#4089', status: 'Running', days: '3 days' },
                 { name: 'Pricing Table Test', id: '#4088', status: 'Running', days: '1 day' },
                 { name: 'Mobile Nav v2', id: '#4086', status: 'Concluded', days: '21 days' },
             ];
+
+            if (selectedExp) {
+                return (
+                    <div>
+                        <button onClick={() => setSelectedExp(null)} className="text-[11px] font-semibold text-gray-500 flex items-center gap-1 mb-3 hover:text-gray-700 transition-colors">
+                            <ChevronDown className="h-3 w-3 rotate-90" /> Back to list
+                        </button>
+                        <InsightsContent />
+                    </div>
+                );
+            }
+
             return (
                 <div>
                     {!filter ? (
@@ -404,16 +417,16 @@
                             <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">Experiments from <span className="font-semibold text-gray-800">{filter}</span>:</p>
                             <div className="space-y-2 mb-3">
                                 {experiments.map(e => (
-                                    <div key={e.id} className="p-2.5 bg-gray-50 border border-gray-100 rounded-lg">
+                                    <button key={e.id} onClick={() => setSelectedExp(e)} className="w-full text-left p-2.5 bg-gray-50 border border-gray-100 hover:bg-primary/5 hover:border-primary/20 rounded-lg transition-colors group cursor-pointer">
                                         <div className="flex items-center justify-between mb-0.5">
-                                            <span className="text-[11px] font-semibold text-gray-900">{e.name}</span>
+                                            <span className="text-[11px] font-semibold text-gray-900 group-hover:text-primary">{e.name}</span>
                                             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${e.status === 'Running' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}`}>{e.status}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] text-gray-400 font-mono">{e.id}</span>
                                             <span className="text-[10px] text-gray-400">{e.days} ago</span>
                                         </div>
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                             <button onClick={() => setFilter(null)} className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Change filter</button>
