@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kai v2.1 - Experiment Copilot</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3838E7',
+                        'kameleoon-blue': '#3838E7',
+                        background: '#FDFDFF',
+                        sidebar: '#FAFAFA',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'md': '8px',
+                        'lg': '12px',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- React & Framer Motion -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@11.0.8/dist/framer-motion.js"></script>
+
+    <style>
+        body {
+            background-color: #FDFDFF;
+            font-family: 'Inter', sans-serif;
+            color: #1a1a1b;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #e5e7eb;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d1d5db;
+        }
+
+        .shadow-sleek {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .border-base {
+            border-color: #e5e7eb;
+        }
+
+        kbd {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 1px 4px;
+            font-size: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // --- Icons ---
+        const Sparkles = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" /><path d="M5 3v4" /><path d="M9 5H5" /></svg>;
+        const X = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
+        const MessageSquare = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
+        const Settings2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 7h-9" /><path d="M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" /></svg>;
+        const BarChart3 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg>;
+        const Send = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>;
+        const ChevronRight = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m9 18 6-6-6-6" /></svg>;
+        const Plus = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14" /><path d="M12 5v14" /></svg>;
+        const Wand2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.21 1.21 0 0 0 1.72 0L21.64 5.36a1.21 1.21 0 0 0 0-1.72Z" /><path d="m14 7 3 3" /><path d="M5 6v4" /><path d="M19 14v4" /><path d="M10 2v2" /><path d="M7 8H3" /><path d="M21 16h-4" /><path d="M11 19v3" /></svg>;
+        const Flag = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" x2="4" y1="22" y2="15" /></svg>;
+        const Bell = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>;
+        const Search = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>;
+        const ArrowUpRight = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg>;
+        const Info = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>;
+        const ChevronDown = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6" /></svg>;
+        const Maximize2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>;
+        const Mail = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>;
+        const Pause = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="4" height="16" x="6" y="4" /><rect width="4" height="16" x="14" y="4" /></svg>;
+        const Play = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3" /></svg>;
+        const Brain = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.54Z" /><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.54Z" /></svg>;
+        const Share2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>;
+        const Download = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>;
+        const MoreHorizontal = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>;
+
+        // --- Utils ---
+        const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+        // --- Data ---
+        const MCP_TOOLS = [
+            { id: 'kam_audit_and_cleanup_workspace', icon: Sparkles, title: "Audit & Cleanup", desc: "Remove stale flags and unused experiments" },
+            { id: 'kam_generate_variant_from_design', icon: Wand2, title: "Generate Variant", desc: "Turn Figma or PBX into HTML/React" },
+            { id: 'kam_set_experiment_state', icon: Settings2, title: "Set Experiment State", desc: "Start, pause, or archive experiments" },
+            { id: 'kam_simulate_user_experience', icon: Search, title: "Simulate User", desc: "Diagnose user assignment logic" },
+            { id: 'kam_manage_progressive_rollout', icon: BarChart3, title: "Manage Rollout", desc: "Trigger safe ramps and guardrails" },
+            { id: 'kam_query_experiment_insights', icon: Brain, title: "Query Insights", desc: "Semantic statistical analysis" },
+        ];
+
+        const INSIGHTS = {
+            health: [
+                { label: "SRM Status", value: "No issues", status: "good", sub: "Skew: 50.1/49.9" },
+                { label: "Exposure Balance", value: "Optimal", status: "good", sub: "Var A: 12.1k / Control: 12.0k" },
+                { label: "SDK Pulse", value: "Healthy", status: "good", sub: "Latency: 24ms" }
+            ],
+            velocity: [
+                { label: "Throughput", value: "8/10", status: "stable", sub: "Tests Concluded vs Target" },
+                { label: "Win Rate", value: "32%", status: "stable", sub: "Last 30 days" },
+                { label: "Conclusive Rate", value: "68%", status: "good", sub: "Statistically sig" }
+            ],
+            impact: [
+                { label: "Annualized Lift", value: "+$4.1M", status: "good", sub: "Based on last 6 months" },
+                { label: "Top Performer", value: "Checkout v2", status: "good", sub: "+12.4% conversion" },
+                { label: "New Learnings", value: "3 new learnings", status: "good", sub: "From 4 experiments this week" },
+                { label: "Reinforcement", value: "4 reinforced learnings", status: "good", sub: "From 10 experiments this week" }
+            ],
+            stats: [
+                { label: "Decision Readiness", value: "48 tests", status: "stable", sub: "Waiting for human sign-off" },
+                { label: "Team Insight", value: "82% Hypotheses Validated", status: "success", sub: "Historical Avg: 78%" }
+            ]
+        };
+
+        // --- Components ---
+        const TabButton = ({ icon: Icon, label, active, onClick }) => (
+            <button
+                onClick={onClick}
+                className={cn(
+                    "flex-1 flex items-center justify-center gap-2 py-3 text-xs font-medium border-b-2 transition-all",
+                    active
+                        ? "text-primary border-primary bg-primary/5 shadow-[inset_0_-2px_0_0_#3838E7]"
+                        : "text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-50"
+                )}
+            >
+                <Icon className="h-3.5 w-3.5" />
+                <span className="tracking-tight">{label}</span>
+            </button>
+        );
+
+        const ActionCard = ({ action, onClick }) => (
+            <div
+                onClick={() => onClick && onClick(action.id)}
+                className="group p-3 border border-gray-100 bg-white hover:border-primary/20 hover:bg-primary/[0.01] transition-all cursor-pointer rounded-lg shadow-sm"
+            >
+                <div className="flex items-start gap-3">
+                    <div className="mt-0.5 h-8 w-8 rounded bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                        <action.icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                            <h4 className="text-[13px] font-semibold text-gray-800 tracking-tight">{action.title}</h4>
+                            <span className="text-[9px] font-medium text-gray-400 uppercase tracking-widest">{action.tag}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-medium leading-normal">{action.desc}</p>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const Modal = ({ isOpen, onClose, title, subtitle, children, footer }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+                    >
+                        <div className="p-6 border-b border-gray-100 flex items-start justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <Wand2 className="h-5 w-5 text-primary" />
+                                    {title}
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+                            </div>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <X className="h-5 w-5 text-gray-400" />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto max-h-[70vh]">
+                            {children}
+                        </div>
+                        {footer && (
+                            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                                {footer}
+                            </div>
+                        )}
+                    </motion.div>
+                </div>
+            );
+        };
+
+        const SimpleChart = ({ expanded = false }) => {
+            const data = [
+                { label: 'Control', val: 12.4, color: '#94a3b8' },
+                { label: 'Var A', val: 14.8, color: '#3838E7' },
+                { label: 'Var B', val: 13.2, color: '#818cf8' },
+            ];
+
+            return (
+                <div className={cn("w-full bg-white border border-gray-100 rounded-lg p-4 mt-2", expanded ? "h-64" : "h-32")}>
+                    <div className="flex items-end justify-around h-full gap-4">
+                        {data.map((d, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                                <motion.div
+                                    initial={{ height: 0 }}
+                                    animate={{ height: `${(d.val / 16) * 100}%` }}
+                                    className="w-full rounded-t"
+                                    style={{ backgroundColor: d.color }}
+                                />
+                                <span className="text-[10px] font-medium text-gray-400 mt-2 uppercase">{d.label}</span>
+                                <span className="text-[10px] font-semibold text-gray-900">{d.val}%</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [kaiOpen, setKaiOpen] = useState(true);
+            const [activeTab, setActiveTab] = useState("chat");
+            const [insightsSubTab, setInsightsSubTab] = useState("summary");
+            const [input, setInput] = useState("");
+            const [showSlashMenu, setShowSlashMenu] = useState(false);
+            const [pbxModalOpen, setPbxModalOpen] = useState(false);
+            const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
+            const [chartModalOpen, setChartModalOpen] = useState(false);
+            const [objectDropdownOpen, setObjectDropdownOpen] = useState(false);
+            const [view, setView] = useState("dashboard"); // dashboard or experiment
+            const [showTestIdeasAlert, setShowTestIdeasAlert] = useState(false);
+            const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
+
+            const handleActionClick = (id) => {
+                if (id === 'pbx') setPbxModalOpen(true);
+                if (id === 'workflow') setWorkflowModalOpen(true);
+                if (id === 'object') setObjectDropdownOpen(!objectDropdownOpen);
+                if (id === 'ideas') {
+                    setActiveTab("chat");
+                    setMessages(prev => [
+                        ...prev,
+                        { role: 'assistant', content: "Please enter the URL or describe the page you'd like me to generate test ideas for." }
+                    ]);
+                    setIsGeneratingIdeas(true);
+                }
+            };
+
+            const [messages, setMessages] = useState([
+                { role: 'assistant', content: "Hi Junaid ! 👋\n\nI'm Kai, your AI assistant ready to assist and answer your questions. 🤓\n\nWhether it's about the platform or any related topic, I've got you covered.\n\nDon't be shy, try me out 👀" }
+            ]);
+
+            const handleMessageSend = () => {
+                if (!input.trim()) return;
+                const newMsg = { role: 'user', content: input };
+                const updatedMessages = [...messages, newMsg];
+                setMessages(updatedMessages);
+                setInput("");
+
+                if (isGeneratingIdeas) {
+                    setTimeout(() => {
+                        setMessages(prev => [
+                            ...prev,
+                            { role: 'assistant', content: "I'm generating new test ideas for this page. I'll notify you in the Alerts tab once they are ready for review." }
+                        ]);
+                        setIsGeneratingIdeas(false);
+                        // Simulate ideas being ready after a delay
+                        setTimeout(() => {
+                            setShowTestIdeasAlert(true);
+                        }, 5000);
+                    }, 1000);
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-screen bg-background overflow-hidden">
+                    {/* Header */}
+                    <header className="h-14 border-b border-gray-200 bg-white flex items-center justify-between px-6 z-50 shadow-sm">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-2">
+                                <div className="h-6 w-6 bg-primary rounded flex items-center justify-center text-white font-black text-xs">K</div>
+                                <span className="font-bold text-lg tracking-tight">Kameleoon</span>
+                            </div>
+                            <nav className="flex items-center gap-5 text-[13px] font-semibold text-gray-500">
+                                <a href="#" className="text-gray-900">Experiments</a>
+                                <a href="#" className="hover:text-gray-900 transition-colors">Segments</a>
+                                <a href="#" className="hover:text-gray-900 transition-colors">Personalization</a>
+                            </nav>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search project..."
+                                    className="pl-9 pr-4 py-1.5 w-64 bg-gray-100 border-none rounded text-xs focus:ring-1 focus:ring-primary focus:bg-white transition-all outline-none"
+                                />
+                            </div>
+                            <button className="p-1.5 hover:bg-gray-100 rounded text-gray-500"><Bell className="h-4 w-4" /></button>
+                            <button
+                                onClick={() => setKaiOpen(!kaiOpen)}
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold border transition-all",
+                                    kaiOpen
+                                        ? "bg-gray-900 text-white border-gray-900"
+                                        : "bg-white text-primary border-primary hover:bg-primary/5"
+                                )}
+                            >
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span>{kaiOpen ? "Hide Assistant" : "Kai Assistant"}</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 flex overflow-hidden">
+                        {/* Dashboard */}
+                        <div className="flex-1 bg-gray-50 p-8 overflow-y-auto">
+                            <div className="max-w-5xl mx-auto">
+                                {view === "dashboard" ? (
+                                    <>
+                                        <div className="flex items-center justify-between mb-8">
+                                            <h1 className="text-2xl font-bold tracking-tight">Active Experiments</h1>
+                                            <button className="bg-primary text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-blue-700 transition-colors">
+                                                Create New Test
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {[1, 2, 3, 4].map(i => (
+                                                <div
+                                                    key={i}
+                                                    onClick={() => i === 1 ? setView("experiment") : null}
+                                                    className={cn(
+                                                        "p-5 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-primary/20 transition-all",
+                                                        i === 1 ? "cursor-pointer ring-2 ring-primary/20 border-primary/30" : ""
+                                                    )}
+                                                >
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded">Experiment ID: 410{i}</div>
+                                                        <div className="h-2 w-2 bg-green-500 rounded-full" />
+                                                    </div>
+                                                    <h3 className="font-bold text-base mb-1">Pricing Page Variation - {i}</h3>
+                                                    <p className="text-xs text-gray-500 mb-6 font-medium">Testing impact on conversion rate for EU traffic.</p>
+                                                    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                                                        <span className="text-[10px] font-bold text-gray-400">STATUS: RUNNING</span>
+                                                        <button className="text-xs font-bold text-primary hover:underline">Manage {i === 1 && <span className="text-[8px] bg-primary text-white px-1 ml-1 rounded">DEMO</span>}</button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <button onClick={() => setView("dashboard")} className="text-xs font-bold text-gray-500 flex items-center gap-1 hover:text-gray-900 transition-colors">
+                                            <ChevronDown className="h-3 w-3 rotate-90" /> BACK TO DASHBOARD
+                                        </button>
+                                        <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold">P1</div>
+                                                <div>
+                                                    <h1 className="text-2xl font-bold">Pricing Page Variation - 1</h1>
+                                                    <div className="flex gap-2 items-center mt-1">
+                                                        <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">RUNNING</span>
+                                                        <span className="text-[10px] font-bold text-gray-400">ID: 4101</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-6 py-6 border-y border-gray-100">
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Targeting</div>
+                                                    <div className="text-sm font-semibold">EU Segment • 50/50 Split</div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Primary Goal</div>
+                                                    <div className="text-sm font-semibold">Purchase Success</div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Started</div>
+                                                    <div className="text-sm font-semibold">Oct 12, 2023 (3 days ago)</div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-8">
+                                                <div className="h-48 bg-gray-50 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm font-bold">
+                                                    Results Visualization Mock
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Kai Copilot Sidebar */}
+                        <AnimatePresence>
+                            {kaiOpen && (
+                                <motion.aside
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    transition={{ type: "tween", duration: 0.2 }}
+                                    className="fixed bottom-6 right-6 w-[400px] h-[75vh] max-h-[800px] flex flex-col bg-white border border-gray-200 shadow-2xl rounded-xl z-50 overflow-hidden"
+                                >
+                                    {/* Sidebar Header */}
+                                    <div className="bg-white border-b border-gray-100 p-3 flex items-center justify-between text-gray-900">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-8 w-8 bg-gray-50 border border-gray-100 rounded-md flex items-center justify-center font-bold text-xs">
+                                                <Sparkles className="h-4 w-4 text-primary" />
+                                            </div>
+                                            <div className="font-bold text-[13px] tracking-tight">KAI</div>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <button className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400">
+                                                <Wand2 className="h-4 w-4" />
+                                            </button>
+                                            <button onClick={() => setKaiOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400">
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Sidebar Content */}
+                                    <div className="flex-1 overflow-y-auto p-5 space-y-4 relative bg-white">
+                                            <div className="space-y-4">
+                                                {messages.map((m, i) => (
+                                                    <div key={i} className={cn("flex flex-col", m.role === 'user' ? "items-end" : "items-start")}>
+                                                        <div className={cn(
+                                                            "px-4 py-3 rounded-2xl text-[13px] font-medium leading-relaxed max-w-[95%] whitespace-pre-wrap",
+                                                            m.role === 'user' 
+                                                                ? "bg-[#F3F4F6] text-gray-900 border border-gray-200 rounded-tr-sm" 
+                                                                : "bg-white text-gray-800 border border-gray-200 shadow-sm rounded-tl-sm"
+                                                        )}>
+                                                            {m.content}
+                                                            {m.type === 'chart' && (
+                                                                <div className="mt-3 space-y-2">
+                                                                    <div className="relative group/chart">
+                                                                        <SimpleChart />
+                                                                        <button
+                                                                            onClick={() => setChartModalOpen(true)}
+                                                                            className="absolute top-4 right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded opacity-0 group-hover/chart:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <Maximize2 className="h-3 w-3 text-gray-500" />
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3 px-1">
+                                                                        <button className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 hover:text-primary transition-colors">
+                                                                            <Share2 className="h-3 w-3" /> SHARE
+                                                                        </button>
+                                                                        <button className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 hover:text-primary transition-colors">
+                                                                            <Download className="h-3 w-3" /> EXPORT
+                                                                        </button>
+                                                                        <button className="ml-auto text-gray-400 hover:text-gray-600 transition-colors">
+                                                                            <MoreHorizontal className="h-3.5 w-3.5" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                {/* Canned Suggestions in Whitespace */}
+                                                <div className="flex flex-wrap gap-1.5 mt-8 mb-4 px-1">
+                                                    {["/kam_audit_and_cleanup_workspace", "/kam_simulate_user_experience", "Analyze EU traffic"].map((s, i) => (
+                                                        <button
+                                                            key={i}
+                                                            onClick={() => setInput(s)}
+                                                            className="px-2.5 py-1 bg-white border border-gray-100 rounded-full text-[10px] font-semibold text-gray-400 hover:border-primary/30 hover:text-primary transition-all shadow-sm"
+                                                        >
+                                                            {s}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                    </div>
+
+                                    {/* Sidebar Composer */}
+                                    <div className="p-4 bg-white border-t border-gray-100 relative">
+                                        <AnimatePresence>
+                                            {showSlashMenu && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 10 }}
+                                                    className="absolute bottom-full mb-2 left-4 right-4 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-50"
+                                                >
+                                                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                        MCP Tools
+                                                    </div>
+                                                    <div className="max-h-60 overflow-y-auto">
+                                                        {MCP_TOOLS.filter(t => ('/' + t.id).includes(input)).map((tool, i) => (
+                                                            <div
+                                                                key={i}
+                                                                onClick={() => {
+                                                                    setInput(`/${tool.id} `);
+                                                                    setShowSlashMenu(false);
+                                                                }}
+                                                                className="flex items-start gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
+                                                            >
+                                                                <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
+                                                                    <tool.icon className="h-3.5 w-3.5" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-[13px] font-bold text-gray-900">{tool.title}</div>
+                                                                    <div className="text-[11px] text-gray-500 font-medium leading-tight mt-0.5">{tool.desc}</div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                        <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm focus-within:border-primary transition-all relative">
+                                            <textarea
+                                                className="w-full h-16 resize-none outline-none text-[13px] font-medium text-gray-900 placeholder:text-gray-400"
+                                                placeholder="Write a message"
+                                                value={input}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setInput(val);
+                                                    if (val.startsWith('/')) {
+                                                        setShowSlashMenu(true);
+                                                    } else {
+                                                        setShowSlashMenu(false);
+                                                    }
+                                                }}
+                                            />
+                                            <div className="flex items-center justify-end mt-1">
+                                                <button
+                                                    onClick={handleMessageSend}
+                                                    className={cn(
+                                                        "h-8 w-8 rounded-full flex items-center justify-center transition-colors",
+                                                        input.trim() ? "bg-primary text-white hover:bg-blue-700" : "bg-gray-100 text-gray-400"
+                                                    )}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.aside>
+                            )}
+                        </AnimatePresence>
+
+                        {/* PBX Modal */}
+                        <Modal
+                            isOpen={pbxModalOpen}
+                            onClose={() => setPbxModalOpen(false)}
+                            title="New A/B test by prompt"
+                            subtitle="Create an experiment in seconds by prompting the AI."
+                            footer={
+                                <>
+                                    <button onClick={() => setPbxModalOpen(false)} className="text-xs font-bold text-gray-500 flex items-center gap-1 hover:text-gray-700">
+                                        <ChevronDown className="h-3 w-3 rotate-90" /> BACK
+                                    </button>
+                                    <button className="px-6 py-2 bg-gray-100 text-gray-400 rounded-lg text-xs font-bold uppercase tracking-wider">
+                                        CREATE
+                                    </button>
+                                </>
+                            }
+                        >
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-900 uppercase tracking-tight">Name</label>
+                                    <input type="text" placeholder="Give your experiment a name" className="w-full p-3 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-primary transition-all" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-900 uppercase tracking-tight">Project</label>
+                                    <div className="w-full p-3 border border-gray-200 rounded-lg text-sm bg-white flex items-center justify-between text-gray-400 cursor-pointer">
+                                        Select a project
+                                        <ChevronDown className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-900 uppercase tracking-tight">URL of the page where you want to launch the simulation</label>
+                                    <input type="text" placeholder="Enter the URL to launch the simulation" className="w-full p-3 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-primary transition-all" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[11px] font-bold text-gray-900 uppercase tracking-tight">Description</label>
+                                        <span className="text-[10px] text-gray-400">0 / 500</span>
+                                    </div>
+                                    <textarea rows="4" placeholder="Describe the purpose of your experiment. This information will make it easier to analyze your results." className="w-full p-3 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-primary transition-all resize-none"></textarea>
+                                </div>
+                                <button className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-xs font-bold hover:bg-primary/5 transition-colors">
+                                    <Plus className="h-3.5 w-3.5" /> ADD TAG
+                                </button>
+                            </div>
+                        </Modal>
+
+                        {/* Chart Modal */}
+                        <Modal
+                            isOpen={chartModalOpen}
+                            onClose={() => setChartModalOpen(false)}
+                            title="EU Segment Results Summary"
+                            subtitle="Last 72 hours performance breakdown."
+                        >
+                            <SimpleChart expanded />
+                            <div className="mt-8 space-y-4">
+                                <div className="p-4 bg-gray-50 rounded-lg grid grid-cols-3 gap-4">
+                                    <div>
+                                        <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Revenue Uplift</div>
+                                        <div className="text-xl font-bold text-green-600">+$2,410</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Confidence</div>
+                                        <div className="text-xl font-bold text-gray-900">94.2%</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Visitors</div>
+                                        <div className="text-xl font-bold text-gray-900">12,402</div>
+                                    </div>
+                                </div>
+                                <p className="text-xs font-medium text-gray-600 leading-relaxed">
+                                    The primary conversion goal 'Purchase' continues to show stability.
+                                    Variation A remains the clear winner with a statistical significance of 94%.
+                                </p>
+                            </div>
+                        </Modal>
+
+                        {/* Workflow Modal */}
+                        <Modal
+                            isOpen={workflowModalOpen}
+                            onClose={() => setWorkflowModalOpen(false)}
+                            title="Create new workflow"
+                            subtitle="Automate your experimentation process with AI-driven triggers."
+                        >
+                            <div className="grid grid-cols-2 gap-4">
+                                {[
+                                    { icon: Mail, title: "Send email", desc: "Notify stakeholders on results." },
+                                    { icon: MessageSquare, title: "Alert on Slack", desc: "Push stats to #xp-alerts." },
+                                    { icon: Pause, title: "Pause XP if", desc: "Automatically stop on regressions." },
+                                    { icon: Play, title: "Start XP if", desc: "Trigger tests on traffic surges." },
+                                ].map((wf, i) => (
+                                    <div key={i} className="p-4 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:border-primary/20 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center text-gray-400 group-hover:text-primary mb-3 shadow-sm">
+                                            <wf.icon className="h-5 w-5" />
+                                        </div>
+                                        <h4 className="text-[13px] font-semibold text-gray-800 mb-1">{wf.title}</h4>
+                                        <p className="text-[11px] text-gray-500 font-medium leading-relaxed">{wf.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </Modal>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
