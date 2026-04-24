@@ -892,9 +892,14 @@ export const checkout: CheckoutProps = {
                                                 }}
                                             />
                                             <div className="flex items-center justify-between mt-1">
-                                                <button onClick={() => setAllToolsOpen(true)} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400 transition-colors" title="Browse all tools">
-                                                    <Sparkles className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex items-center gap-1">
+                                                    <button onClick={() => setAllToolsOpen(true)} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400 transition-colors" title="Browse all tools">
+                                                        <Sparkles className="h-4 w-4" />
+                                                    </button>
+                                                    <button onClick={() => { setInput('/'); setShowSlashMenu(true); textareaRef.current?.focus(); }} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400 transition-colors" title="Slash commands">
+                                                        <span className="text-lg font-bold">/</span>
+                                                    </button>
+                                                </div>
                                                 <span className="text-[10px] text-gray-300 font-medium">↵ send · shift+↵ newline</span>
                                                 <button onClick={() => sendMessage(input)}
                                                     className={cn("h-7 w-7 rounded-full flex items-center justify-center transition-colors",
