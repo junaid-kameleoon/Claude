@@ -70,39 +70,42 @@
 
         const cn = (...classes) => classes.filter(Boolean).join(' ');
 
-        const MCP_TOOLS = [
-            { id: 'query_experiment_insights', icon: BarChart3, title: "Query experiment insights", desc: "Semantic breakdown of results, winner status & next steps", category: 'advanced' },
-            { id: 'set_experiment_state', icon: Settings2, title: "Set experiment state", desc: "Pause, resume, stop or archive experiments", category: 'advanced' },
-            { id: 'audit_and_cleanup_workspace', icon: Sparkles, title: "Audit & clean up workspace", desc: "Find stale flags and concluded experiments", category: 'advanced' },
-            { id: 'simulate_user_experience', icon: Search, title: "Simulate user assignment", desc: "See which variants a user profile qualifies for", category: 'advanced' },
-            { id: 'manage_progressive_rollout', icon: Zap, title: "Manage progressive rollout", desc: "Trigger safe ramps and set guardrails", category: 'advanced' },
-            { id: 'generate_variant_from_design', icon: Wand2, title: "Generate variant from design", desc: "Turn a Figma URL into HTML/React code", category: 'advanced' },
-            // Lot 1 Baseline
-            { id: 'get_experiment_details', icon: BarChart3, title: "Get experiment details", desc: "Configuration and metadata retrieval", category: 'baseline' },
-            { id: 'list_experiments', icon: BarChart3, title: "List experiments", desc: "Searchable and filterable project overview", category: 'baseline' },
-            { id: 'get_variant_code', icon: Wand2, title: "Get variant code", desc: "Secure retrieval of implementation logic", category: 'baseline' },
-            { id: 'list_feature_flags', icon: Zap, title: "List feature flags", desc: "Real-time flag visibility", category: 'baseline' },
-            { id: 'get_feature_flag_details', icon: Settings2, title: "Get feature flag details", desc: "Environment-specific settings and rules", category: 'baseline' },
-            { id: 'create_feature_flag', icon: Plus, title: "Create feature flag", desc: "Native flag instantiation", category: 'baseline' },
-            { id: 'enable_disable_feature_flag', icon: Zap, title: "Enable/disable feature flag", desc: "Immediate state control", category: 'baseline' },
-            { id: 'delete_feature_flag', icon: X, title: "Delete feature flag", desc: "Cleanup of simple flag assets", category: 'baseline' },
-            { id: 'audit_recent_changes', icon: Sparkles, title: "Audit recent changes", desc: "Operational visibility and logs", category: 'baseline' },
-            { id: 'duplicate_feature_flag', icon: Plus, title: "Duplicate feature flag", desc: "Rapid iteration of flag logic", category: 'baseline' },
-            { id: 'get_experiment_results_summary', icon: BarChart3, title: "Get experiment results summary", desc: "High-level pulse/outcomes for AI parsing", category: 'baseline' },
-            // Lot 1 Advanced
-            { id: 'goal_list', icon: Sparkles, title: "List goals", desc: "View all tracking goals", category: 'advanced_ready' },
-            { id: 'goal_get', icon: Sparkles, title: "Get goal details", desc: "Retrieve specific goal configuration", category: 'advanced_ready' },
-            { id: 'goal_create', icon: Plus, title: "Create goal", desc: "Add new tracking goal", category: 'advanced_ready' },
-            { id: 'goal_delete', icon: X, title: "Delete goal", desc: "Remove a goal", category: 'advanced_ready' },
-            { id: 'segment_list', icon: Sparkles, title: "List segments", desc: "View all audience segments", category: 'advanced_ready' },
-            { id: 'segment_get', icon: Sparkles, title: "Get segment details", desc: "Retrieve segment configuration", category: 'advanced_ready' },
-            { id: 'segment_create', icon: Plus, title: "Create segment", desc: "Define new audience segment", category: 'advanced_ready' },
-            { id: 'targeting_rule_list', icon: Settings2, title: "List targeting rules", desc: "View all targeting rules", category: 'advanced_ready' },
-            { id: 'targeting_rule_create', icon: Plus, title: "Create targeting rule", desc: "Add new targeting rule", category: 'advanced_ready' },
-            { id: 'feature_flag_variation_create', icon: Plus, title: "Create flag variation", desc: "Add variant to feature flag", category: 'advanced_ready' },
-            { id: 'feature_flag_rule_targeted_create', icon: Settings2, title: "Create targeted rule", desc: "Set up targeted delivery rule", category: 'advanced_ready' },
-            { id: 'feature_flag_rule_progressive_create', icon: Zap, title: "Create progressive rule", desc: "Set up progressive rollout rule", category: 'advanced_ready' },
+        const MAIN_TOOLS = [
+            { id: 'query_experiment_insights', icon: BarChart3, title: "Query experiment insights", desc: "Semantic breakdown of results, winner status & next steps" },
+            { id: 'set_experiment_state', icon: Settings2, title: "Set experiment state", desc: "Pause, resume, stop or archive experiments" },
+            { id: 'audit_and_cleanup_workspace', icon: Sparkles, title: "Audit & clean up workspace", desc: "Find stale flags and concluded experiments" },
+            { id: 'simulate_user_experience', icon: Search, title: "Simulate user assignment", desc: "See which variants a user profile qualifies for" },
+            { id: 'manage_progressive_rollout', icon: Zap, title: "Manage progressive rollout", desc: "Trigger safe ramps and set guardrails" },
+            { id: 'generate_variant_from_design', icon: Wand2, title: "Generate variant from design", desc: "Turn a Figma URL into HTML/React code" },
         ];
+
+        const ALL_TOOLS = [
+            { id: 'get_experiment_details', icon: BarChart3, title: "Get experiment details", desc: "Configuration and metadata retrieval" },
+            { id: 'list_experiments', icon: BarChart3, title: "List experiments", desc: "Searchable and filterable project overview" },
+            { id: 'get_variant_code', icon: Wand2, title: "Get variant code", desc: "Secure retrieval of implementation logic" },
+            { id: 'list_feature_flags', icon: Zap, title: "List feature flags", desc: "Real-time flag visibility" },
+            { id: 'get_feature_flag_details', icon: Settings2, title: "Get feature flag details", desc: "Environment-specific settings and rules" },
+            { id: 'create_feature_flag', icon: Plus, title: "Create feature flag", desc: "Native flag instantiation" },
+            { id: 'enable_disable_feature_flag', icon: Zap, title: "Enable/disable feature flag", desc: "Immediate state control" },
+            { id: 'delete_feature_flag', icon: X, title: "Delete feature flag", desc: "Cleanup of simple flag assets" },
+            { id: 'audit_recent_changes', icon: Sparkles, title: "Audit recent changes", desc: "Operational visibility and logs" },
+            { id: 'duplicate_feature_flag', icon: Plus, title: "Duplicate feature flag", desc: "Rapid iteration of flag logic" },
+            { id: 'get_experiment_results_summary', icon: BarChart3, title: "Get experiment results summary", desc: "High-level pulse/outcomes for AI parsing" },
+            { id: 'goal_list', icon: Sparkles, title: "List goals", desc: "View all tracking goals" },
+            { id: 'goal_get', icon: Sparkles, title: "Get goal details", desc: "Retrieve specific goal configuration" },
+            { id: 'goal_create', icon: Plus, title: "Create goal", desc: "Add new tracking goal" },
+            { id: 'goal_delete', icon: X, title: "Delete goal", desc: "Remove a goal" },
+            { id: 'segment_list', icon: Sparkles, title: "List segments", desc: "View all audience segments" },
+            { id: 'segment_get', icon: Sparkles, title: "Get segment details", desc: "Retrieve segment configuration" },
+            { id: 'segment_create', icon: Plus, title: "Create segment", desc: "Define new audience segment" },
+            { id: 'targeting_rule_list', icon: Settings2, title: "List targeting rules", desc: "View all targeting rules" },
+            { id: 'targeting_rule_create', icon: Plus, title: "Create targeting rule", desc: "Add new targeting rule" },
+            { id: 'feature_flag_variation_create', icon: Plus, title: "Create flag variation", desc: "Add variant to feature flag" },
+            { id: 'feature_flag_rule_targeted_create', icon: Settings2, title: "Create targeted rule", desc: "Set up targeted delivery rule" },
+            { id: 'feature_flag_rule_progressive_create', icon: Zap, title: "Create progressive rule", desc: "Set up progressive rollout rule" },
+        ];
+
+        const MCP_TOOLS = [...MAIN_TOOLS, ...ALL_TOOLS];
 
         const SUGGESTIONS = [
             "What's winning on the Checkout test?",
@@ -431,6 +434,7 @@
             const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
             const [chartModalOpen, setChartModalOpen] = useState(false);
             const [allToolsOpen, setAllToolsOpen] = useState(false);
+            const [expandedAllTools, setExpandedAllTools] = useState(false);
             const [view, setView] = useState("dashboard");
             const [typingState, setTypingState] = useState(null);
             const messagesEndRef = useRef(null);
@@ -484,9 +488,14 @@
                 }
             };
 
-            const filteredTools = input === '/' ? MCP_TOOLS : MCP_TOOLS.filter(t =>
-                input.startsWith('/') && t.title.toLowerCase().includes(input.slice(1).toLowerCase())
+            const searchQuery = input.startsWith('/') ? input.slice(1).toLowerCase() : '';
+            const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(t =>
+                t.title.toLowerCase().includes(searchQuery) || t.desc.toLowerCase().includes(searchQuery)
             );
+            const filteredAllTools = ALL_TOOLS.filter(t =>
+                t.title.toLowerCase().includes(searchQuery) || t.desc.toLowerCase().includes(searchQuery)
+            );
+            const hasSearchResults = input.startsWith('/') && (filteredMainTools.length > 0 || filteredAllTools.length > 0);
 
             const showSuggestions = !typingState && messages.length === 1;
 
@@ -659,7 +668,7 @@
 
                                     <div className="p-3 bg-white border-t border-gray-100 relative shrink-0">
                                         <AnimatePresence>
-                                            {showSlashMenu && filteredTools.length > 0 && (
+                                            {showSlashMenu && hasSearchResults && (
                                                 <motion.div
                                                     initial={{ opacity: 0, y: 8 }}
                                                     animate={{ opacity: 1, y: 0 }}
@@ -671,9 +680,9 @@
                                                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tools</span>
                                                     </div>
                                                     <div className="max-h-56 overflow-y-auto">
-                                                        {filteredTools.map((tool, i) => (
+                                                        {filteredMainTools.map((tool, i) => (
                                                             <div key={i} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
-                                                                className="flex items-start gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
+                                                                className="flex items-start gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50"
                                                             >
                                                                 <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
                                                                     <tool.icon className="h-3 w-3" />
@@ -684,6 +693,35 @@
                                                                 </div>
                                                             </div>
                                                         ))}
+                                                        {filteredAllTools.length > 0 && (
+                                                            <>
+                                                                <button onClick={() => setExpandedAllTools(!expandedAllTools)}
+                                                                    className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 border-b border-gray-50 text-left transition-colors">
+                                                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expandedAllTools ? 'rotate-180' : ''}`} />
+                                                                    <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">All Tools</span>
+                                                                    <span className="text-[10px] text-gray-400 ml-auto">{filteredAllTools.length}</span>
+                                                                </button>
+                                                                <AnimatePresence>
+                                                                    {expandedAllTools && (
+                                                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                                                                            {filteredAllTools.map((tool, i) => (
+                                                                                <div key={i} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
+                                                                                    className="flex items-start gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 bg-gray-25"
+                                                                                >
+                                                                                    <div className="mt-0.5 h-6 w-6 rounded bg-gray-200/50 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0">
+                                                                                        <tool.icon className="h-3 w-3" />
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <div className="text-[12px] font-semibold text-gray-700">{tool.title}</div>
+                                                                                        <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </motion.div>
+                                                                    )}
+                                                                </AnimatePresence>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </motion.div>
                                             )}
@@ -762,30 +800,40 @@
 
                         <Modal isOpen={allToolsOpen} onClose={() => setAllToolsOpen(false)} title="All Tools" subtitle="Complete MCP tool directory">
                             <div className="space-y-6">
-                                {['advanced', 'advanced_ready', 'baseline'].map(cat => {
-                                    const tools = MCP_TOOLS.filter(t => t.category === cat);
-                                    if (tools.length === 0) return null;
-                                    const catLabel = cat === 'advanced' ? 'Advanced Tools' : cat === 'advanced_ready' ? 'Lot 1 Advanced (Ready)' : 'Lot 1 Baseline';
-                                    return (
-                                        <div key={cat}>
-                                            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2.5">{catLabel}</h3>
-                                            <div className="space-y-1.5">
-                                                {tools.map((tool, i) => (
-                                                    <div key={i} onClick={() => { sendMessage(tool.title); setAllToolsOpen(false); }}
-                                                        className="flex items-start gap-2.5 p-2.5 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all group">
-                                                        <div className="mt-0.5 h-5 w-5 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary/10">
-                                                            <tool.icon className="h-2.5 w-2.5" />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="text-[11px] font-semibold text-gray-900">{tool.title}</div>
-                                                            <div className="text-[10px] text-gray-400 leading-tight">{tool.desc}</div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                <div>
+                                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2.5">Featured Tools</h3>
+                                    <div className="space-y-1.5">
+                                        {MAIN_TOOLS.map((tool, i) => (
+                                            <div key={i} onClick={() => { sendMessage(tool.title); setAllToolsOpen(false); }}
+                                                className="flex items-start gap-2.5 p-2.5 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all group">
+                                                <div className="mt-0.5 h-5 w-5 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary/10">
+                                                    <tool.icon className="h-2.5 w-2.5" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="text-[11px] font-semibold text-gray-900">{tool.title}</div>
+                                                    <div className="text-[10px] text-gray-400 leading-tight">{tool.desc}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2.5">Lot 1 Tools</h3>
+                                    <div className="space-y-1.5">
+                                        {ALL_TOOLS.map((tool, i) => (
+                                            <div key={i} onClick={() => { sendMessage(tool.title); setAllToolsOpen(false); }}
+                                                className="flex items-start gap-2.5 p-2.5 hover:bg-gray-100 border border-gray-100 hover:border-gray-200 rounded-lg cursor-pointer transition-all group">
+                                                <div className="mt-0.5 h-5 w-5 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0 group-hover:bg-gray-200">
+                                                    <tool.icon className="h-2.5 w-2.5" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="text-[11px] font-semibold text-gray-700">{tool.title}</div>
+                                                    <div className="text-[10px] text-gray-400 leading-tight">{tool.desc}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </Modal>
                     </main>
