@@ -560,8 +560,8 @@ export const checkout: CheckoutProps = {
         const Modal = ({ isOpen, onClose, title, subtitle, children, footer }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                    <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+                    <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                         <div className="p-6 border-b border-gray-100 flex items-start justify-between">
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Wand2 className="h-5 w-5 text-primary" />{title}</h2>
@@ -640,10 +640,10 @@ export const checkout: CheckoutProps = {
 
             const searchQuery = input.startsWith('/') ? input.slice(1).toLowerCase() : '';
             const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(t =>
-                t.title.toLowerCase().includes(searchQuery) || t.desc.toLowerCase().includes(searchQuery)
+                t.title.toLowerCase().startsWith(searchQuery) || t.title.toLowerCase().includes(searchQuery)
             );
             const filteredAllTools = ALL_TOOLS.filter(t =>
-                t.title.toLowerCase().includes(searchQuery) || t.desc.toLowerCase().includes(searchQuery)
+                t.title.toLowerCase().startsWith(searchQuery) || t.title.toLowerCase().includes(searchQuery)
             );
             const hasSearchResults = input.startsWith('/') && (filteredMainTools.length > 0 || filteredAllTools.length > 0);
 
@@ -760,7 +760,6 @@ export const checkout: CheckoutProps = {
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <button onClick={() => { setMessages([{role: 'assistant', content: "Hi Junaid! 👋\n\nI'm Kai, your experiment copilot. I can run tools directly — query results, pause experiments, audit stale flags, simulate user assignment, and more.\n\nType / to see available tools, or just ask me in plain language."}]); }} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400" title="Reset chat"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"/></svg></button>
-                                            <button className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400" title="Browse all tools" onClick={() => setAllToolsOpen(true)}><BarChart3 className="h-4 w-4" /></button>
                                             <button onClick={() => setKaiOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400"><X className="h-4 w-4" /></button>
                                         </div>
                                     </div>
@@ -801,13 +800,12 @@ export const checkout: CheckoutProps = {
                                         </AnimatePresence>
 
                                         {showSuggestions && (
-                                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-1.5 pt-2">
+                                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-wrap gap-2 justify-end pt-2">
                                                 {SUGGESTIONS.map((s, i) => (
                                                     <button key={i} onClick={() => sendMessage(s)}
-                                                        className="w-full text-left px-3 py-2.5 bg-transparent hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-lg text-[12px] text-gray-500 hover:text-gray-700 font-normal transition-all flex items-center justify-between group"
+                                                        className="px-3 py-2 bg-transparent hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-lg text-[12px] text-gray-500 hover:text-gray-700 font-normal transition-all whitespace-nowrap"
                                                     >
-                                                        <span>{s}</span>
-                                                        <ChevronRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-400 shrink-0" />
+                                                        {s}
                                                     </button>
                                                 ))}
                                             </motion.div>
@@ -816,7 +814,12 @@ export const checkout: CheckoutProps = {
                                         <div ref={messagesEndRef} />
                                     </div>
 
-                                    <div className="p-3 bg-white border-t border-gray-100 relative shrink-0">
+                                    <div className="p-3 bg-white border-t border-gray-100 relative shrink-0 space-y-3">
+                                        <button onClick={() => setAllToolsOpen(true)} className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-[11px] font-semibold text-gray-600 hover:text-gray-800 transition-colors">
+                                            <Sparkles className="h-3.5 w-3.5" />
+                                            Browse all tools
+                                            <ChevronRight className="h-3.5 w-3.5 ml-auto text-gray-300" />
+                                        </button>
                                         <AnimatePresence>
                                             {showSlashMenu && hasSearchResults && (
                                                 <motion.div
