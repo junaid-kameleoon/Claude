@@ -126,6 +126,9 @@
 
         const MCP_TOOLS = [...MAIN_TOOLS, ...ALL_TOOLS];
 
+        const RECENT_TOOL_IDS = ['query_experiment_insights', 'audit_and_cleanup_workspace', 'list_experiments'];
+        const RECENT_TOOLS = RECENT_TOOL_IDS.map(id => MCP_TOOLS.find(t => t.id === id)).filter(Boolean);
+
         const SUGGESTIONS = [
             "Query experiment results",
             "Clean up my stale flags",
@@ -156,21 +159,21 @@
                 return { tool: 'generate_variant_from_design', label: 'Generate Variant from Design', type: 'generate' };
             // Baseline tools (simple back-and-forth)
             if (l.includes('list') && (l.includes('experiment') || l.includes('flag')))
-                return { tool: 'list_experiments', label: 'List Experiments', type: 'followup', question: 'Searching for active experiments... would you like to filter by status, owner, or date range?' };
+                return { tool: 'list_experiments', label: 'List Experiments', type: 'followup', question: 'Searching for active experiments... would you like to filter by status, owner, or date range?', quickReplies: ['Only running', 'Owned by me', 'Last 7 days'] };
             if (l.includes('get details') || l.includes('details'))
-                return { tool: 'get_experiment_details', label: 'Get Experiment Details', type: 'followup', question: 'Which experiment? (provide experiment ID or name)' };
+                return { tool: 'get_experiment_details', label: 'Get Experiment Details', type: 'followup', question: 'Which experiment? (provide experiment ID or name)', quickReplies: ['Pricing Page Variation - 1', 'Checkout Page Redesign', 'Hero Banner Test'] };
             if (l.includes('goal') || l.includes('tracking'))
-                return { tool: 'goal_list', label: 'List Goals', type: 'followup', question: 'Fetching tracking goals... found 12 goals. Need help with a specific one?' };
+                return { tool: 'goal_list', label: 'List Goals', type: 'followup', question: 'Fetching tracking goals... found 12 goals. Need help with a specific one?', quickReplies: ['Conversion goals', 'Revenue goals', 'Show all'] };
             if (l.includes('segment') || l.includes('audience'))
-                return { tool: 'segment_list', label: 'List Segments', type: 'followup', question: 'Loading audience segments... how would you like to filter them?' };
+                return { tool: 'segment_list', label: 'List Segments', type: 'followup', question: 'Loading audience segments... how would you like to filter them?', quickReplies: ['By traffic size', 'Recently used', 'Show all'] };
             if (l.includes('duplicate') || l.includes('copy'))
-                return { tool: 'duplicate_feature_flag', label: 'Duplicate Feature Flag', type: 'followup', question: 'Which flag should I duplicate? (provide flag key or name)' };
+                return { tool: 'duplicate_feature_flag', label: 'Duplicate Feature Flag', type: 'followup', question: 'Which flag should I duplicate? (provide flag key or name)', quickReplies: ['checkout-v1-legacy', 'pricing-table-old'] };
             if (l.includes('delete') || l.includes('remove'))
-                return { tool: 'delete_feature_flag', label: 'Delete Feature Flag', type: 'followup', question: 'Which flag do you want to delete? (provide flag key — this action is permanent)' };
+                return { tool: 'delete_feature_flag', label: 'Delete Feature Flag', type: 'followup', question: 'Which flag do you want to delete? (provide flag key — this action is permanent)', quickReplies: ['checkout-v1-legacy', 'hero-banner-test-q2', 'Cancel'] };
             if (l.includes('code') || l.includes('implementation'))
-                return { tool: 'get_variant_code', label: 'Get Variant Code', type: 'followup', question: 'Which variant? (experiment ID + variant name)' };
+                return { tool: 'get_variant_code', label: 'Get Variant Code', type: 'followup', question: 'Which variant? (experiment ID + variant name)', quickReplies: ['#4089 Variant A', '#4101 Variant B'] };
             if (l.includes('recent') || l.includes('history') || l.includes('changelog'))
-                return { tool: 'audit_recent_changes', label: 'Audit Recent Changes', type: 'followup', question: 'Pulling activity logs... showing changes from the last 7 days. Want to filter by user or action type?' };
+                return { tool: 'audit_recent_changes', label: 'Audit Recent Changes', type: 'followup', question: 'Pulling activity logs... showing changes from the last 7 days. Want to filter by user or action type?', quickReplies: ['By me', 'Flag changes only', 'Last 24 hours'] };
             return null;
         };
 
@@ -549,8 +552,25 @@ export const checkout: CheckoutProps = {
             </div>
         );
 
-        const MessageBubble = ({ message }) => {
+        const StreamingText = ({ text, speed = 12 }) => {
+            const [shown, setShown] = React.useState('');
+            React.useEffect(() => {
+                setShown('');
+                if (!text) return;
+                let i = 0;
+                const id = setInterval(() => {
+                    i++;
+                    setShown(text.slice(0, i));
+                    if (i >= text.length) clearInterval(id);
+                }, speed);
+                return () => clearInterval(id);
+            }, [text]);
+            return <span className="whitespace-pre-wrap">{shown}{shown.length < text.length && <span className="inline-block w-0.5 h-3 bg-gray-400 ml-0.5 align-middle animate-pulse" />}</span>;
+        };
+
+        const MessageBubble = ({ message, onSendMessage, isLatest }) => {
             const isUser = message.role === 'user';
+            const shouldStream = !isUser && !message.richContent && message.content && message.streamed;
             return (
                 <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
                     {!isUser && message.toolCall && (
@@ -562,10 +582,95 @@ export const checkout: CheckoutProps = {
                             ? "bg-[#F0F1FF] text-blue-900 border border-[#E5E7FF] rounded-tr-sm font-medium"
                             : "bg-white text-gray-700 border border-gray-100 shadow-sm rounded-tl-sm"
                     )}>
-                        {message.richContent ? message.richContent : <span className="whitespace-pre-wrap">{message.content}</span>}
+                        {message.richContent ? message.richContent : (
+                            shouldStream
+                                ? <StreamingText text={message.content} />
+                                : <span className="whitespace-pre-wrap">{message.content}</span>
+                        )}
                     </div>
+                    {!isUser && message.quickReplies && message.quickReplies.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2 max-w-[95%]">
+                            {message.quickReplies.map((qr, i) => (
+                                <button key={i} onClick={() => onSendMessage && onSendMessage(qr)}
+                                    className="px-2.5 py-1 bg-white hover:bg-primary/5 border border-gray-200 hover:border-primary/30 rounded-full text-[11px] text-gray-600 hover:text-primary font-medium transition-all">
+                                    {qr}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {!isUser && message.nextSteps && message.nextSteps.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2 max-w-[95%]">
+                            <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider w-full">Next steps</span>
+                            {message.nextSteps.map((ns, i) => (
+                                <button key={i} onClick={() => onSendMessage && onSendMessage(ns)}
+                                    className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-br from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 border border-primary/15 hover:border-primary/30 rounded-full text-[11px] text-primary font-medium transition-all">
+                                    <Sparkles className="h-2.5 w-2.5" />
+                                    {ns}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             );
+        };
+
+        const SkeletonLine = ({ w = 'full', h = '2.5' }) => (
+            <div className={`h-${h} bg-gray-100 rounded animate-pulse`} style={{ width: w === 'full' ? '100%' : w }} />
+        );
+
+        const InsightsSkeleton = () => (
+            <div className="space-y-3">
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse w-3/4" />
+                <div className="grid grid-cols-3 gap-1.5">
+                    {[0, 1, 2].map(i => (
+                        <div key={i} className="p-2.5 rounded-lg border border-gray-100 bg-gray-50 space-y-1.5">
+                            <div className="h-2 bg-gray-200 rounded animate-pulse w-1/2" />
+                            <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                            <div className="h-2 bg-gray-100 rounded animate-pulse w-2/3" />
+                        </div>
+                    ))}
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full animate-pulse" />
+            </div>
+        );
+
+        const AuditSkeleton = () => (
+            <div className="space-y-2">
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse w-2/3" />
+                {[0, 1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-2.5 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="h-1.5 w-1.5 rounded-full bg-gray-200 animate-pulse" />
+                        <div className="h-2.5 bg-gray-200 rounded animate-pulse flex-1" />
+                        <div className="h-2 bg-gray-100 rounded animate-pulse w-20" />
+                    </div>
+                ))}
+            </div>
+        );
+
+        const ListSkeleton = () => (
+            <div className="space-y-2">
+                {[0, 1, 2].map(i => (
+                    <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-100">
+                        <div className="h-3 w-3 rounded bg-gray-200 animate-pulse" />
+                        <div className="h-2.5 bg-gray-200 rounded animate-pulse flex-1" />
+                    </div>
+                ))}
+            </div>
+        );
+
+        const GenericSkeleton = () => (
+            <div className="space-y-2.5">
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse" />
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse w-5/6" />
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse w-3/4" />
+            </div>
+        );
+
+        const getSkeletonForType = (type) => {
+            if (type === 'insights' || type === 'queryfilter') return <InsightsSkeleton />;
+            if (type === 'audit') return <AuditSkeleton />;
+            if (type === 'pausefilter') return <ListSkeleton />;
+            return <GenericSkeleton />;
         };
 
         const SimpleChart = ({ expanded = false }) => {
@@ -637,11 +742,23 @@ export const checkout: CheckoutProps = {
                 setInput("");
                 setShowSlashMenu(false);
 
+                const NEXT_STEPS_BY_TYPE = {
+                    insights: ['Pause losing variants', 'Ship winner to 100%', 'Export results to Slack'],
+                    audit: ['Delete all stale flags', 'Schedule weekly audit', 'View flag dependencies'],
+                    pause: ['Resume experiment', 'Notify team on Slack', 'Archive experiment'],
+                    simulate: ['Try another user profile', 'Override assignment', 'View targeting rules'],
+                    rollout: ['Increase to 50%', 'Set guardrail metric', 'Pause rollout'],
+                    generate: ['Refine variant copy', 'A/B test against control', 'Push to staging'],
+                    queryfilter: ['Compare to previous week', 'Drill into segment', 'Pause underperformers'],
+                    pausefilter: ['Pause selected', 'Notify owners', 'Schedule auto-pause'],
+                    shipvariant: ['Open PR in GitHub', 'Run QA on staging', 'Schedule deploy'],
+                };
+
                 const mock = getMockResponse(text);
                 if (mock) {
                     setTypingState({ step: 'tool_call', tool: { id: mock.tool, label: mock.label } });
                     setTimeout(() => {
-                        setTypingState({ step: 'thinking' });
+                        setTypingState({ step: 'thinking', type: mock.type });
                         setTimeout(() => {
                             setTypingState(null);
                             if (mock.type === 'followup') {
@@ -649,6 +766,8 @@ export const checkout: CheckoutProps = {
                                     role: 'assistant',
                                     toolCall: { id: mock.tool, label: mock.label },
                                     content: mock.question,
+                                    streamed: true,
+                                    quickReplies: mock.quickReplies,
                                 }]);
                             } else {
                                 const richContent = getRichContent(mock.type);
@@ -657,15 +776,16 @@ export const checkout: CheckoutProps = {
                                     toolCall: { id: mock.tool, label: mock.label },
                                     content: '',
                                     richContent: richContent || <p className="text-[12px] text-gray-600 leading-relaxed">I don't have a live connection in this prototype. Try one of the suggestions to see a full tool response.</p>,
+                                    nextSteps: NEXT_STEPS_BY_TYPE[mock.type],
                                 }]);
                             }
-                        }, 800);
+                        }, 1200);
                     }, 1200);
                 } else {
                     setTypingState({ step: 'thinking' });
                     setTimeout(() => {
                         setTypingState(null);
-                        setMessages(prev => [...prev, { role: 'assistant', content: "I don't have a live connection in this prototype. Try one of the suggestions or type / to browse available tools." }]);
+                        setMessages(prev => [...prev, { role: 'assistant', content: "I don't have a live connection in this prototype. Try one of the suggestions or type / to browse available tools.", streamed: true }]);
                     }, 1100);
                 }
             };
@@ -680,9 +800,15 @@ export const checkout: CheckoutProps = {
                 return false;
             };
             const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(matchesTool);
-            const filteredAllTools = input === '/' ? [] : ALL_TOOLS.filter(matchesTool);
-            const hasSearchResults = input.startsWith('/') && (filteredMainTools.length > 0 || filteredAllTools.length > 0);
+            const filteredAllTools = ALL_TOOLS.filter(matchesTool);
+            const showRecent = input === '/';
+            const hasSearchResults = input.startsWith('/');
             const shouldAutoExpandAllTools = searchQuery.length > 0 && filteredAllTools.length > 0;
+            const flatNavTools = showRecent
+                ? [...RECENT_TOOLS, ...filteredMainTools, ...filteredAllTools]
+                : [...filteredMainTools, ...filteredAllTools];
+            const [selectedToolIdx, setSelectedToolIdx] = useState(0);
+            useEffect(() => { setSelectedToolIdx(0); }, [input]);
 
             const showSuggestions = !typingState && messages.length === 1;
 
@@ -804,7 +930,7 @@ export const checkout: CheckoutProps = {
                                     <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                         {messages.map((m, i) => (
                                             <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-                                                <MessageBubble message={m} />
+                                                <MessageBubble message={m} onSendMessage={sendMessage} isLatest={i === messages.length - 1} />
                                             </motion.div>
                                         ))}
 
@@ -824,13 +950,19 @@ export const checkout: CheckoutProps = {
                                                         </div>
                                                     )}
                                                     {typingState.step === 'thinking' && (
-                                                        <div className="px-3.5 py-3 bg-white border border-gray-100 shadow-sm rounded-2xl rounded-tl-sm">
-                                                            <span className="flex gap-1">
-                                                                <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
-                                                                <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
-                                                                <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
-                                                            </span>
-                                                        </div>
+                                                        typingState.type && typingState.type !== 'followup' ? (
+                                                            <div className="px-3.5 py-3 bg-white border border-gray-100 shadow-sm rounded-2xl rounded-tl-sm w-[320px] max-w-[95%]">
+                                                                {getSkeletonForType(typingState.type)}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="px-3.5 py-3 bg-white border border-gray-100 shadow-sm rounded-2xl rounded-tl-sm">
+                                                                <span className="flex gap-1">
+                                                                    <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
+                                                                    <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
+                                                                    <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
+                                                                </span>
+                                                            </div>
+                                                        )
                                                     )}
                                                 </motion.div>
                                             )}
@@ -860,48 +992,106 @@ export const checkout: CheckoutProps = {
                                                     exit={{ opacity: 0, y: 8 }}
                                                     className="absolute bottom-full mb-2 left-3 right-3 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-50"
                                                 >
-                                                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-1.5">
-                                                        <span className="text-[12px] font-bold text-gray-400">/</span>
-                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tools</span>
+                                                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[12px] font-bold text-gray-400">/</span>
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tools</span>
+                                                        </div>
+                                                        {flatNavTools.length > 0 && (
+                                                            <span className="text-[9px] text-gray-300 font-medium">↑↓ navigate · ↵ select</span>
+                                                        )}
                                                     </div>
-                                                    <div className="max-h-56 overflow-y-auto">
-                                                        {filteredMainTools.map((tool, i) => (
-                                                            <div key={i} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
-                                                                className="flex items-start gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50"
-                                                            >
-                                                                <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
-                                                                    <tool.icon className="h-3 w-3" />
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[12px] font-semibold text-gray-900">{tool.title}</div>
-                                                                    <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
-                                                                </div>
+                                                    <div className="max-h-64 overflow-y-auto">
+                                                        {flatNavTools.length === 0 && (
+                                                            <div className="px-4 py-6 text-center">
+                                                                <div className="text-[12px] text-gray-500 font-medium">No tools matching <span className="font-mono text-gray-700">"{searchQuery}"</span></div>
+                                                                <div className="text-[10px] text-gray-400 mt-1">Try a different keyword or just ask in plain language</div>
                                                             </div>
-                                                        ))}
+                                                        )}
+                                                        {showRecent && RECENT_TOOLS.length > 0 && (
+                                                            <>
+                                                                <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Recent</span>
+                                                                </div>
+                                                                {RECENT_TOOLS.map((tool, i) => {
+                                                                    const idx = i;
+                                                                    const isSel = selectedToolIdx === idx;
+                                                                    return (
+                                                                        <div key={`r-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
+                                                                            onMouseEnter={() => setSelectedToolIdx(idx)}
+                                                                            className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
+                                                                        >
+                                                                            <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
+                                                                                <tool.icon className="h-3 w-3" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <div className="text-[12px] font-semibold text-gray-900">{tool.title}</div>
+                                                                                <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                                <div className="h-px bg-gray-100 mx-3 my-1" />
+                                                            </>
+                                                        )}
+                                                        {filteredMainTools.length > 0 && (
+                                                            <>
+                                                                {showRecent && (
+                                                                    <div className="px-3 pt-1 pb-1">
+                                                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Featured</span>
+                                                                    </div>
+                                                                )}
+                                                                {filteredMainTools.map((tool, i) => {
+                                                                    const idx = (showRecent ? RECENT_TOOLS.length : 0) + i;
+                                                                    const isSel = selectedToolIdx === idx;
+                                                                    return (
+                                                                        <div key={`m-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
+                                                                            onMouseEnter={() => setSelectedToolIdx(idx)}
+                                                                            className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
+                                                                        >
+                                                                            <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
+                                                                                <tool.icon className="h-3 w-3" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <div className="text-[12px] font-semibold text-gray-900">{tool.title}</div>
+                                                                                <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </>
+                                                        )}
                                                         {filteredAllTools.length > 0 && (
                                                             <>
+                                                                {filteredMainTools.length > 0 && <div className="h-px bg-gray-100 mx-3 my-1" />}
                                                                 <button onClick={() => setExpandedAllTools(!expandedAllTools)}
-                                                                    className="w-full flex items-center gap-2 p-3 hover:bg-gray-50 border-b border-gray-50 text-left transition-colors">
-                                                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expandedAllTools || shouldAutoExpandAllTools ? 'rotate-180' : ''}`} />
-                                                                    <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">All Tools</span>
-                                                                    <span className="text-[10px] text-gray-400 ml-auto">{filteredAllTools.length}</span>
+                                                                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left transition-colors">
+                                                                    <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${expandedAllTools || shouldAutoExpandAllTools ? 'rotate-180' : ''}`} />
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">All Tools</span>
+                                                                    <span className="text-[10px] text-gray-300 ml-auto">{filteredAllTools.length}</span>
                                                                 </button>
                                                                 <AnimatePresence>
                                                                     {(expandedAllTools || shouldAutoExpandAllTools) && (
                                                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                                                                            {filteredAllTools.map((tool, i) => (
-                                                                                <div key={i} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
-                                                                                    className="flex items-start gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 bg-gray-25"
-                                                                                >
-                                                                                    <div className="mt-0.5 h-6 w-6 rounded bg-gray-200/50 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0">
-                                                                                        <tool.icon className="h-3 w-3" />
+                                                                            {filteredAllTools.map((tool, i) => {
+                                                                                const idx = (showRecent ? RECENT_TOOLS.length : 0) + filteredMainTools.length + i;
+                                                                                const isSel = selectedToolIdx === idx;
+                                                                                return (
+                                                                                    <div key={`a-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
+                                                                                        onMouseEnter={() => setSelectedToolIdx(idx)}
+                                                                                        className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
+                                                                                    >
+                                                                                        <div className="mt-0.5 h-6 w-6 rounded bg-gray-200/50 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0">
+                                                                                            <tool.icon className="h-3 w-3" />
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <div className="text-[12px] font-semibold text-gray-700">{tool.title}</div>
+                                                                                            <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
+                                                                                        </div>
                                                                                     </div>
-                                                                                    <div>
-                                                                                        <div className="text-[12px] font-semibold text-gray-700">{tool.title}</div>
-                                                                                        <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
+                                                                                );
+                                                                            })}
                                                                         </motion.div>
                                                                     )}
                                                                 </AnimatePresence>
@@ -924,6 +1114,16 @@ export const checkout: CheckoutProps = {
                                                     setShowSlashMenu(val.startsWith('/'));
                                                 }}
                                                 onKeyDown={(e) => {
+                                                    if (showSlashMenu && hasSearchResults && flatNavTools.length > 0) {
+                                                        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedToolIdx(p => (p + 1) % flatNavTools.length); return; }
+                                                        if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedToolIdx(p => (p - 1 + flatNavTools.length) % flatNavTools.length); return; }
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault();
+                                                            const tool = flatNavTools[selectedToolIdx];
+                                                            if (tool) { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }
+                                                            return;
+                                                        }
+                                                    }
                                                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
                                                     if (e.key === 'Escape') setShowSlashMenu(false);
                                                 }}
