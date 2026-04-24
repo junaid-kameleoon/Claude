@@ -672,10 +672,10 @@ export const checkout: CheckoutProps = {
 
             const searchQuery = input.startsWith('/') ? input.slice(1).toLowerCase() : '';
             const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(t =>
-                t.title.toLowerCase().startsWith(searchQuery) || t.title.toLowerCase().includes(searchQuery)
+                t.title.toLowerCase().startsWith(searchQuery)
             );
             const filteredAllTools = input === '/' ? [] : ALL_TOOLS.filter(t =>
-                t.title.toLowerCase().startsWith(searchQuery) || t.title.toLowerCase().includes(searchQuery)
+                t.title.toLowerCase().startsWith(searchQuery)
             );
             const hasSearchResults = input.startsWith('/') && (filteredMainTools.length > 0 || filteredAllTools.length > 0);
             const shouldAutoExpandAllTools = searchQuery.length > 0 && filteredAllTools.length > 0;
