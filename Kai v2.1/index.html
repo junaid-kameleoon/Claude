@@ -671,12 +671,16 @@ export const checkout: CheckoutProps = {
             };
 
             const searchQuery = input.startsWith('/') ? input.slice(1).toLowerCase() : '';
-            const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(t =>
-                t.title.toLowerCase().startsWith(searchQuery)
-            );
-            const filteredAllTools = input === '/' ? [] : ALL_TOOLS.filter(t =>
-                t.title.toLowerCase().startsWith(searchQuery)
-            );
+            const matchesTool = (t) => {
+                const title = t.title.toLowerCase();
+                if (title.startsWith(searchQuery)) return true;
+                if (searchQuery.length >= 3) {
+                    return title.split(/\s+/).some(word => word.startsWith(searchQuery));
+                }
+                return false;
+            };
+            const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(matchesTool);
+            const filteredAllTools = input === '/' ? [] : ALL_TOOLS.filter(matchesTool);
             const hasSearchResults = input.startsWith('/') && (filteredMainTools.length > 0 || filteredAllTools.length > 0);
             const shouldAutoExpandAllTools = searchQuery.length > 0 && filteredAllTools.length > 0;
 
