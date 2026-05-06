@@ -3,54 +3,162 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Workflow Builder</title>
+  <title>Kameleoon — Workflow Builder</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #root { width: 100%; height: 100%; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; }
-    .node { position: absolute; width: 100px; padding: 12px; background: white; border: 2px solid #333; border-radius: 8px; text-align: center; cursor: pointer; font-weight: bold; font-size: 13px; }
+    body { font-family: 'Roboto', sans-serif; background: #FCFCFD; color: #1B1B23; }
+    .canvas { background-image: radial-gradient(circle, #E1DFE7 0.5px, transparent 0.5px); background-size: 20px 20px; }
+    .node { position: absolute; width: 110px; padding: 12px; background: white; border: 2px solid transparent; border-radius: 12px; text-align: center; cursor: pointer; font-size: 12px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .node:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .node.selected { border-color: #3838E7; box-shadow: 0 4px 12px rgba(56, 56, 231, 0.2); }
+    .node-icon { font-size: 20px; margin-bottom: 4px; }
+    .node-label { font-weight: 600; margin-bottom: 2px; }
+    .node-type { font-size: 10px; color: #999; }
   </style>
 </head>
 <body>
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState } = React;
+const { useState, useRef } = React;
 
-function App() {
-  const [nodes] = useState([
-    { id: 1, label: 'Trigger', x: 50, y: 50 },
-    { id: 2, label: 'Agent', x: 250, y: 50 },
-    { id: 3, label: 'Action', x: 450, y: 50 }
+const NODE_TYPES = {
+  trigger: { label: 'Trigger', icon: '⚡', bgColor: '#EFF6FF', color: '#3B82F6' },
+  agent: { label: 'Agent', icon: '⚙️', bgColor: '#FAF5FF', color: '#A855F7' },
+  logic: { label: 'Logic', icon: '🔀', bgColor: '#FFFBF0', color: '#F59E0B' },
+  action: { label: 'Action', icon: '✓', bgColor: '#F0FDF4', color: '#10B981' },
+  wait: { label: 'Wait', icon: '⏱', bgColor: '#F9FAFB', color: '#6B7280' }
+};
+
+function WorkflowBuilder() {
+  const [nodes, setNodes] = useState([
+    { id: '1', type: 'trigger', label: 'Chat Trigger', x: 100, y: 100 },
+    { id: '2', type: 'agent', label: 'Generate Ideas', x: 350, y: 100 },
+    { id: '3', type: 'logic', label: 'Score Check', x: 600, y: 100 },
+    { id: '4', type: 'action', label: 'Publish', x: 850, y: 50 },
+    { id: '5', type: 'action', label: 'Archive', x: 850, y: 150 }
   ]);
 
-  return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <h1 style={{ padding: '20px' }}>Workflow Builder</h1>
-      
-      <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-        <line x1="150" y1="80" x2="250" y2="80" stroke="#999" strokeWidth="2" markerEnd="url(#arrowhead)" />
-        <line x1="350" y1="80" x2="450" y2="80" stroke="#999" strokeWidth="2" markerEnd="url(#arrowhead)" />
-        <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-            <polygon points="0 0, 10 3, 0 6" fill="#999" />
-          </marker>
-        </defs>
-      </svg>
+  const [edges, setEdges] = useState([
+    { from: '1', to: '2' },
+    { from: '2', to: '3' },
+    { from: '3', to: '4', label: 'Pass' },
+    { from: '3', to: '5', label: 'Fail' }
+  ]);
 
-      {nodes.map(node => (
-        <div key={node.id} className="node" style={{ left: node.x, top: node.y }}>
-          {node.label}
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [hoveredEdgeIdx, setHoveredEdgeIdx] = useState(null);
+  const svgRef = useRef(null);
+
+  const selectedNode = nodes.find(n => n.id === selectedNodeId);
+
+  const addNodeBetween = (fromId, toId) => {
+    const fromNode = nodes.find(n => n.id === fromId);
+    const toNode = nodes.find(n => n.id === toId);
+    const newId = String(Math.max(...nodes.map(n => parseInt(n.id)), 0) + 1);
+    const newNode = {
+      id: newId,
+      type: 'agent',
+      label: 'New Step',
+      x: (fromNode.x + toNode.x) / 2,
+      y: (fromNode.y + toNode.y) / 2 + 80
+    };
+
+    setNodes([...nodes, newNode]);
+    const newEdges = edges.filter(e => !(e.from === fromId && e.to === toId));
+    newEdges.push({ from: fromId, to: newId });
+    newEdges.push({ from: newId, to: toId });
+    setEdges(newEdges);
+    setSelectedNodeId(newId);
+  };
+
+  const updateNode = (id, updates) => {
+    setNodes(nodes.map(n => n.id === id ? { ...n, ...updates } : n));
+  };
+
+  return (
+    <div className="flex h-screen bg-white">
+      <div className="flex-1 canvas relative overflow-hidden">
+        <svg ref={svgRef} className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+              <polygon points="0 0, 10 3, 0 6" fill="#C7C5D0" />
+            </marker>
+          </defs>
+          {edges.map((edge, idx) => {
+            const from = nodes.find(n => n.id === edge.from);
+            const to = nodes.find(n => n.id === edge.to);
+            if (!from || !to) return null;
+
+            const x1 = from.x + 55, y1 = from.y + 50;
+            const x2 = to.x + 55, y2 = to.y + 50;
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+
+            return (
+              <g key={`edge-${idx}`}>
+                <path d={`M ${x1} ${y1} Q ${mx} ${y1 + (y2 - y1) / 2} ${x2} ${y2}`} stroke="#C7C5D0" strokeWidth="2" fill="none" markerEnd="url(#arrowhead)" />
+                <path d={`M ${x1} ${y1} Q ${mx} ${y1 + (y2 - y1) / 2} ${x2} ${y2}`} stroke="transparent" strokeWidth="14" fill="none" style={{ pointerEvents: 'auto', cursor: 'pointer' }} onMouseEnter={() => setHoveredEdgeIdx(idx)} onMouseLeave={() => setHoveredEdgeIdx(null)} />
+                {hoveredEdgeIdx === idx && (
+                  <g style={{ cursor: 'pointer' }} onClick={() => addNodeBetween(edge.from, edge.to)}>
+                    <circle cx={mx} cy={my} r="18" fill="white" stroke="#3838E7" strokeWidth="2" />
+                    <text x={mx} y={my} textAnchor="middle" dy="0.3em" fontSize="16" fontWeight="bold" fill="#3838E7">+</text>
+                  </g>
+                )}
+                {edge.label && <text x={mx} y={my - 12} textAnchor="middle" fontSize="11" fill="#666">{edge.label}</text>}
+              </g>
+            );
+          })}
+        </svg>
+
+        {nodes.map(node => {
+          const config = NODE_TYPES[node.type];
+          return (
+            <div key={node.id} className={`node ${selectedNodeId === node.id ? 'selected' : ''}`} style={{ left: node.x, top: node.y, backgroundColor: config.bgColor, borderColor: selectedNodeId === node.id ? '#3838E7' : 'transparent' }} onClick={() => setSelectedNodeId(node.id)}>
+              <div className="node-icon">{config.icon}</div>
+              <div className="node-label">{node.label}</div>
+              <div className="node-type">{config.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedNode && (
+        <div className="w-80 bg-white border-l border-gray-200 flex flex-col shadow-xl">
+          <div className="p-5 border-b border-gray-200">
+            <h2 className="font-semibold text-gray-900">{selectedNode.label}</h2>
+            <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{NODE_TYPES[selectedNode.type].label}</p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Label</label>
+              <input type="text" value={selectedNode.label} onChange={(e) => updateNode(selectedNode.id, { label: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+              <select value={selectedNode.type} onChange={(e) => updateNode(selectedNode.id, { type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {Object.entries(NODE_TYPES).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}
+              </select>
+            </div>
+          </div>
+          <div className="p-5 border-t border-gray-200 flex gap-2">
+            <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 text-sm">Save</button>
+            <button onClick={() => setSelectedNodeId(null)} className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 text-sm">Close</button>
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<WorkflowBuilder />);
 </script>
 </body>
 </html>
