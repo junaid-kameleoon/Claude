@@ -862,31 +862,46 @@ function WorkflowDetailView({ workflow, onNavigate }) {
   }
 
   function autoLayoutNodes() {
-    // Create a Dagre graph
+    // Create a Dagre graph with optimized settings
     const g = new dagre.graphlib.Graph({ rankdir: 'LR' });
-    g.setGraph({ rankdir: 'LR', marginx: 50, marginy: 50 });
+    g.setGraph({
+      rankdir: 'LR',
+      marginx: 80,
+      marginy: 80,
+      ranksep: 120,      // Vertical spacing between ranks
+      nodesep: 100,      // Horizontal spacing between nodes
+    });
     g.setDefaultEdgeLabel(() => ({}));
 
-    // Add nodes to graph
+    // Add nodes to graph with realistic dimensions
     nodes.forEach(node => {
-      g.setNode(node.id, { label: node.label, width: 220, height: 100 });
+      g.setNode(node.id, { width: 240, height: 120 });
     });
 
-    // Add edges to graph
-    const connections = [['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8'],['9','11'],['11','12'],['12','13']];
-    connections.forEach(([a, b]) => {
+    // Add main edges to graph
+    const mainConnections = [['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8'],['9','11'],['11','12'],['12','13']];
+    mainConnections.forEach(([a, b]) => {
       g.setEdge(a, b);
+    });
+
+    // Add branch edges so Dagre understands the flow structure
+    const branchConnections = [['3','4'],['8','9'],['8','10'],['12','13']];
+    branchConnections.forEach(([a, b]) => {
+      if (!mainConnections.some(([ma, mb]) => ma === a && mb === b)) {
+        g.setEdge(a, b);
+      }
     });
 
     // Calculate layout
     dagre.layout(g);
 
     // Update node positions from graph layout
+    const canvasWidth = 1200; // Approximate canvas width in pixels
     const layoutedNodes = nodes.map(node => {
       const graphNode = g.node(node.id);
       if (graphNode) {
-        // Normalize x (convert from pixels to percentage based on viewport)
-        const newX = Math.max(10, Math.min(90, (graphNode.x / 1000) * 100));
+        // Convert from Dagre pixel coordinates to percentage
+        const newX = Math.max(10, Math.min(90, (graphNode.x / canvasWidth) * 100));
         const newY = graphNode.y;
         return { ...node, x: newX, y: newY };
       }
@@ -1055,7 +1070,7 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               <line x1="50%" y1="268" x2="75%" y2="295" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3"/>
               <text x="64%" y="282" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No → End</text>
 
-              {/* (+) buttons on edges for node insertion */}
+              {/* (+) buttons on edges for node insertion - only visible on hover */}
               {[['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8'],['9','11'],['11','12'],['12','13']].map(([a,b]) => {
                 const na = nodes.find(n => n.id === a);
                 const nb = nodes.find(n => n.id === b);
@@ -1066,45 +1081,54 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                 const x2Pct = nb.x;
                 const y2 = nb.y + 10;
 
-                // Convert percentages to pixel values (assuming 100% = canvas width)
-                // For SVG positioning, we'll use relative positioning
                 const midXPct = (x1Pct + x2Pct) / 2;
                 const midY = (y1 + y2) / 2;
-
                 const edgeKey = `${a}-${b}`;
-                const isHovered = hoveredEdge === edgeKey;
 
                 return (
-                  <g key={`btn-${edgeKey}`}
+                  <g key={`edge-${edgeKey}`}
                      onMouseEnter={() => setHoveredEdge(edgeKey)}
                      onMouseLeave={() => setHoveredEdge(null)}
                      style={{ cursor: 'pointer' }}>
+                    {/* Invisible interactive zone */}
                     <circle
                       cx={`${midXPct}%`}
                       cy={midY}
-                      r={isHovered ? 18 : 14}
-                      fill="#3838E7"
-                      opacity={isHovered ? 1 : 0.8}
-                      style={{ transition: 'all 0.2s ease' }}
-                    />
-                    <text
-                      x={`${midXPct}%`}
-                      y={midY + 5}
-                      fontFamily="Roboto, sans-serif"
-                      fontSize="16"
-                      fontWeight="bold"
-                      fill="#fff"
-                      textAnchor="middle"
-                      pointerEvents="none"
-                      style={{ userSelect: 'none' }}>
-                      +
-                    </text>
-                    <circle
-                      cx={`${midXPct}%`}
-                      cy={midY}
-                      r={18}
+                      r={20}
                       fill="transparent"
                       style={{ cursor: 'pointer' }}
+                    />
+                    {/* Visible button - only appears on hover */}
+                    {hoveredEdge === edgeKey && (
+                      <g>
+                        <circle
+                          cx={`${midXPct}%`}
+                          cy={midY}
+                          r={18}
+                          fill="#3838E7"
+                          style={{ transition: 'all 0.15s ease' }}
+                        />
+                        <text
+                          x={`${midXPct}%`}
+                          y={midY + 6}
+                          fontFamily="Roboto, sans-serif"
+                          fontSize="18"
+                          fontWeight="bold"
+                          fill="#fff"
+                          textAnchor="middle"
+                          pointerEvents="none"
+                          style={{ userSelect: 'none' }}>
+                          +
+                        </text>
+                      </g>
+                    )}
+                    {/* Clickable area */}
+                    <circle
+                      cx={`${midXPct}%`}
+                      cy={midY}
+                      r={20}
+                      fill="transparent"
+                      style={{ cursor: hoveredEdge === edgeKey ? 'pointer' : 'default' }}
                       onClick={() => setInsertDialogEdge([a, b])}
                     />
                   </g>
