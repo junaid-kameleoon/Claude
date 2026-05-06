@@ -13,7 +13,11 @@
       "Bash(git branch *)",
       "Bash(git push *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://junaid-kameleoon.github.io/Claude/Kai%20v2.1/\")",
-      "mcp__3ef1dbd3-a854-47c9-ae85-e70746fad27d__slack_read_canvas"
+      "mcp__3ef1dbd3-a854-47c9-ae85-e70746fad27d__slack_read_canvas",
+      "mcp__3ef1dbd3-a854-47c9-ae85-e70746fad27d__slack_create_canvas",
+      "mcp__3ef1dbd3-a854-47c9-ae85-e70746fad27d__slack_send_message",
+      "mcp__3ef1dbd3-a854-47c9-ae85-e70746fad27d__slack_search_channels",
+      "mcp__3ef1dbd3-a854-47c9-ae85-e70746fad27d__slack_send_message_draft"
     ]
   }
 }
