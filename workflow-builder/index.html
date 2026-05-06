@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kameleoon — Workflow Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { primary: '#3838E7' },
+          fontFamily: {
+            sans: ['Roboto', 'sans-serif'],
+            display: ['Montserrat', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body, #root { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+    body { font-family: 'Roboto', sans-serif; background: #FCFCFD; color: #1B1B23; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #E1DFE7; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #C7C5D0; }
+    .canvas-grid {
+      background-image: radial-gradient(circle, #C7C5D0 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 0.9s linear infinite; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.22s ease forwards; }
+    @keyframes nodeFadeIn {
+      from { opacity: 0; transform: translateY(6px) translateX(-50%); }
+      to   { opacity: 1; transform: translateY(0)   translateX(-50%); }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── SVG PATH CONSTANTS ───────────────────────────────────────────────────────
+const P = {
+  kaiStar:   "M6.41797 1.16638C6.69008 1.16642 6.95372 1.26212 7.16309 1.43591C7.37253 1.60986 7.51447 1.85188 7.56445 2.11951L8.17773 5.35974C8.19951 5.47499 8.25593 5.58149 8.33887 5.66443C8.42169 5.74716 8.52757 5.80278 8.64258 5.82458L11.8828 6.43787C12.1503 6.48782 12.3925 6.63 12.5664 6.83923C12.7403 7.04856 12.8358 7.31226 12.8359 7.58435C12.8359 7.85661 12.7404 8.121 12.5664 8.33044C12.3925 8.53964 12.1512 8.68184 11.8838 8.73181L8.64258 9.34412C8.52752 9.36591 8.42171 9.42248 8.33887 9.50525C8.25593 9.58819 8.19951 9.69469 8.17773 9.80994L7.56445 13.0502C7.51443 13.3176 7.37238 13.5599 7.16309 13.7338C6.95374 13.9075 6.69 14.0033 6.41797 14.0033C6.1459 14.0032 5.88219 13.9075 5.67285 13.7338C5.46347 13.5598 5.32147 13.3178 5.27148 13.0502L4.6582 9.80994C4.63643 9.6947 4.57999 9.58818 4.49707 9.50525C4.41419 9.42249 4.30845 9.36587 4.19336 9.34412L0.952148 8.73181C0.684646 8.68177 0.442431 8.5398 0.268555 8.33044C0.0946898 8.12103 0 7.85654 0 7.58435C0.000107263 7.31234 0.094805 7.04853 0.268555 6.83923C0.420738 6.65599 0.625616 6.52485 0.853516 6.4613L4.19336 5.82458C4.30842 5.80282 4.41421 5.74717 4.49707 5.66443C4.58001 5.58149 4.63643 5.47499 4.6582 5.35974L5.27148 2.11951L5.29395 2.0199C5.35749 1.79204 5.48965 1.58808 5.67285 1.43591C5.88221 1.2621 6.14587 1.16644 6.41797 1.16638Z",
+  kaiDot:    "M11.9584 0C12.0671 0 12.1725 0.038 12.2562 0.107C12.3399 0.177 12.3973 0.274 12.4174 0.381L12.601 1.353C12.6031 1.364 12.6085 1.375 12.6166 1.383C12.6248 1.391 12.6355 1.397 12.6469 1.399L13.6195 1.583C13.6989 1.598 13.7737 1.634 13.8353 1.687L13.892 1.744L13.9388 1.811C13.9788 1.881 14.0004 1.96 14.0004 2.042C14.0003 2.151 13.9614 2.256 13.892 2.34C13.8224 2.423 13.7254 2.48 13.6185 2.5L12.6469 2.685C12.6355 2.687 12.6247 2.692 12.6166 2.7C12.6084 2.708 12.6031 2.719 12.601 2.73L12.4174 3.703C12.3973 3.81 12.3398 3.906 12.2562 3.976C12.1725 4.045 12.0672 4.083 11.9584 4.083C11.8495 4.083 11.7443 4.045 11.6605 3.976C11.5769 3.906 11.5195 3.81 11.4994 3.703L11.3158 2.73C11.3136 2.719 11.3083 2.708 11.3002 2.7C11.292 2.692 11.2812 2.687 11.2699 2.685L10.2972 2.5L10.2191 2.478C10.1439 2.449 10.0768 2.402 10.0248 2.34C9.95534 2.256 9.91646 2.151 9.91638 2.042C9.91638 1.933 9.9553 1.828 10.0248 1.744L10.0814 1.687C10.1429 1.634 10.2171 1.598 10.2972 1.583L11.2699 1.399C11.2813 1.397 11.292 1.391 11.3002 1.383C11.3082 1.375 11.3136 1.364 11.3158 1.353L11.4994 0.381C11.5195 0.274 11.5769 0.177 11.6605 0.107L11.7269 0.062C11.797 0.022 11.8768 0 11.9584 0Z",
+  kaiCircle: "M1.16667 13.9997C1.811 13.9997 2.33333 13.4774 2.33333 12.833C2.33333 12.1887 1.811 11.6664 1.16667 11.6664C0.522334 11.6664 0 12.1887 0 12.833C0 13.4774 0.522334 13.9997 1.16667 13.9997Z",
+  newChat:   "M5.24977 8.24977H11.2498M8.24977 5.24977V11.2498M1.49377 11.5063C1.60405 11.7845 1.6286 12.0893 1.56427 12.3815L0.765519 14.849C0.739782 14.9742 0.746437 15.1038 0.784851 15.2256C0.823265 15.3475 0.892166 15.4575 0.985019 15.5452C1.07787 15.633 1.1916 15.6955 1.31542 15.727C1.43924 15.7585 1.56904 15.7578 1.69252 15.725L4.25227 14.9765C4.52806 14.9218 4.81367 14.9457 5.07652 15.0455C6.67806 15.7934 8.49229 15.9517 10.1991 15.4923C11.906 15.0329 13.3957 13.9855 14.4055 12.5348C15.4154 11.0841 15.8804 9.32333 15.7185 7.56318C15.5566 5.80304 14.7783 4.15662 13.5208 2.91442C12.2633 1.67221 10.6075 0.91405 8.84556 0.773694C7.08357 0.633337 5.32862 1.11981 3.89035 2.14728C2.45208 3.17474 1.42292 4.67718 0.984439 6.3895C0.545961 8.10182 0.726346 9.91399 1.49377 11.5063Z",
+  gear1:     "M7.67819 0.75H7.34819C6.95036 0.75 6.56883 0.908035 6.28753 1.18934C6.00622 1.47064 5.84819 1.85218 5.84819 2.25V2.385C5.84792 2.64804 5.77848 2.90639 5.64684 3.13413C5.5152 3.36186 5.32599 3.55098 5.09819 3.6825L4.77569 3.87C4.54766 4.00165 4.28899 4.07096 4.02569 4.07096C3.76238 4.07096 3.50372 4.00165 3.27569 3.87L3.16319 3.81C2.81899 3.61145 2.41006 3.55758 2.02619 3.66023C1.64231 3.76288 1.31485 4.01365 1.11569 4.3575L0.950687 4.6425C0.752134 4.9867 0.69827 5.39562 0.800918 5.7795C0.903566 6.16338 1.15434 6.49084 1.49819 6.69L1.61069 6.765C1.83739 6.89588 2.0259 7.08382 2.15747 7.31012C2.28905 7.53643 2.35911 7.79323 2.36069 8.055V8.4375C2.36174 8.70182 2.29292 8.96171 2.16122 9.19088C2.02951 9.42005 1.83959 9.61034 1.61069 9.7425L1.49819 9.81C1.15434 10.0092 0.903566 10.3366 0.800918 10.7205C0.69827 11.1044 0.752134 11.5133 0.950687 11.8575L1.11569 12.1425C1.31485 12.4863 1.64231 12.7371 2.02619 12.8398C2.41006 12.9424 2.81899 12.8886 3.16319 12.69L3.27569 12.63C3.50372 12.4983 3.76238 12.429 4.02569 12.429C4.28899 12.429 4.54766 12.4983 4.77569 12.63L5.09819 12.8175C5.32599 12.949 5.5152 13.1381 5.64684 13.3659C5.77848 13.5936 5.84792 13.852 5.84819 14.115V14.25C5.84819 14.6478 6.00622 15.0294 6.28753 15.3107C6.56883 15.592 6.95036 15.75 7.34819 15.75H7.67819C8.07601 15.75 8.45754 15.592 8.73885 15.3107C9.02015 15.0294 9.17819 14.6478 9.17819 14.25V14.115C9.17846 13.852 9.24789 13.5936 9.37953 13.3659C9.51117 13.1381 9.70038 12.949 9.92819 12.8175L10.2507 12.63C10.4787 12.4983 10.7374 12.429 11.0007 12.429C11.264 12.429 11.5227 12.4983 11.7507 12.63L11.8632 12.69C12.2074 12.8886 12.6163 12.9424 13.0002 12.8398C13.3841 12.7371 13.7115 12.4863 13.9107 12.1425L14.0757 11.85C14.2742 11.5058 14.3281 11.0969 14.2255 10.713C14.1228 10.3291 13.872 10.0017 13.5282 9.8025L13.4157 9.7425C13.1868 9.61034 12.9969 9.42005 12.8652 9.19088C12.7334 8.96171 12.6646 8.70182 12.6657 8.4375V8.0625C12.6646 7.79819 12.7334 7.53829 12.8652 7.30912C12.9969 7.07995 13.1868 6.88966 13.4157 6.7575L13.5282 6.69C13.872 6.49084 14.1228 6.16338 14.2255 5.7795C14.3281 5.39562 14.2742 4.9867 14.0757 4.6425L13.9107 4.3575C13.7115 4.01365 13.3841 3.76288 13.0002 3.66023C12.6163 3.55758 12.2074 3.61145 11.8632 3.81L11.7507 3.87C11.5227 4.00165 11.264 4.07096 11.0007 4.07096C10.7374 4.07096 10.4787 4.00165 10.2507 3.87L9.92819 3.6825C9.70038 3.55098 9.51117 3.36186 9.37953 3.13413C9.24789 2.90639 9.17846 2.64804 9.17819 2.385V2.25C9.17819 1.85218 9.02015 1.47064 8.73885 1.18934C8.45754 0.908035 8.07601 0.75 7.67819 0.75Z",
+  gear2:     "M7.51319 10.5C8.75583 10.5 9.76319 9.49264 9.76319 8.25C9.76319 7.00736 8.75583 6 7.51319 6C6.27054 6 5.26319 7.00736 5.26319 8.25C5.26319 9.49264 6.27054 10.5 7.51319 10.5Z",
+  backArrow: "M5.25 9.75L0.75 5.25L5.25 0.75",
+  collapse:  "M5.25 0.75V14.25M10.5 9.75L8.25 7.5L10.5 5.25M2.25 0.75H12.75C13.5784 0.75 14.25 1.42157 14.25 2.25V12.75C14.25 13.5784 13.5784 14.25 12.75 14.25H2.25C1.42157 14.25 0.75 13.5784 0.75 12.75V2.25C0.75 1.42157 1.42157 0.75 2.25 0.75Z",
+  sun:       "M7.41667 0.75V2.08333M7.41667 12.75V14.0833M2.70337 2.70329L3.64337 3.64329M11.1899 11.1899L12.1299 12.1299M0.75 7.41667H2.08333M12.75 7.41667H14.0833M3.64337 11.1899L2.70337 12.1299M12.1299 2.70329L11.1899 3.64329M10.0833 7.41667C10.0833 8.88943 8.88943 10.0833 7.41667 10.0833C5.94391 10.0833 4.75 8.88943 4.75 7.41667C4.75 5.94391 5.94391 4.75 7.41667 4.75C8.88943 4.75 10.0833 5.94391 10.0833 7.41667Z",
+  bell:      "M5.59481 13.4167C5.71184 13.6193 5.88015 13.7876 6.08284 13.9047C6.28552 14.0217 6.51544 14.0833 6.74948 14.0833C6.98351 14.0833 7.21343 14.0217 7.41611 13.9047C7.6188 13.7876 7.78711 13.6193 7.90414 13.4167M0.92418 9.634C0.83709 9.72946 0.779616 9.84816 0.75875 9.97568C0.737885 10.1032 0.754526 10.234 0.806651 10.3523C0.858776 10.4705 0.944137 10.571 1.05235 10.6417C1.16056 10.7123 1.28697 10.7499 1.41618 10.75H12.0828C12.212 10.75 12.3385 10.7125 12.4468 10.6421C12.555 10.5716 12.6405 10.4712 12.6928 10.353C12.745 10.2349 12.7618 10.1041 12.7411 9.97653C12.7204 9.849 12.6631 9.73023 12.5762 9.63467C11.6895 8.72067 10.7495 7.74933 10.7495 4.75C10.7495 3.68913 10.3281 2.67172 9.57794 1.92157C8.8278 1.17143 7.81038 0.75 6.74951 0.75C5.68865 0.75 4.67123 1.17143 3.92109 1.92157C3.17094 2.67172 2.74951 3.68913 2.74951 4.75C2.74951 7.74933 1.80885 8.72067 0.92418 9.634Z",
+  chevronUp: "M0.75 4.75L4.75 0.75L8.75 4.75",
+  chevronDn: "M8.75 0.75L4.75 4.75L0.75 0.75",
+  pin:       "M5.41667 10.75V14.0833M3.41667 6.59C3.41653 6.83806 3.34721 7.08116 3.21648 7.29197C3.08575 7.50278 2.89881 7.67295 2.67667 7.78333L1.49 8.38333C1.26786 8.49372 1.08091 8.66388 0.950186 8.8747C0.819459 9.08551 0.750132 9.32861 0.75 9.57667V10.0833C0.75 10.2601 0.820238 10.4297 0.945262 10.5547C1.07029 10.6798 1.23986 10.75 1.41667 10.75H9.41667C9.59348 10.75 9.76305 10.6798 9.88807 10.5547C10.0131 10.4297 10.0833 10.2601 10.0833 10.0833V9.57667C10.0832 9.32861 10.0139 9.08551 9.88315 8.8747C9.75242 8.66388 9.56547 8.49372 9.34333 8.38333L8.15667 7.78333C7.93452 7.67295 7.74758 7.50278 7.61685 7.29197C7.48613 7.08116 7.4168 6.83806 7.41667 6.59V4.08333C7.41667 3.90652 7.4869 3.73695 7.61193 3.61193C7.73695 3.4869 7.90652 3.41667 8.08333 3.41667C8.43696 3.41667 8.77609 3.27619 9.02614 3.02614C9.27619 2.77609 9.41667 2.43696 9.41667 2.08333C9.41667 1.72971 9.27619 1.39057 9.02614 1.14052C8.77609 0.890476 8.43696 0.75 8.08333 0.75H2.75C2.39638 0.75 2.05724 0.890476 1.80719 1.14052C1.55714 1.39057 1.41667 1.72971 1.41667 2.08333C1.41667 2.43696 1.55714 2.77609 1.80719 3.02614C2.05724 3.27619 2.39638 3.41667 2.75 3.41667C2.92681 3.41667 3.09638 3.4869 3.2214 3.61193C3.34643 3.73695 3.41667 3.90652 3.41667 4.08333V6.59Z",
+  logoRect:  "M0 8C0 3.58172 3.58172 0 8 0H28C32.4183 0 36 3.58172 36 8V28C36 32.4183 32.4183 36 28 36H8C3.58172 36 0 32.4183 0 28V8Z",
+  logoK:     "M26.2266 6.72461C26.7238 6.72465 27.1889 6.85665 27.5918 7.08496C27.5983 7.0886 27.6049 7.09199 27.6113 7.0957C27.6468 7.1162 27.6814 7.13817 27.7158 7.16016C27.7615 7.18932 27.8058 7.22023 27.8496 7.25195C27.8787 7.27298 27.9074 7.2943 27.9355 7.31641C27.968 7.34187 28 7.36767 28.0312 7.39453C28.0564 7.41618 28.0811 7.4384 28.1055 7.46094C28.1591 7.51053 28.2102 7.56254 28.2598 7.61621C28.2824 7.64076 28.3054 7.66506 28.3271 7.69043C28.3513 7.71852 28.3745 7.74731 28.3975 7.77637C28.4213 7.80643 28.4442 7.83709 28.4668 7.86816C28.5084 7.9255 28.5477 7.98436 28.585 8.04492C28.5982 8.06645 28.6123 8.08745 28.625 8.10938C28.6279 8.11434 28.63 8.12001 28.6328 8.125C28.8626 8.52883 28.996 8.99516 28.9961 9.49414V13.1875C28.9961 13.6888 28.8616 14.1574 28.6299 14.5625C28.6281 14.5657 28.6268 14.5691 28.625 14.5723C28.6125 14.5939 28.598 14.6145 28.585 14.6357C28.5507 14.6916 28.5156 14.7467 28.4775 14.7998C28.4514 14.8363 28.4243 14.8721 28.3965 14.9072C28.3739 14.9357 28.3508 14.9637 28.3271 14.9912C28.3054 15.0166 28.2824 15.0409 28.2598 15.0654C28.2038 15.1261 28.1452 15.1838 28.084 15.2393C28.0698 15.2521 28.0564 15.2658 28.042 15.2783C28.0067 15.309 27.9704 15.3383 27.9336 15.3672C27.9103 15.3854 27.8862 15.4024 27.8623 15.4199C27.8039 15.4627 27.7444 15.5038 27.6826 15.542C27.6588 15.5567 27.6356 15.5729 27.6113 15.5869C27.605 15.5905 27.5981 15.5931 27.5918 15.5967C27.1889 15.8251 26.7239 15.958 26.2266 15.958H24.3799C19.7911 15.958 16.0703 19.6787 16.0703 24.2676V26.1143C16.0703 26.6116 15.9374 27.0766 15.709 27.4795C15.7054 27.4858 15.7029 27.4927 15.6992 27.499C15.6852 27.5234 15.6691 27.5465 15.6543 27.5703C15.6161 27.6321 15.5751 27.6916 15.5322 27.75C15.5142 27.7746 15.4964 27.7993 15.4775 27.8232C15.4521 27.8557 15.4263 27.8877 15.3994 27.9189C15.3778 27.9441 15.3556 27.9688 15.333 27.9932C15.2834 28.0468 15.2314 28.0979 15.1777 28.1475C15.1532 28.1701 15.1289 28.1931 15.1035 28.2148C15.076 28.2385 15.048 28.2616 15.0195 28.2842C14.9844 28.312 14.9486 28.3391 14.9121 28.3652C14.8663 28.398 14.8193 28.429 14.7715 28.459C14.7429 28.4769 14.7148 28.4958 14.6855 28.5127C14.68 28.5159 14.6736 28.5183 14.668 28.5215C14.2644 28.7508 13.7983 28.8838 13.2998 28.8838H9.60645C9.10716 28.8837 8.64033 28.7506 8.23633 28.5205C8.23164 28.5179 8.22634 28.5154 8.22168 28.5127C8.19976 28.5 8.17876 28.4859 8.15723 28.4727C8.09667 28.4354 8.03781 28.3961 7.98047 28.3545C7.9494 28.3319 7.91873 28.309 7.88867 28.2852C7.85961 28.2621 7.83083 28.239 7.80273 28.2148C7.77737 28.1931 7.75306 28.1701 7.72852 28.1475C7.67485 28.0979 7.62284 28.0468 7.57324 27.9932C7.55071 27.9688 7.52849 27.9441 7.50684 27.9189C7.47997 27.8877 7.45418 27.8557 7.42871 27.8232C7.4099 27.7993 7.39205 27.7746 7.37402 27.75C7.33122 27.6916 7.29016 27.6321 7.25195 27.5703C7.2373 27.5466 7.22196 27.5232 7.20801 27.499C7.20429 27.4926 7.20091 27.486 7.19727 27.4795C6.96896 27.0766 6.83695 26.6115 6.83691 26.1143V22.4209C6.83691 21.9234 6.96874 21.4577 7.19727 21.0547C7.20077 21.0485 7.20444 21.0423 7.20801 21.0361C7.22206 21.0118 7.23719 20.9877 7.25195 20.9639C7.29227 20.8987 7.33543 20.8358 7.38086 20.7744C7.39512 20.7551 7.40909 20.7357 7.42383 20.7168C7.45064 20.6825 7.47748 20.6482 7.50586 20.6152C7.5329 20.5838 7.56143 20.5536 7.58984 20.5234C7.63469 20.4758 7.68139 20.4301 7.72949 20.3857C7.75065 20.3662 7.7712 20.346 7.79297 20.3271C7.8274 20.2973 7.86254 20.2684 7.89844 20.2402C7.92169 20.222 7.94587 20.205 7.96973 20.1875C8.0403 20.1357 8.11301 20.087 8.18848 20.042C8.1995 20.0354 8.21055 20.0289 8.22168 20.0225L8.28516 19.9844C8.67756 19.7715 9.12764 19.6514 9.60645 19.6514H11.4541C16.0427 19.6511 19.7637 15.9295 19.7637 11.3408V9.49414C19.7638 8.88058 19.9636 8.31583 20.2998 7.85742C20.3173 7.83357 20.3343 7.80939 20.3525 7.78613C20.3807 7.75024 20.4096 7.7151 20.4395 7.68066C20.4583 7.65889 20.4785 7.63835 20.498 7.61719C20.5424 7.56908 20.5881 7.52239 20.6357 7.47754C20.6659 7.44913 20.6961 7.4206 20.7275 7.39355C20.7605 7.36518 20.7948 7.33834 20.8291 7.31152C20.8518 7.29378 20.8751 7.27681 20.8984 7.25977C20.9456 7.22521 20.9935 7.19172 21.043 7.16016C21.0776 7.13806 21.1128 7.1163 21.1484 7.0957C21.1546 7.09213 21.1608 7.08846 21.167 7.08496C21.57 6.85644 22.0357 6.72461 22.5332 6.72461H26.2266Z",
+  logoSq1:   "M24.3799 19.6514C26.1057 19.6514 26.9686 19.6514 27.6113 20.0225C28.0323 20.2656 28.3819 20.6151 28.625 21.0361C28.996 21.6789 28.9961 22.5418 28.9961 24.2676C28.9961 25.9934 28.9961 26.8563 28.625 27.499C28.3819 27.92 28.0323 28.2696 27.6113 28.5127C26.9686 28.8838 26.1057 28.8838 24.3799 28.8838C22.6541 28.8838 21.7912 28.8837 21.1484 28.5127C20.7274 28.2696 20.3779 27.92 20.1348 27.499C19.7637 26.8563 19.7637 25.9934 19.7637 24.2676C19.7637 22.5417 19.7637 21.6789 20.1348 21.0361C20.3779 20.6151 20.7274 20.2656 21.1484 20.0225C21.7912 19.6514 22.654 19.6514 24.3799 19.6514Z",
+  logoSq2:   "M11.4541 6.72461C13.1797 6.72461 14.0428 6.72464 14.6855 7.0957C15.1065 7.33879 15.4562 7.68841 15.6992 8.10938C16.0703 8.7521 16.0703 9.61516 16.0703 11.3408C16.0703 13.0663 16.0701 13.9295 15.6992 14.5723C15.4561 14.9933 15.1066 15.3438 14.6855 15.5869C14.0428 15.958 13.1797 15.958 11.4541 15.958C9.72823 15.958 8.86444 15.958 8.22168 15.5869C7.80067 15.3438 7.45109 14.9933 7.20801 14.5723C6.83716 13.9295 6.83691 13.0663 6.83691 11.3408C6.83691 9.61516 6.83693 8.7521 7.20801 8.10938C7.45106 7.68842 7.80075 7.3388 8.22168 7.0957C8.86444 6.7246 9.72823 6.72461 11.4541 6.72461Z",
+};
+
+// ─── WORKFLOW DATA ──────────────────────────────────────────────────────────
+const WORKFLOWS = [
+  { id: '1', name: 'Test & Deploy Automation', status: 'live', description: 'A/B test workflow with traffic ramp-up and automatic deployment on conversion winner.', updatedAt: '2 days ago', trigger: 'url' },
+  { id: '2', name: 'Traffic Ramp-Up Strategy', status: 'draft', description: 'Gradually ramp traffic to new variants with safeguard metrics and rollback conditions.', updatedAt: '5 days ago', trigger: 'schedule' },
+  { id: '3', name: 'Mobile Checkout Optimization', status: 'live', description: 'Optimize checkout funnel for mobile users with personalization rules and targeting.', updatedAt: '1 week ago', trigger: 'url' },
+  { id: '4', name: 'Segment-Based Personalization', status: 'archived', description: 'Personalize content based on user segments and behavioral data signals.', updatedAt: '3 months ago', trigger: 'webhook' },
+  { id: '5', name: 'API Feature Flag Rollout', status: 'draft', description: 'Progressive rollout of API feature flags with error rate monitoring and auto-rollback.', updatedAt: 'Yesterday', trigger: 'api' },
+  { id: '6', name: 'Homepage Hero Test', status: 'live', description: 'Multivariate test on hero banner copy, image, and CTA button color.', updatedAt: '3 days ago', trigger: 'url' },
+];
+
+const WORKFLOW_NODES = [
+  { id: '1', type: 'trigger',   label: 'URL Trigger',              desc: 'This URL',                  color: '#DCE8FF', x: 50, y: 20  },
+  { id: '2', type: 'agent',     label: 'Propose Test Ideas',        desc: 'Generate test variations',  color: '#E8DCF8', x: 50, y: 110 },
+  { id: '3', type: 'condition', label: 'Score > 8/10?',             desc: 'Filter by quality score',   color: '#FFF3DC', x: 50, y: 200, branches: true },
+  { id: '4', type: 'agent',     label: 'Build Variations',          desc: 'Create test variations',    color: '#E8DCF8', x: 50, y: 300 },
+  { id: '5', type: 'action',    label: 'Schedule Publish',           desc: 'Publish on June 1st',       color: '#DCF8DC', x: 50, y: 390 },
+  { id: '6', type: 'action',    label: 'Set Traffic 25%',           desc: 'Initial traffic allocation', color: '#DCF8DC', x: 50, y: 480 },
+  { id: '7', type: 'wait',      label: 'Wait 1 Week',               desc: 'Monitor period',            color: '#F0F0F5', x: 50, y: 570 },
+  { id: '8', type: 'condition', label: 'Conversion Rate > Original?', desc: 'Performance check',       color: '#FFF3DC', x: 50, y: 660, branches: true },
+  { id: '9', type: 'action',    label: 'Set Traffic 50%',           desc: 'Increase allocation',       color: '#DCF8DC', x: 73, y: 760 },
+  { id: '10', type: 'action',   label: 'Keep Original',             desc: 'Revert to original',        color: '#DCF8DC', x: 27, y: 760 },
+  { id: '11', type: 'wait',     label: 'Wait 1 Month',              desc: 'Extended monitoring',       color: '#F0F0F5', x: 73, y: 860 },
+  { id: '12', type: 'condition', label: 'Still Converting Higher?', desc: 'Final check',               color: '#FFF3DC', x: 73, y: 960, branches: true },
+  { id: '13', type: 'action',   label: 'Ship at 100%',              desc: 'Full deployment',           color: '#DCF8DC', x: 73, y: 1060 },
+];
+
+// ─── SHARED COMPONENTS ───────────────────────────────────────────────────────
+function KaiIcon({ size = 14 }) {
+  const id = `kai_${Math.random().toString(36).slice(2,7)}`;
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <defs>
+        <linearGradient id={`g1_${id}`} x1="3.208" x2="11.376" y1="3.5" y2="12.833" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#4142EF"/><stop offset="1" stopColor="#53FDC3"/>
+        </linearGradient>
+        <linearGradient id={`g2_${id}`} x1="10.5" x2="12.833" y1="0.292" y2="3.792" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#53FDC3"/><stop offset="1" stopColor="#4142EF"/>
+        </linearGradient>
+        <linearGradient id={`g3_${id}`} x1="1.167" x2="1.167" y1="11.666" y2="14.583" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#4142EF"/><stop offset="1" stopColor="#53FDC3"/>
+        </linearGradient>
+      </defs>
+      <path d={P.kaiStar}   fill={`url(#g1_${id})`}/>
+      <path d={P.kaiDot}    fill={`url(#g2_${id})`}/>
+      <path d={P.kaiCircle} fill={`url(#g3_${id})`}/>
+    </svg>
+  );
+}
+
+function KameleoonSquareLogo({ size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" style={{ borderRadius: 8, overflow: 'hidden' }}>
+      <path d={P.logoRect} fill="#DAE995"/>
+      <path d={P.logoK}    fill="#1D342F"/>
+      <path d={P.logoSq1}  fill="#1D342F"/>
+      <path d={P.logoSq2}  fill="#1D342F"/>
+    </svg>
+  );
+}
+
+function SvgIcon({ d, size = 18, stroke = '#5E5D67', vw, vh }) {
+  const viewBox = vw && vh ? `0 0 ${vw} ${vh}` : `0 0 ${size} ${size}`;
+  return (
+    <svg width={size} height={size} viewBox={viewBox} fill="none">
+      <path d={d} stroke={stroke} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"/>
+    </svg>
+  );
+}
+
+// Workflow icon (flows/branches)
+function WorkflowIcon({ color = '#5E5D67', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path d="M3 2.25C3 1.42157 3.67157 0.75 4.5 0.75C5.32843 0.75 6 1.42157 6 2.25C6 3.07843 5.32843 3.75 4.5 3.75C3.67157 3.75 3 3.07843 3 2.25Z" stroke={color} strokeWidth="1.5"/>
+      <path d="M12 15.75C12 14.9216 12.6716 14.25 13.5 14.25C14.3284 14.25 15 14.9216 15 15.75C15 16.5784 14.3284 17.25 13.5 17.25C12.6716 17.25 12 16.5784 12 15.75Z" stroke={color} strokeWidth="1.5"/>
+      <path d="M3 15.75C3 14.9216 3.67157 14.25 4.5 14.25C5.32843 14.25 6 14.9216 6 15.75C6 16.5784 5.32843 17.25 4.5 17.25C3.67157 17.25 3 16.5784 3 15.75Z" stroke={color} strokeWidth="1.5"/>
+      <path d="M4.5 3.75V9M4.5 9V14.25M4.5 9H13.5V14.25" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+// ─── HEADER ──────────────────────────────────────────────────────────────────
+function Header() {
+  return (
+    <div style={{ height: 60, background: '#fff', borderBottom: '1px solid #E1DFE7', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 0 20px', flexShrink: 0 }}>
+      {/* Left: logo + Kai badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Kameleoon text logo — simple text render */}
+        <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 16, color: '#1B1B23', letterSpacing: '-0.3px' }}>Kameleoon</span>
+        {/* Kai badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 20, padding: '5px 10px' }}>
+          <KaiIcon size={14}/>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#3838E7', letterSpacing: '0.2px' }}>Kai</span>
+        </div>
+      </div>
+      {/* Right: actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <button style={{ padding: 8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}
+          onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+          onMouseOut={e => e.currentTarget.style.background = 'none'}>
+          <SvgIcon d={P.sun} size={16} vw={14.83} vh={14.83}/>
+        </button>
+        <button style={{ padding: 8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}
+          onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+          onMouseOut={e => e.currentTarget.style.background = 'none'}>
+          <SvgIcon d={P.bell} size={16} vw={13.5} vh={14.83}/>
+        </button>
+        <div style={{ width: 35, height: 35, borderRadius: 20, background: '#FFE299', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 4, border: '1px solid #E1DFE7' }}>
+          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 12, color: '#0A0A0A', letterSpacing: 1 }}>PT</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+function Sidebar({ screen, onNavigate }) {
+  const [pinnedOpen, setPinnedOpen] = useState(true);
+  const [recentOpen, setRecentOpen] = useState(true);
+
+  const isWorkflows = screen === 'dashboard' || screen === 'new-workflow' || screen === 'workflow-detail';
+
+  const NavItem = ({ icon, label, active, onClick }) => (
+    <button onClick={onClick}
+      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 8px', borderRadius: 6, background: active ? '#F5F5FF' : 'none', border: 'none', cursor: 'pointer', transition: 'background .12s' }}
+      onMouseOver={e => { if (!active) e.currentTarget.style.background = '#F9F9FB'; }}
+      onMouseOut={e => { if (!active) e.currentTarget.style.background = 'none'; }}>
+      <span style={{ color: active ? '#3838E7' : '#5E5D67', display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: active ? '#3838E7' : '#1B1B23', letterSpacing: '0.25px', whiteSpace: 'nowrap' }}>{label}</span>
+    </button>
+  );
+
+  return (
+    <div style={{ width: 270, background: '#fff', borderRight: '1px solid #E1DFE7', display: 'flex', flexDirection: 'column', flexShrink: 0, height: '100%' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 0' }}>
+        {/* Main actions */}
+        <NavItem icon={<SvgIcon d={P.newChat} size={18} vw={16.5} vh={16.5}/>} label="New chat" active={screen === 'home'} onClick={() => onNavigate('home')}/>
+        <NavItem icon={<svg width="18" height="18" viewBox="0 0 16 16.5" fill="none"><path d={P.gear1} stroke={screen !== 'home' && !isWorkflows ? '#3838E7' : '#5E5D67'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d={P.gear2} stroke={screen !== 'home' && !isWorkflows ? '#3838E7' : '#5E5D67'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>} label="AI Settings" active={false} onClick={() => {}}/>
+
+        {/* Separator */}
+        <div style={{ borderBottom: '1px dashed #E1DFE7', margin: '4px 0 8px' }}/>
+
+        {/* Workflows — new item */}
+        <NavItem icon={<WorkflowIcon color={isWorkflows ? '#3838E7' : '#5E5D67'}/>} label="Workflows" active={isWorkflows} onClick={() => onNavigate('dashboard')}/>
+
+        {/* Separator */}
+        <div style={{ borderBottom: '1px dashed #E1DFE7', margin: '8px 0' }}/>
+
+        {/* Pinned */}
+        <div style={{ padding: '0 4px 8px' }}>
+          <button onClick={() => setPinnedOpen(!pinnedOpen)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 4 }}>
+            <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#918F9A', letterSpacing: '0.25px' }}>Pinned</span>
+            <svg width="9" height="6" viewBox="0 0 9.5 5.5" fill="none" style={{ transform: pinnedOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+              <path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          {pinnedOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {['how can I update my setting', 'I want to know the segment builde...'].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 4px', borderRadius: 4, cursor: 'pointer' }}
+                  onMouseOver={e => e.currentTarget.style.background = '#FCFCFD'}
+                  onMouseOut={e => e.currentTarget.style.background = 'none'}>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item}</span>
+                  <SvgIcon d={P.pin} size={14} vw={10.83} vh={14.83}/>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent */}
+        <div style={{ padding: '0 4px', borderTop: '1px solid #E1DFE7', paddingTop: 12 }}>
+          <button onClick={() => setRecentOpen(!recentOpen)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 4 }}>
+            <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#918F9A', letterSpacing: '0.25px' }}>Recent</span>
+            <svg width="9" height="6" viewBox="0 0 9.5 5.5" fill="none" style={{ transform: recentOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+              <path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          {recentOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {['I cannot upload my Figma file', 'Personalization is not working for....', 'Personalization is not working for....', 'Segment builder configuration issue', 'Feature flag not triggering on edge...'].map((item, i) => (
+                <div key={i} style={{ padding: '5px 4px', borderRadius: 4, cursor: 'pointer' }}
+                  onMouseOver={e => e.currentTarget.style.background = '#FCFCFD'}
+                  onMouseOut={e => e.currentTarget.style.background = 'none'}>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom */}
+      <div style={{ borderTop: '1px solid #E1DFE7', flexShrink: 0 }}>
+        <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '14px 12px', background: 'none', border: 'none', cursor: 'pointer', transition: 'background .12s' }}
+          onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+          onMouseOut={e => e.currentTarget.style.background = 'none'}>
+          <SvgIcon d={P.backArrow} size={18} vw={6} vh={10.5}/>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>Back to app</span>
+        </button>
+        <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '14px 12px', background: 'none', border: 'none', borderTop: '1px solid #E1DFE7', cursor: 'pointer', transition: 'background .12s' }}
+          onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+          onMouseOut={e => e.currentTarget.style.background = 'none'}>
+          <SvgIcon d={P.collapse} size={18} vw={15} vh={15}/>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>Collapse</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN 1: HOME ──────────────────────────────────────────────────────────
+function HomeScreen({ onNavigate }) {
+  const [input, setInput] = useState('');
+  const suggestions = ['Create a segment for returning users', 'Target mobile users only', 'Trigger on 50% scroll', 'Build a Workflows automation'];
+
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflowY: 'auto', background: '#FCFCFD' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 48, alignItems: 'center', width: '100%', maxWidth: 760 }}>
+        {/* Center heading */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <KameleoonSquareLogo size={36}/>
+          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 18, color: '#1B1B23', letterSpacing: '0.15px' }}>What are we optimizing?</span>
+        </div>
+
+        {/* Chat input */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* / agent badge + credits */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 4, padding: '2px 8px', display: 'inline-flex' }}>
+              <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 12, color: '#52515B' }}>/ agent</span>
+            </div>
+            <div style={{ background: '#F5F5FF', borderRadius: 5, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="16" height="16" viewBox="0 0 14.83 14.83" fill="none"><path d={P.kaiStar} fill="#3838E7"/></svg>
+              <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#3838E7' }}>{'{6}'} AI credits left</span>
+            </div>
+          </div>
+
+          {/* Textarea */}
+          <div style={{ position: 'relative' }}>
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Ask me anything, upload a design or sketch directly on the page"
+              style={{ width: '100%', minHeight: 100, padding: '8px 8px 40px', border: '1px solid #C7C5D0', borderRadius: 4, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', resize: 'none', outline: 'none', lineHeight: 1.5, background: '#fff' }}
+              onFocus={e => e.target.style.borderColor = '#3838E7'}
+              onBlur={e => e.target.style.borderColor = '#C7C5D0'}
+            />
+            {/* Bottom row inside textarea area */}
+            <div style={{ position: 'absolute', bottom: 8, left: 8, right: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 4, padding: '6px', display: 'flex', cursor: 'pointer' }}>
+                <svg width="14" height="14" viewBox="0 0 9.67 9.67" fill="none"><path d="M0.75 4.83333H8.91667M4.83333 0.75V8.91667" stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <button
+                onClick={() => input.trim() && onNavigate('workflow-detail', { id: 'new', name: input.trim().slice(0, 40) || 'New Workflow' })}
+                style={{ background: input.trim() ? '#3838E7' : '#F1F0F5', border: 'none', borderRadius: 20, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: input.trim() ? 'pointer' : 'default', transition: 'background .15s' }}>
+                <svg width="14" height="14" viewBox="0 0 6.17 13.17" fill="none">
+                  <path d="M5.41667 3.08333L3.08333 0.75L0.75 3.08333M3.08333 0.75V12.4167" stroke={input.trim() ? '#fff' : '#C7C5D0'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: 0 }}>Our AI can make mistakes. Please double-check your responses.</p>
+        </div>
+
+        {/* Suggested prompts */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+          {suggestions.map((s, i) => (
+            <button key={i} onClick={() => { setInput(s); }}
+              style={{ background: '#fff', border: '1px solid #F1F0F5', borderRadius: 20, padding: '8px 12px', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B', cursor: 'pointer', transition: 'border-color .12s, box-shadow .12s' }}
+              onMouseOver={e => { e.currentTarget.style.borderColor = '#C7C5D0'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = '#F1F0F5'; e.currentTarget.style.boxShadow = 'none'; }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN 2: WORKFLOWS DASHBOARD ──────────────────────────────────────────
+function StatusBadge({ status }) {
+  const map = { live: ['#00B37A', '#E6F9F3'], draft: ['#918F9A', '#F1F0F5'], archived: ['#C7C5D0', '#F7F7F8'] };
+  const [text, bg] = [status.charAt(0).toUpperCase() + status.slice(1), map[status]?.[1] || '#F1F0F5'];
+  const textColor = map[status]?.[0] || '#918F9A';
+  return (
+    <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: textColor, background: bg, padding: '2px 8px', borderRadius: 20, letterSpacing: '0.2px' }}>{text}</span>
+  );
+}
+
+function TriggerIcon({ type }) {
+  const icons = { url: '🌐', schedule: '📅', webhook: '🔗', event: '⚡', api: '🔌' };
+  return <span style={{ fontSize: 13 }}>{icons[type] || '⚡'}</span>;
+}
+
+function WorkflowCard({ workflow, onClick }) {
+  const [hover, setHover] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <div onClick={onClick} onMouseOver={() => setHover(true)} onMouseOut={() => { setHover(false); setMenuOpen(false); }}
+      style={{ background: '#fff', border: `1px solid ${hover ? '#C7C5D0' : '#E1DFE7'}`, borderRadius: 10, padding: '16px', cursor: 'pointer', transition: 'box-shadow .15s, border-color .15s', boxShadow: hover ? '0 4px 16px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', minHeight: 140 }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23', lineHeight: 1.3, flex: 1 }}>{workflow.name}</span>
+        <StatusBadge status={workflow.status}/>
+      </div>
+
+      {/* Description */}
+      <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B', lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{workflow.description}</p>
+
+      {/* Footer */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>Updated {workflow.updatedAt}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <TriggerIcon type={workflow.trigger}/>
+          <div style={{ position: 'relative' }}>
+            <button onClick={e => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 4, color: '#918F9A', fontSize: 16, display: 'flex', alignItems: 'center' }}
+              onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+              onMouseOut={e => e.currentTarget.style.background = 'none'}>
+              ⋮
+            </button>
+            {menuOpen && (
+              <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', right: 0, bottom: 28, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 10, minWidth: 140, overflow: 'hidden' }}>
+                {['Edit', 'Duplicate', 'Archive', 'Delete'].map((opt, i) => (
+                  <button key={i} onClick={e => { e.stopPropagation(); setMenuOpen(false); }}
+                    style={{ width: '100%', display: 'block', padding: '8px 14px', background: 'none', border: 'none', textAlign: 'left', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: opt === 'Delete' ? '#E03D3D' : '#1B1B23', cursor: 'pointer' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+                    onMouseOut={e => e.currentTarget.style.background = 'none'}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowsDashboard({ onNavigate }) {
+  const [filter, setFilter] = useState('all');
+  const filters = ['all', 'live', 'draft', 'archived'];
+  const filtered = filter === 'all' ? WORKFLOWS : WORKFLOWS.filter(w => w.status === filter);
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FCFCFD', overflowY: 'auto' }}>
+      {/* Dashboard header */}
+      <div style={{ padding: '24px 32px 0', background: '#FCFCFD', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 22, color: '#1B1B23', margin: 0 }}>Workflows</h1>
+          <button onClick={() => onNavigate('new-workflow')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#3838E7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer', transition: 'background .12s' }}
+            onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
+            onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
+            <svg width="13" height="13" viewBox="0 0 9.67 9.67" fill="none"><path d="M0.75 4.83H8.92M4.83 0.75V8.92" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
+            New Workflow
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #E1DFE7', paddingBottom: 0 }}>
+          {filters.map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ padding: '8px 16px', background: 'none', border: 'none', borderBottom: filter === f ? '2px solid #3838E7' : '2px solid transparent', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: filter === f ? '#3838E7' : '#918F9A', transition: 'color .12s', marginBottom: -1, textTransform: 'capitalize' }}>
+              {f === 'all' ? `All (${WORKFLOWS.length})` : `${f.charAt(0).toUpperCase() + f.slice(1)} (${WORKFLOWS.filter(w=>w.status===f).length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Cards grid */}
+      <div style={{ padding: '24px 32px', flex: 1 }}>
+        {filtered.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 320, gap: 12 }}>
+            <WorkflowIcon color="#C7C5D0" size={40}/>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 15, color: '#52515B', margin: 0 }}>No workflows yet</p>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#918F9A', margin: 0, textAlign: 'center' }}>Create your first workflow to automate your testing</p>
+            <button onClick={() => onNavigate('new-workflow')}
+              style={{ marginTop: 8, padding: '10px 20px', background: '#3838E7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}>
+              New Workflow
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+            {filtered.map(w => (
+              <div key={w.id} className="fade-up">
+                <WorkflowCard workflow={w} onClick={() => onNavigate('workflow-detail', w)}/>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN 3: NEW WORKFLOW ──────────────────────────────────────────────────
+function NewWorkflowScreen({ onNavigate }) {
+  const [name, setName] = useState('');
+  const [desc, setDesc] = useState('');
+  const [trigger, setTrigger] = useState('url');
+  const [prompt, setPrompt] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [showDiscard, setShowDiscard] = useState(false);
+
+  const charCount = prompt.length;
+  const canGenerate = name.trim() && prompt.trim();
+
+  function handleGenerate() {
+    if (!canGenerate) return;
+    setGenerating(true);
+    setTimeout(() => {
+      setGenerating(false);
+      onNavigate('workflow-detail', { id: 'new', name: name.trim(), description: desc });
+    }, 1600);
+  }
+
+  const templates = [
+    { label: 'A/B Test & Deploy', text: 'Run an A/B test on this URL, score the ideas, build variations for high scores, set traffic to 25%, wait 1 week, then ship the winner to 100%.' },
+    { label: 'Traffic Ramp-Up', text: 'Start at 10% traffic, monitor conversion rate for 3 days, ramp to 25% if positive, then 50%, then 100% or rollback.' },
+    { label: 'Rollback on Failure', text: 'Deploy variant at 20% traffic. If error rate exceeds 2% within 24h, automatically rollback and notify the team.' },
+  ];
+
+  return (
+    <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#FCFCFD' }}>
+      {/* Canvas area */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        {/* Back breadcrumb */}
+        <div style={{ position: 'absolute', top: 16, left: 20, zIndex: 5, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => { const dirty = name || prompt; if (dirty) setShowDiscard(true); else onNavigate('dashboard'); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B' }}
+            onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+            onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+            <svg width="12" height="10" viewBox="0 0 6 10.5" fill="none"><path d={P.backArrow} stroke="#52515B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Workflows
+          </button>
+        </div>
+
+        {/* Canvas */}
+        <div className="canvas-grid" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+          <div style={{ background: 'rgba(255,255,255,0.8)', border: '1.5px dashed #C7C5D0', borderRadius: 10, padding: '20px 32px', textAlign: 'center' }}>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 14, color: '#918F9A', margin: 0, lineHeight: 1.6 }}>Start adding steps or describe your workflow →</p>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#C7C5D0', margin: '4px 0 0' }}>Canvas will populate after generation</p>
+          </div>
+        </div>
+
+        {/* Discard dialog */}
+        {showDiscard && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(27,27,35,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '24px', width: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+              <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23', margin: '0 0 8px' }}>Discard changes?</h3>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#52515B', margin: '0 0 20px' }}>Your workflow setup will be lost if you leave now.</p>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowDiscard(false)} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => onNavigate('dashboard')} style={{ padding: '8px 16px', background: '#E03D3D', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#fff', cursor: 'pointer' }}>Discard</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right Drawer */}
+      <div style={{ width: 380, borderLeft: '1px solid #E1DFE7', background: '#fff', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', flexShrink: 0 }}>
+        {/* Workflow Setup section */}
+        <div style={{ background: '#F9F8FB', borderBottom: '1px solid #E1DFE7', padding: '18px 20px', flexShrink: 0 }}>
+          <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 13, color: '#52515B', margin: '0 0 14px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Workflow Setup</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Name */}
+            <div>
+              <label style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', display: 'block', marginBottom: 4 }}>Workflow Name <span style={{ color: '#E03D3D' }}>*</span></label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Checkout A/B Test"
+                style={{ width: '100%', padding: '7px 10px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none', background: '#fff' }}
+                onFocus={e => e.target.style.borderColor = '#3838E7'}
+                onBlur={e => e.target.style.borderColor = '#E1DFE7'}/>
+            </div>
+            {/* Description */}
+            <div>
+              <label style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', display: 'block', marginBottom: 4 }}>Description <span style={{ color: '#C7C5D0' }}>(optional)</span></label>
+              <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Short description of this workflow"
+                style={{ width: '100%', padding: '7px 10px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none', background: '#fff' }}
+                onFocus={e => e.target.style.borderColor = '#3838E7'}
+                onBlur={e => e.target.style.borderColor = '#E1DFE7'}/>
+            </div>
+            {/* Trigger type */}
+            <div>
+              <label style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', display: 'block', marginBottom: 4 }}>Trigger Type</label>
+              <select value={trigger} onChange={e => setTrigger(e.target.value)}
+                style={{ width: '100%', padding: '7px 10px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none', background: '#fff', cursor: 'pointer' }}>
+                <option value="url">🌐 URL</option>
+                <option value="schedule">📅 Schedule</option>
+                <option value="webhook">🔗 Webhook</option>
+                <option value="event">⚡ Event</option>
+                <option value="api">🔌 API</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Prompt zone */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '18px 20px', overflow: 'hidden' }}>
+          <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 13, color: '#52515B', margin: '0 0 6px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Describe your workflow</h3>
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', margin: '0 0 10px' }}>Describe in plain language what you want Kai to build.</p>
+
+          {/* Quick templates */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            {templates.map((t, i) => (
+              <button key={i} onClick={() => setPrompt(t.text)}
+                style={{ padding: '4px 10px', background: '#F5F5FF', border: '1px solid #E5E7FF', borderRadius: 20, fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#3838E7', cursor: 'pointer', transition: 'background .12s' }}
+                onMouseOver={e => e.currentTarget.style.background = '#EAEAFF'}
+                onMouseOut={e => e.currentTarget.style.background = '#F5F5FF'}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Textarea */}
+          <textarea
+            value={prompt}
+            onChange={e => setPrompt(e.target.value.slice(0, 2000))}
+            placeholder={'On this URL, propose some test ideas, then for all ideas scored higher than 8/10, build the variation...'}
+            style={{ flex: 1, padding: '10px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', resize: 'none', outline: 'none', lineHeight: 1.5, minHeight: 100 }}
+            onFocus={e => e.target.style.borderColor = '#3838E7'}
+            onBlur={e => e.target.style.borderColor = '#E1DFE7'}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: charCount > 1800 ? '#E03D3D' : '#C7C5D0' }}>{charCount} / 2000</span>
+          </div>
+        </div>
+
+        {/* Generate button */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid #E1DFE7', flexShrink: 0 }}>
+          <button onClick={handleGenerate} disabled={!canGenerate || generating}
+            style={{ width: '100%', padding: '11px', background: canGenerate ? '#3838E7' : '#E1DFE7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: canGenerate ? '#fff' : '#918F9A', cursor: canGenerate ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background .12s' }}>
+            {generating ? (
+              <>
+                <svg className="spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1.5C3.96 1.5 1.5 3.96 1.5 7" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+                Generating workflow...
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 14.83 14.83" fill="none"><path d={P.kaiStar} fill={canGenerate ? '#fff' : '#918F9A'}/></svg>
+                Generate Workflow
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN 4: WORKFLOW DETAIL ───────────────────────────────────────────────
+function NodeBox({ node, selected, onClick }) {
+  const typeLabel = { trigger: 'Trigger', agent: 'Agent', condition: 'Condition', action: 'Action', wait: 'Wait' };
+  return (
+    <div onClick={onClick} style={{ position: 'absolute', left: `${node.x}%`, top: node.y, transform: 'translateX(-50%)', cursor: 'pointer', animation: 'nodeFadeIn 0.25s ease forwards', animationDelay: `${parseInt(node.id) * 40}ms`, opacity: 0 }}>
+      <div style={{ padding: '10px 14px', borderRadius: 8, border: `2px solid ${selected ? '#3838E7' : '#E1DFE7'}`, background: node.color, minWidth: 200, maxWidth: 240, boxShadow: selected ? '0 0 0 3px rgba(56,56,231,0.12)' : 'none', transition: 'border-color .15s, box-shadow .15s' }}>
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 10, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 3 }}>{typeLabel[node.type]}</div>
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 2 }}>{node.label}</div>
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{node.desc}</div>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowDetailView({ workflow, onNavigate }) {
+  const [selected, setSelected] = useState(null);
+  const [saved, setSaved] = useState(false);
+
+  const selectedNode = WORKFLOW_NODES.find(n => n.id === selected);
+
+  function handleSave() {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FCFCFD', overflow: 'hidden' }}>
+      {/* Sub-header */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #E1DFE7', padding: '0 24px', flexShrink: 0 }}>
+        {/* Breadcrumb + actions row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => onNavigate('dashboard')}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#918F9A', padding: 0 }}
+              onMouseOver={e => e.currentTarget.style.color = '#1B1B23'}
+              onMouseOut={e => e.currentTarget.style.color = '#918F9A'}>
+              <svg width="12" height="10" viewBox="0 0 6 10.5" fill="none"><path d={P.backArrow} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Workflows
+            </button>
+            <span style={{ color: '#C7C5D0', fontFamily: 'Roboto, sans-serif', fontSize: 13 }}>/</span>
+            <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23' }}>
+              {workflow?.name || 'Test & Deploy Automation'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {saved && <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#00B37A' }}>✓ Saved</span>}
+            <button onClick={handleSave}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
+              onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+              onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M11.5 13H2.5C1.94772 13 1.5 12.5523 1.5 12V2C1.5 1.44772 1.94772 1 2.5 1H9.5L12.5 4V12C12.5 12.5523 12.0523 13 11.5 13Z" stroke="#52515B" strokeWidth="1.3" strokeLinejoin="round"/>
+                <path d="M9 1V4.5H4V1" stroke="#52515B" strokeWidth="1.3" strokeLinejoin="round"/>
+                <path d="M3.5 8H10.5M3.5 10.5H8" stroke="#52515B" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              Save
+            </button>
+            <button
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}
+              onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
+              onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 1.5L11.5 6.5L2.5 11.5V1.5Z" fill="#fff"/></svg>
+              Run Workflow
+            </button>
+          </div>
+        </div>
+        {/* Generated info bar */}
+        <div style={{ paddingBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>
+            {workflow?.description || 'Generated from your prompt · Ready to execute'}
+          </span>
+          <span style={{ background: '#E6F9F3', color: '#00B37A', fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>Live</span>
+        </div>
+      </div>
+
+      {/* Canvas + side panel */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Canvas */}
+        <div style={{ flex: 1, overflow: 'auto', padding: 24, background: '#FCFCFD' }}>
+          <div style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: '32px 24px', minHeight: 1200, position: 'relative' }}>
+            {/* SVG connections */}
+            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+              <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="2.5" orient="auto">
+                  <polygon points="0 0, 7 2.5, 0 5" fill="#C7C5D0"/>
+                </marker>
+              </defs>
+              {/* Main vertical connections (1→2, 2→3, 3→4, 4→5, 5→6, 6→7, 7→8) */}
+              {[['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8']].map(([a,b]) => {
+                const na = WORKFLOW_NODES.find(n => n.id === a);
+                const nb = WORKFLOW_NODES.find(n => n.id === b);
+                if (!na || !nb) return null;
+                return <line key={`${a}-${b}`} x1={`${na.x}%`} y1={na.y + 68} x2={`${nb.x}%`} y2={nb.y + 10} stroke="#C7C5D0" strokeWidth="1.5" markerEnd="url(#arrow)"/>;
+              })}
+              {/* Branch from condition 8 → 9 (right) and 10 (left) */}
+              <line x1="50%" y1="728" x2="73%" y2="760" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3" markerEnd="url(#arrow)"/>
+              <line x1="50%" y1="728" x2="27%" y2="760" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3" markerEnd="url(#arrow)"/>
+              {/* Branch labels */}
+              <text x="62%" y="745" fontFamily="Roboto, sans-serif" fontSize="10" fill="#00B37A" textAnchor="middle">Yes</text>
+              <text x="38%" y="745" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No</text>
+              {/* 9→11, 11→12, 12→13 */}
+              {[['9','11'],['11','12'],['12','13']].map(([a,b]) => {
+                const na = WORKFLOW_NODES.find(n => n.id === a);
+                const nb = WORKFLOW_NODES.find(n => n.id === b);
+                if (!na || !nb) return null;
+                return <line key={`${a}-${b}`} x1={`${na.x}%`} y1={na.y + 68} x2={`${nb.x}%`} y2={nb.y + 10} stroke="#C7C5D0" strokeWidth="1.5" markerEnd="url(#arrow)"/>;
+              })}
+              {/* Branch from condition 3 – "No" end */}
+              <line x1="50%" y1="268" x2="75%" y2="295" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3"/>
+              <text x="64%" y="282" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No → End</text>
+            </svg>
+
+            {/* Nodes */}
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              {WORKFLOW_NODES.map(node => (
+                <NodeBox key={node.id} node={node} selected={selected === node.id} onClick={() => setSelected(selected === node.id ? null : node.id)}/>
+              ))}
+            </div>
+
+            {/* Legend */}
+            <div style={{ position: 'absolute', bottom: 24, left: 24, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: '10px 14px' }}>
+              <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', marginBottom: 8 }}>Node Types</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {[['#DCE8FF', 'Trigger'], ['#E8DCF8', 'Agent'], ['#FFF3DC', 'Condition'], ['#DCF8DC', 'Action'], ['#F0F0F5', 'Wait']].map(([color, label]) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, background: color, border: '1px solid #E1DFE7' }}/>
+                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right panel */}
+        {selectedNode && (
+          <div className="fade-up" style={{ width: 300, borderLeft: '1px solid #E1DFE7', background: '#fff', padding: '20px', overflowY: 'auto', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>Node Details</span>
+              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#918F9A', lineHeight: 1, padding: '0 2px' }}>×</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Node Type</div>
+                <div style={{ display: 'inline-block', background: selectedNode.color, padding: '4px 10px', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', textTransform: 'capitalize' }}>{selectedNode.type}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Label</div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', fontWeight: 500 }}>{selectedNode.label}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Description</div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', lineHeight: 1.5 }}>{selectedNode.desc}</div>
+              </div>
+              {selectedNode.branches && (
+                <div>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Branches</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00B37A', flexShrink: 0 }}/>
+                      Yes → Continue to next step
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#E03D3D', flexShrink: 0 }}/>
+                      No → End workflow / rollback
+                    </div>
+                  </div>
+                </div>
+              )}
+              <button style={{ width: '100%', padding: '9px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer', marginTop: 4 }}
+                onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
+                onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
+                Edit Node
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ROOT ─────────────────────────────────────────────────────────────────
+function App() {
+  const [screen, setScreen] = useState('home');
+  const [currentWorkflow, setCurrentWorkflow] = useState(null);
+
+  function navigate(s, data) {
+    if (data) setCurrentWorkflow(data);
+    setScreen(s);
+  }
+
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#FCFCFD' }}>
+      <Header/>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <Sidebar screen={screen} onNavigate={navigate}/>
+        {screen === 'home' && <HomeScreen onNavigate={navigate}/>}
+        {screen === 'dashboard' && <WorkflowsDashboard onNavigate={navigate}/>}
+        {screen === 'new-workflow' && <NewWorkflowScreen onNavigate={navigate}/>}
+        {screen === 'workflow-detail' && <WorkflowDetailView workflow={currentWorkflow} onNavigate={navigate}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
