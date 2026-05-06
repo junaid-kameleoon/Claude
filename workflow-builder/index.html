@@ -634,14 +634,36 @@ function NewWorkflowScreen({ onNavigate }) {
 }
 
 // ─── SCREEN 4: WORKFLOW DETAIL ───────────────────────────────────────────────
-function NodeBox({ node, selected, onClick }) {
+function NodeBox({ node, selected, onClick, onHoverEdge }) {
+  const typeEmojis = { trigger: '⚡', agent: '⚙️', condition: '🔀', action: '✓', wait: '⏱' };
   const typeLabel = { trigger: 'Trigger', agent: 'Agent', condition: 'Condition', action: 'Action', wait: 'Wait' };
+  const typeColors = {
+    trigger: '#3B82F6',
+    agent: '#A855F7',
+    condition: '#F59E0B',
+    action: '#10B981',
+    wait: '#6B7280'
+  };
+
   return (
     <div onClick={onClick} style={{ position: 'absolute', left: `${node.x}%`, top: node.y, transform: 'translateX(-50%)', cursor: 'pointer', animation: 'nodeFadeIn 0.25s ease forwards', animationDelay: `${parseInt(node.id) * 40}ms`, opacity: 0 }}>
-      <div style={{ padding: '10px 14px', borderRadius: 8, border: `2px solid ${selected ? '#3838E7' : '#E1DFE7'}`, background: node.color, minWidth: 200, maxWidth: 240, boxShadow: selected ? '0 0 0 3px rgba(56,56,231,0.12)' : 'none', transition: 'border-color .15s, box-shadow .15s' }}>
-        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 10, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 3 }}>{typeLabel[node.type]}</div>
-        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 2 }}>{node.label}</div>
-        <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{node.desc}</div>
+      <div style={{
+        padding: '14px 16px',
+        borderRadius: 12,
+        border: `2px solid ${selected ? '#3838E7' : '#E1DFE7'}`,
+        background: '#fff',
+        minWidth: 220,
+        maxWidth: 260,
+        boxShadow: selected ? '0 0 0 3px rgba(56,56,231,0.12), 0 4px 12px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.04)',
+        transition: 'all .15s ease',
+        borderLeft: `4px solid ${typeColors[node.type]}`
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 18 }}>{typeEmojis[node.type]}</span>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 9, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', flex: 1 }}>{typeLabel[node.type]}</span>
+        </div>
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 4, lineHeight: 1.3 }}>{node.label}</div>
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', lineHeight: 1.4 }}>{node.desc}</div>
       </div>
     </div>
   );
@@ -711,38 +733,64 @@ function WorkflowDetailView({ workflow, onNavigate }) {
       {/* Canvas + side panel */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Canvas */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 24, background: '#FCFCFD' }}>
-          <div style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: '32px 24px', minHeight: 1200, position: 'relative' }}>
-            {/* SVG connections */}
+        <div style={{ flex: 1, overflow: 'auto', padding: 28, background: '#F5F5F7' }}>
+          <div style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 12, padding: '40px 32px', minHeight: 1200, position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+            {/* SVG connections with improved routing */}
             <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
               <defs>
-                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="2.5" orient="auto">
-                  <polygon points="0 0, 7 2.5, 0 5" fill="#C7C5D0"/>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="#9CA3AF"/>
+                </marker>
+                <marker id="arrowYes" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="#10B981"/>
+                </marker>
+                <marker id="arrowNo" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="#EF4444"/>
                 </marker>
               </defs>
-              {/* Main vertical connections (1→2, 2→3, 3→4, 4→5, 5→6, 6→7, 7→8) */}
+
+              {/* Main vertical connections with smooth curves */}
               {[['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8']].map(([a,b]) => {
                 const na = WORKFLOW_NODES.find(n => n.id === a);
                 const nb = WORKFLOW_NODES.find(n => n.id === b);
                 if (!na || !nb) return null;
-                return <line key={`${a}-${b}`} x1={`${na.x}%`} y1={na.y + 68} x2={`${nb.x}%`} y2={nb.y + 10} stroke="#C7C5D0" strokeWidth="1.5" markerEnd="url(#arrow)"/>;
+                const x1 = `${na.x}%`, y1 = na.y + 68, x2 = `${nb.x}%`, y2 = nb.y + 10;
+                const midY = (y1 + y2) / 2;
+                return (
+                  <path key={`${a}-${b}`}
+                    d={`M ${x1} ${y1} Q ${x1} ${midY} ${x2} ${y2}`}
+                    stroke="#9CA3AF" strokeWidth="2" fill="none" markerEnd="url(#arrow)"/>
+                );
               })}
+
               {/* Branch from condition 8 → 9 (right) and 10 (left) */}
-              <line x1="50%" y1="728" x2="73%" y2="760" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3" markerEnd="url(#arrow)"/>
-              <line x1="50%" y1="728" x2="27%" y2="760" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3" markerEnd="url(#arrow)"/>
-              {/* Branch labels */}
-              <text x="62%" y="745" fontFamily="Roboto, sans-serif" fontSize="10" fill="#00B37A" textAnchor="middle">Yes</text>
-              <text x="38%" y="745" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No</text>
-              {/* 9→11, 11→12, 12→13 */}
+              <path d="M 50% 728 Q 60% 745 73% 760" stroke="#10B981" strokeWidth="2" fill="none" strokeDasharray="5,4" markerEnd="url(#arrowYes)"/>
+              <path d="M 50% 728 Q 40% 745 27% 760" stroke="#EF4444" strokeWidth="2" fill="none" strokeDasharray="5,4" markerEnd="url(#arrowNo)"/>
+
+              {/* Branch labels with background */}
+              <rect x="54%" y="736" width="16" height="14" fill="#fff" rx="3"/>
+              <text x="62%" y="745" fontFamily="Roboto, sans-serif" fontSize="11" fontWeight="600" fill="#10B981" textAnchor="middle">Yes</text>
+
+              <rect x="30%" y="736" width="14" height="14" fill="#fff" rx="3"/>
+              <text x="37%" y="745" fontFamily="Roboto, sans-serif" fontSize="11" fontWeight="600" fill="#EF4444" textAnchor="middle">No</text>
+
+              {/* Right branch: 9→11, 11→12, 12→13 */}
               {[['9','11'],['11','12'],['12','13']].map(([a,b]) => {
                 const na = WORKFLOW_NODES.find(n => n.id === a);
                 const nb = WORKFLOW_NODES.find(n => n.id === b);
                 if (!na || !nb) return null;
-                return <line key={`${a}-${b}`} x1={`${na.x}%`} y1={na.y + 68} x2={`${nb.x}%`} y2={nb.y + 10} stroke="#C7C5D0" strokeWidth="1.5" markerEnd="url(#arrow)"/>;
+                const x1 = `${na.x}%`, y1 = na.y + 68, x2 = `${nb.x}%`, y2 = nb.y + 10;
+                const midY = (y1 + y2) / 2;
+                return (
+                  <path key={`${a}-${b}`}
+                    d={`M ${x1} ${y1} Q ${x1} ${midY} ${x2} ${y2}`}
+                    stroke="#9CA3AF" strokeWidth="2" fill="none" markerEnd="url(#arrow)"/>
+                );
               })}
-              {/* Branch from condition 3 – "No" end */}
-              <line x1="50%" y1="268" x2="75%" y2="295" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3"/>
-              <text x="64%" y="282" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No → End</text>
+
+              {/* Branch from condition 3 – "No" end (exit path) */}
+              <path d="M 50% 268 Q 60% 280 75% 295" stroke="#EF4444" strokeWidth="2" fill="none" strokeDasharray="5,4"/>
+              <text x="66%" y="283" fontFamily="Roboto, sans-serif" fontSize="10" fill="#EF4444" fontWeight="500" textAnchor="middle">No → End</text>
             </svg>
 
             {/* Nodes */}
@@ -752,13 +800,13 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               ))}
             </div>
 
-            {/* Legend */}
-            <div style={{ position: 'absolute', bottom: 24, left: 24, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: '10px 14px' }}>
-              <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', marginBottom: 8 }}>Node Types</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                {[['#DCE8FF', 'Trigger'], ['#E8DCF8', 'Agent'], ['#FFF3DC', 'Condition'], ['#DCF8DC', 'Action'], ['#F0F0F5', 'Wait']].map(([color, label]) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 3, background: color, border: '1px solid #E1DFE7' }}/>
+            {/* Legend with new node types */}
+            <div style={{ position: 'absolute', bottom: 24, left: 24, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: '12px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 12, color: '#52515B', marginBottom: 10, letterSpacing: '0.3px' }}>Node Types</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                {[['⚡', '#3B82F6', 'Trigger'], ['⚙️', '#A855F7', 'Agent'], ['🔀', '#F59E0B', 'Logic'], ['✓', '#10B981', 'Action'], ['⏱', '#6B7280', 'Wait']].map(([emoji, color, label]) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 20, height: 20, borderRadius: 6, background: '#fff', border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>{emoji}</div>
                     <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{label}</span>
                   </div>
                 ))}
@@ -767,43 +815,61 @@ function WorkflowDetailView({ workflow, onNavigate }) {
           </div>
         </div>
 
-        {/* Right panel */}
+        {/* Right panel - Node configuration */}
         {selectedNode && (
-          <div className="fade-up" style={{ width: 300, borderLeft: '1px solid #E1DFE7', background: '#fff', padding: '20px', overflowY: 'auto', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>Node Details</span>
-              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#918F9A', lineHeight: 1, padding: '0 2px' }}>×</button>
+          <div className="fade-up" style={{ width: 340, borderLeft: '1px solid #E1DFE7', background: '#fff', padding: '24px', overflowY: 'auto', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 15, color: '#1B1B23' }}>Node Configuration</span>
+              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: '#C7C5D0', lineHeight: 1, padding: '0 4px', transition: 'color .15s' }}
+                onMouseOver={e => e.currentTarget.style.color = '#918F9A'}
+                onMouseOut={e => e.currentTarget.style.color = '#C7C5D0'}>
+                ×
+              </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Node type badge */}
               <div>
-                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Node Type</div>
-                <div style={{ display: 'inline-block', background: selectedNode.color, padding: '4px 10px', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', textTransform: 'capitalize' }}>{selectedNode.type}</div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Type</div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#F9F8FB', padding: '6px 12px', borderRadius: 8, borderLeft: `3px solid ${selectedNode.color || '#9CA3AF'}` }}>
+                  <span style={{ fontSize: 16 }}>
+                    {{ trigger: '⚡', agent: '⚙️', condition: '🔀', action: '✓', wait: '⏱' }[selectedNode.type]}
+                  </span>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', fontWeight: 500, textTransform: 'capitalize' }}>{selectedNode.type}</span>
+                </div>
               </div>
+
+              {/* Label */}
               <div>
-                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Label</div>
-                <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', fontWeight: 500 }}>{selectedNode.label}</div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Label</div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', fontWeight: 500, lineHeight: 1.5 }}>{selectedNode.label}</div>
               </div>
+
+              {/* Description */}
               <div>
-                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Description</div>
-                <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', lineHeight: 1.5 }}>{selectedNode.desc}</div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Description</div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', lineHeight: 1.6 }}>{selectedNode.desc}</div>
               </div>
+
+              {/* Branches info */}
               {selectedNode.branches && (
-                <div>
-                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Branches</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00B37A', flexShrink: 0 }}/>
-                      Yes → Continue to next step
+                <div style={{ background: '#F9F8FB', padding: '12px', borderRadius: 8, borderLeft: '3px solid #FFA500' }}>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 10 }}>Conditional Branches</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', flexShrink: 0, marginTop: 3 }}/>
+                      <span><span style={{ fontWeight: 600, color: '#10B981' }}>Yes:</span> Continue to next step</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#E03D3D', flexShrink: 0 }}/>
-                      No → End workflow / rollback
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#EF4444', flexShrink: 0, marginTop: 3 }}/>
+                      <span><span style={{ fontWeight: 600, color: '#EF4444' }}>No:</span> End workflow or rollback</span>
                     </div>
                   </div>
                 </div>
               )}
-              <button style={{ width: '100%', padding: '9px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer', marginTop: 4 }}
+
+              {/* Edit button */}
+              <button style={{ width: '100%', padding: '11px', background: '#3838E7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#fff', cursor: 'pointer', marginTop: 8, transition: 'background .15s' }}
                 onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
                 onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
                 Edit Node
