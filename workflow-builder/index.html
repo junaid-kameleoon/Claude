@@ -10,7 +10,8 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #root { width: 100%; height: 100%; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; }
+    .node { position: absolute; width: 100px; padding: 12px; background: white; border: 2px solid #333; border-radius: 8px; text-align: center; cursor: pointer; font-weight: bold; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -19,7 +20,7 @@
 <script type="text/babel">
 const { useState } = React;
 
-export default function App() {
+function App() {
   const [nodes] = useState([
     { id: 1, label: 'Trigger', x: 50, y: 50 },
     { id: 2, label: 'Agent', x: 250, y: 50 },
@@ -27,7 +28,7 @@ export default function App() {
   ]);
 
   return (
-    <div style={{ width: '100%', height: '100%', background: '#f5f5f5', position: 'relative' }}>
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <h1 style={{ padding: '20px' }}>Workflow Builder</h1>
       
       <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
@@ -41,20 +42,7 @@ export default function App() {
       </svg>
 
       {nodes.map(node => (
-        <div key={node.id} style={{
-          position: 'absolute',
-          left: node.x,
-          top: node.y,
-          width: 100,
-          padding: '10px',
-          background: 'white',
-          border: '2px solid #333',
-          borderRadius: '8px',
-          textAlign: 'center',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 'bold'
-        }}>
+        <div key={node.id} className="node" style={{ left: node.x, top: node.y }}>
           {node.label}
         </div>
       ))}
@@ -62,8 +50,7 @@ export default function App() {
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
 </html>
