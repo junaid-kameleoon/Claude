@@ -842,6 +842,8 @@ function WorkflowDetailView({ workflow, onNavigate }) {
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState(false);
   const [nodes, setNodes] = useState(WORKFLOW_NODES);
+  const [hoveredEdge, setHoveredEdge] = useState(null);
+  const [insertDialogEdge, setInsertDialogEdge] = useState(null);
 
   const selectedNode = nodes.find(n => n.id === selected);
 
@@ -856,6 +858,69 @@ function WorkflowDetailView({ workflow, onNavigate }) {
     WORKFLOW_NODES = nodes;
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  function insertNodeOnEdge(sourceId, targetId, nodeType) {
+    // Find next available ID
+    const maxId = Math.max(...nodes.map(n => parseInt(n.id)));
+    const newId = String(maxId + 1);
+
+    // Find source and target nodes
+    const sourceNode = nodes.find(n => n.id === sourceId);
+    const targetNode = nodes.find(n => n.id === targetId);
+
+    if (!sourceNode || !targetNode) return;
+
+    // Calculate position between source and target
+    const newX = (sourceNode.x + targetNode.x) / 2;
+    const newY = (sourceNode.y + targetNode.y) / 2;
+
+    // Create new node with default properties
+    const newNode = {
+      id: newId,
+      type: nodeType,
+      label: `New ${nodeType}`,
+      desc: 'Configure this step',
+      color: { trigger: '#DCE8FF', agent: '#E8DCF8', condition: '#FFF3DC', action: '#DCF8DC', wait: '#F0F0F5' }[nodeType] || '#DCF8DC',
+      x: newX,
+      y: newY,
+    };
+
+    // Add default properties based on type
+    if (nodeType === 'trigger') {
+      newNode.source = 'webhook';
+      newNode.frequency = 'continuous';
+    } else if (nodeType === 'agent') {
+      newNode.service = 'openai';
+      newNode.action = 'new-action';
+      newNode.temperature = 0.7;
+    } else if (nodeType === 'condition') {
+      newNode.condition = 'condition';
+      newNode.branchLabelYes = 'Yes';
+      newNode.branchLabelNo = 'No';
+      newNode.branches = true;
+    } else if (nodeType === 'action') {
+      newNode.schedule = 'immediate';
+      newNode.platform = 'analytics';
+      newNode.retries = 3;
+    } else if (nodeType === 'wait') {
+      newNode.duration = '1 day';
+      newNode.waitType = 'delay';
+    }
+
+    // Adjust downstream y-coordinates to prevent overlap
+    const adjustedNodes = nodes.map(n => {
+      if (n.y >= newY) {
+        return { ...n, y: n.y + 90 };
+      }
+      return n;
+    });
+
+    // Add new node to the list
+    const updatedNodes = [...adjustedNodes, newNode];
+    setNodes(updatedNodes);
+    setInsertDialogEdge(null);
+    setSelected(newId);
   }
 
   return (
@@ -943,6 +1008,62 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               {/* Branch from condition 3 – "No" end */}
               <line x1="50%" y1="268" x2="75%" y2="295" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3"/>
               <text x="64%" y="282" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No → End</text>
+
+              {/* (+) buttons on edges for node insertion */}
+              {[['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8'],['9','11'],['11','12'],['12','13']].map(([a,b]) => {
+                const na = nodes.find(n => n.id === a);
+                const nb = nodes.find(n => n.id === b);
+                if (!na || !nb) return null;
+
+                const x1Pct = na.x;
+                const y1 = na.y + 68;
+                const x2Pct = nb.x;
+                const y2 = nb.y + 10;
+
+                // Convert percentages to pixel values (assuming 100% = canvas width)
+                // For SVG positioning, we'll use relative positioning
+                const midXPct = (x1Pct + x2Pct) / 2;
+                const midY = (y1 + y2) / 2;
+
+                const edgeKey = `${a}-${b}`;
+                const isHovered = hoveredEdge === edgeKey;
+
+                return (
+                  <g key={`btn-${edgeKey}`}
+                     onMouseEnter={() => setHoveredEdge(edgeKey)}
+                     onMouseLeave={() => setHoveredEdge(null)}
+                     style={{ cursor: 'pointer' }}>
+                    <circle
+                      cx={`${midXPct}%`}
+                      cy={midY}
+                      r={isHovered ? 18 : 14}
+                      fill="#3838E7"
+                      opacity={isHovered ? 1 : 0.8}
+                      style={{ transition: 'all 0.2s ease' }}
+                    />
+                    <text
+                      x={`${midXPct}%`}
+                      y={midY + 5}
+                      fontFamily="Roboto, sans-serif"
+                      fontSize="16"
+                      fontWeight="bold"
+                      fill="#fff"
+                      textAnchor="middle"
+                      pointerEvents="none"
+                      style={{ userSelect: 'none' }}>
+                      +
+                    </text>
+                    <circle
+                      cx={`${midXPct}%`}
+                      cy={midY}
+                      r={18}
+                      fill="transparent"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setInsertDialogEdge([a, b])}
+                    />
+                  </g>
+                );
+              })}
             </svg>
 
             {/* Nodes */}
@@ -966,6 +1087,77 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             </div>
           </div>
         </div>
+
+        {/* Node insertion dialog */}
+        {insertDialogEdge && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div className="fade-up" style={{ background: '#fff', borderRadius: 12, padding: 24, minWidth: 320, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+              <h3 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23', marginBottom: 4 }}>Insert Node</h3>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', marginBottom: 18 }}>Select the type of node to insert between the connected steps</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+                {['trigger', 'agent', 'condition', 'action', 'wait'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => insertNodeOnEdge(insertDialogEdge[0], insertDialogEdge[1], type)}
+                    style={{
+                      padding: '12px',
+                      border: '1px solid #E1DFE7',
+                      borderRadius: 8,
+                      background: '#fff',
+                      cursor: 'pointer',
+                      fontFamily: 'Roboto, sans-serif',
+                      fontSize: 13,
+                      color: '#1B1B23',
+                      fontWeight: 500,
+                      textTransform: 'capitalize',
+                      transition: 'all 0.15s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.background = '#F5F5FF';
+                      e.currentTarget.style.borderColor = '#3838E7';
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.background = '#fff';
+                      e.currentTarget.style.borderColor = '#E1DFE7';
+                    }}>
+                    <span style={{ width: 12, height: 12, borderRadius: 2, background: { trigger: '#DCE8FF', agent: '#E8DCF8', condition: '#FFF3DC', action: '#DCF8DC', wait: '#F0F0F5' }[type] }}/>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setInsertDialogEdge(null)}
+                style={{
+                  width: '100%',
+                  padding: '9px',
+                  background: 'transparent',
+                  border: '1px solid #E1DFE7',
+                  borderRadius: 7,
+                  fontFamily: 'Roboto, sans-serif',
+                  fontWeight: 500,
+                  fontSize: 13,
+                  color: '#918F9A',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = '#F5F5FF';
+                  e.currentTarget.style.color = '#1B1B23';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#918F9A';
+                }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Right panel */}
         {selectedNode && (
