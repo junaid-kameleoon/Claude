@@ -85,20 +85,72 @@ const WORKFLOWS = [
   { id: '6', name: 'Homepage Hero Test', status: 'live', description: 'Multivariate test on hero banner copy, image, and CTA button color.', updatedAt: '3 days ago', trigger: 'url' },
 ];
 
-const WORKFLOW_NODES = [
-  { id: '1', type: 'trigger',   label: 'URL Trigger',              desc: 'This URL',                  color: '#DCE8FF', x: 10, y: 20  },
-  { id: '2', type: 'agent',     label: 'Propose Test Ideas',        desc: 'Generate test variations',  color: '#E8DCF8', x: 20, y: 110 },
-  { id: '3', type: 'condition', label: 'Score > 8/10?',             desc: 'Filter by quality score',   color: '#FFF3DC', x: 30, y: 200, branches: true },
-  { id: '4', type: 'agent',     label: 'Build Variations',          desc: 'Create test variations',    color: '#E8DCF8', x: 40, y: 300 },
-  { id: '5', type: 'action',    label: 'Schedule Publish',          desc: 'Publish on June 1st',       color: '#DCF8DC', x: 50, y: 390 },
-  { id: '6', type: 'action',    label: 'Set Traffic 25%',           desc: 'Initial traffic allocation', color: '#DCF8DC', x: 60, y: 480 },
-  { id: '7', type: 'wait',      label: 'Wait 1 Week',               desc: 'Monitor period',            color: '#F0F0F5', x: 70, y: 570 },
-  { id: '8', type: 'condition', label: 'Conversion Rate > Original?', desc: 'Performance check',       color: '#FFF3DC', x: 80, y: 660, branches: true },
-  { id: '9', type: 'action',    label: 'Set Traffic 50%',           desc: 'Increase allocation',       color: '#DCF8DC', x: 85, y: 760 },
-  { id: '10', type: 'action',   label: 'Keep Original',             desc: 'Revert to original',        color: '#DCF8DC', x: 75, y: 760 },
-  { id: '11', type: 'wait',     label: 'Wait 1 Month',              desc: 'Extended monitoring',       color: '#F0F0F5', x: 85, y: 860 },
-  { id: '12', type: 'condition', label: 'Still Converting Higher?', desc: 'Final check',               color: '#FFF3DC', x: 85, y: 960, branches: true },
-  { id: '13', type: 'action',   label: 'Ship at 100%',              desc: 'Full deployment',           color: '#DCF8DC', x: 85, y: 1060 },
+let WORKFLOW_NODES = [
+  {
+    id: '1', type: 'trigger', label: 'URL Trigger', desc: 'This URL', color: '#DCE8FF', x: 10, y: 20,
+    // Trigger properties
+    source: 'webhook', frequency: 'continuous'
+  },
+  {
+    id: '2', type: 'agent', label: 'Propose Test Ideas', desc: 'Generate test variations', color: '#E8DCF8', x: 20, y: 110,
+    // Agent properties
+    service: 'openai', action: 'propose-tests', temperature: 0.7
+  },
+  {
+    id: '3', type: 'condition', label: 'Score > 8/10?', desc: 'Filter by quality score', color: '#FFF3DC', x: 30, y: 200, branches: true,
+    // Condition properties
+    condition: 'score > 8', branchLabelYes: 'Yes', branchLabelNo: 'No'
+  },
+  {
+    id: '4', type: 'agent', label: 'Build Variations', desc: 'Create test variations', color: '#E8DCF8', x: 40, y: 300,
+    // Agent properties
+    service: 'anthropic', action: 'build-tests', temperature: 0.5
+  },
+  {
+    id: '5', type: 'action', label: 'Schedule Publish', desc: 'Publish on June 1st', color: '#DCF8DC', x: 50, y: 390,
+    // Action properties
+    schedule: 'scheduled', platform: 'analytics', retries: 3
+  },
+  {
+    id: '6', type: 'action', label: 'Set Traffic 25%', desc: 'Initial traffic allocation', color: '#DCF8DC', x: 60, y: 480,
+    // Action properties
+    schedule: 'immediate', platform: 'analytics', retries: 2
+  },
+  {
+    id: '7', type: 'wait', label: 'Wait 1 Week', desc: 'Monitor period', color: '#F0F0F5', x: 70, y: 570,
+    // Wait properties
+    duration: '1 week', waitType: 'delay'
+  },
+  {
+    id: '8', type: 'condition', label: 'Conversion Rate > Original?', desc: 'Performance check', color: '#FFF3DC', x: 80, y: 660, branches: true,
+    // Condition properties
+    condition: 'conversion_rate > baseline', branchLabelYes: 'Yes', branchLabelNo: 'No'
+  },
+  {
+    id: '9', type: 'action', label: 'Set Traffic 50%', desc: 'Increase allocation', color: '#DCF8DC', x: 85, y: 760,
+    // Action properties
+    schedule: 'immediate', platform: 'analytics', retries: 3
+  },
+  {
+    id: '10', type: 'action', label: 'Keep Original', desc: 'Revert to original', color: '#DCF8DC', x: 75, y: 760,
+    // Action properties
+    schedule: 'immediate', platform: 'analytics', retries: 1
+  },
+  {
+    id: '11', type: 'wait', label: 'Wait 1 Month', desc: 'Extended monitoring', color: '#F0F0F5', x: 85, y: 860,
+    // Wait properties
+    duration: '1 month', waitType: 'delay'
+  },
+  {
+    id: '12', type: 'condition', label: 'Still Converting Higher?', desc: 'Final check', color: '#FFF3DC', x: 85, y: 960, branches: true,
+    // Condition properties
+    condition: 'final_conversion > baseline', branchLabelYes: 'Yes', branchLabelNo: 'No'
+  },
+  {
+    id: '13', type: 'action', label: 'Ship at 100%', desc: 'Full deployment', color: '#DCF8DC', x: 85, y: 1060,
+    // Action properties
+    schedule: 'immediate', platform: 'production', retries: 5
+  },
 ];
 
 // ─── SHARED COMPONENTS ───────────────────────────────────────────────────────
@@ -660,13 +712,148 @@ function NodeBox({ node, selected, onClick }) {
   );
 }
 
+// ─── NODE FORM RENDERER ──────────────────────────────────────────────────────
+function renderNodeForm(node, onPropertyChange) {
+  const fieldStyle = { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 };
+  const labelStyle = { fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px' };
+  const inputStyle = { fontFamily: 'Roboto, sans-serif', fontSize: 13, padding: '8px 10px', border: '1px solid #E1DFE7', borderRadius: 6, color: '#1B1B23' };
+  const selectStyle = { ...inputStyle, cursor: 'pointer' };
+
+  const handleChange = (propertyName, value) => {
+    onPropertyChange(node.id, propertyName, value);
+  };
+
+  if (node.type === 'trigger') {
+    return (
+      <>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Source</label>
+          <select value={node.source || 'webhook'} onChange={e => handleChange('source', e.target.value)} style={selectStyle}>
+            <option value="webhook">Webhook</option>
+            <option value="scheduler">Scheduler</option>
+            <option value="email">Email</option>
+            <option value="chat">Chat</option>
+          </select>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Frequency</label>
+          <select value={node.frequency || 'continuous'} onChange={e => handleChange('frequency', e.target.value)} style={selectStyle}>
+            <option value="continuous">Continuous</option>
+            <option value="one-time">One-time</option>
+            <option value="recurring">Recurring</option>
+          </select>
+        </div>
+      </>
+    );
+  }
+
+  if (node.type === 'agent') {
+    return (
+      <>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Service</label>
+          <select value={node.service || 'openai'} onChange={e => handleChange('service', e.target.value)} style={selectStyle}>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="google">Google AI</option>
+          </select>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Action</label>
+          <input type="text" value={node.action || ''} onChange={e => handleChange('action', e.target.value)} placeholder="e.g., propose-tests" style={inputStyle}/>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Temperature ({(node.temperature || 0.7).toFixed(2)})</label>
+          <input type="range" min="0" max="1" step="0.1" value={node.temperature || 0.7} onChange={e => handleChange('temperature', parseFloat(e.target.value))} style={{ cursor: 'pointer' }}/>
+        </div>
+      </>
+    );
+  }
+
+  if (node.type === 'condition') {
+    return (
+      <>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Condition</label>
+          <input type="text" value={node.condition || ''} onChange={e => handleChange('condition', e.target.value)} placeholder="e.g., score > 8" style={inputStyle}/>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>If True Label</label>
+          <input type="text" value={node.branchLabelYes || 'Yes'} onChange={e => handleChange('branchLabelYes', e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>If False Label</label>
+          <input type="text" value={node.branchLabelNo || 'No'} onChange={e => handleChange('branchLabelNo', e.target.value)} style={inputStyle}/>
+        </div>
+      </>
+    );
+  }
+
+  if (node.type === 'action') {
+    return (
+      <>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Schedule</label>
+          <select value={node.schedule || 'immediate'} onChange={e => handleChange('schedule', e.target.value)} style={selectStyle}>
+            <option value="immediate">Immediate</option>
+            <option value="delayed">Delayed</option>
+            <option value="scheduled">Scheduled</option>
+          </select>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Platform</label>
+          <select value={node.platform || 'analytics'} onChange={e => handleChange('platform', e.target.value)} style={selectStyle}>
+            <option value="analytics">Analytics</option>
+            <option value="production">Production</option>
+            <option value="staging">Staging</option>
+          </select>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Retries</label>
+          <input type="number" min="0" max="10" value={node.retries || 3} onChange={e => handleChange('retries', parseInt(e.target.value))} style={inputStyle}/>
+        </div>
+      </>
+    );
+  }
+
+  if (node.type === 'wait') {
+    return (
+      <>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Duration</label>
+          <input type="text" value={node.duration || ''} onChange={e => handleChange('duration', e.target.value)} placeholder="e.g., 1 week" style={inputStyle}/>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Wait Type</label>
+          <select value={node.waitType || 'delay'} onChange={e => handleChange('waitType', e.target.value)} style={selectStyle}>
+            <option value="delay">Delay</option>
+            <option value="polling">Polling</option>
+            <option value="event-based">Event-based</option>
+          </select>
+        </div>
+      </>
+    );
+  }
+
+  return null;
+}
+
 function WorkflowDetailView({ workflow, onNavigate }) {
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [nodes, setNodes] = useState(WORKFLOW_NODES);
 
-  const selectedNode = WORKFLOW_NODES.find(n => n.id === selected);
+  const selectedNode = nodes.find(n => n.id === selected);
+
+  function handleNodePropertyChange(nodeId, propertyName, value) {
+    setNodes(prevNodes => prevNodes.map(n =>
+      n.id === nodeId ? { ...n, [propertyName]: value } : n
+    ));
+  }
 
   function handleSave() {
+    // Update the global WORKFLOW_NODES with current state
+    WORKFLOW_NODES = nodes;
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -735,8 +922,8 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               </defs>
               {/* Main vertical connections (1→2, 2→3, 3→4, 4→5, 5→6, 6→7, 7→8) */}
               {[['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8']].map(([a,b]) => {
-                const na = WORKFLOW_NODES.find(n => n.id === a);
-                const nb = WORKFLOW_NODES.find(n => n.id === b);
+                const na = nodes.find(n => n.id === a);
+                const nb = nodes.find(n => n.id === b);
                 if (!na || !nb) return null;
                 return <line key={`${a}-${b}`} x1={`${na.x}%`} y1={na.y + 68} x2={`${nb.x}%`} y2={nb.y + 10} stroke="#C7C5D0" strokeWidth="1.5" markerEnd="url(#arrow)"/>;
               })}
@@ -748,8 +935,8 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               <text x="38%" y="745" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No</text>
               {/* 9→11, 11→12, 12→13 */}
               {[['9','11'],['11','12'],['12','13']].map(([a,b]) => {
-                const na = WORKFLOW_NODES.find(n => n.id === a);
-                const nb = WORKFLOW_NODES.find(n => n.id === b);
+                const na = nodes.find(n => n.id === a);
+                const nb = nodes.find(n => n.id === b);
                 if (!na || !nb) return null;
                 return <line key={`${a}-${b}`} x1={`${na.x}%`} y1={na.y + 68} x2={`${nb.x}%`} y2={nb.y + 10} stroke="#C7C5D0" strokeWidth="1.5" markerEnd="url(#arrow)"/>;
               })}
@@ -760,7 +947,7 @@ function WorkflowDetailView({ workflow, onNavigate }) {
 
             {/* Nodes */}
             <div style={{ position: 'relative', zIndex: 1 }}>
-              {WORKFLOW_NODES.map(node => (
+              {nodes.map(node => (
                 <NodeBox key={node.id} node={node} selected={selected === node.id} onClick={() => setSelected(selected === node.id ? null : node.id)}/>
               ))}
             </div>
@@ -782,7 +969,7 @@ function WorkflowDetailView({ workflow, onNavigate }) {
 
         {/* Right panel */}
         {selectedNode && (
-          <div className="fade-up" style={{ width: 300, borderLeft: '1px solid #E1DFE7', background: '#fff', padding: '20px', overflowY: 'auto', flexShrink: 0 }}>
+          <div className="fade-up" style={{ width: 340, borderLeft: '1px solid #E1DFE7', background: '#fff', padding: '20px', overflowY: 'auto', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
               <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>Node Details</span>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#918F9A', lineHeight: 1, padding: '0 2px' }}>×</button>
@@ -801,17 +988,24 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                 <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Description</div>
                 <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', lineHeight: 1.5 }}>{selectedNode.desc}</div>
               </div>
+
+              {/* Type-specific form fields */}
+              <div style={{ borderTop: '1px solid #E1DFE7', paddingTop: 14 }}>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 12 }}>Configuration</div>
+                {renderNodeForm(selectedNode, handleNodePropertyChange)}
+              </div>
+
               {selectedNode.branches && (
                 <div>
-                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Branches</div>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Branch Behavior</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00B37A', flexShrink: 0 }}/>
-                      Yes → Continue to next step
+                      {selectedNode.branchLabelYes || 'Yes'} → Continue to next step
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#E03D3D', flexShrink: 0 }}/>
-                      No → End workflow / rollback
+                      {selectedNode.branchLabelNo || 'No'} → End workflow / rollback
                     </div>
                   </div>
                 </div>
