@@ -1,0 +1,88 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0f9ff 0%, #f3e8ff 100%);
+}
+
+/* Navbar */
+.navbar {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-bottom: 2px solid #e0e7ff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 70px;
+}
+
+.logo {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.nav-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: 2px solid transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95em;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+.nav-btn:hover {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.nav-btn.active {
+  color: #3b82f6;
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 30px 20px;
+  overflow-y: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav-container {
+    flex-direction: column;
+    height: auto;
+    padding: 15px 20px;
+    gap: 15px;
+  }
+
+  .logo {
+    font-size: 1.4em;
+  }
+
+  .main-content {
+    padding: 15px 10px;
+  }
+}
