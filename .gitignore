@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Claude local worktrees / preview helpers (not for prod)
+.claude/worktrees/
+.claude/launch.json
+.claude/serve-kai.cjs
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
