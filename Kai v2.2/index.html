@@ -812,11 +812,19 @@ export const checkout: CheckoutProps = {
                                     <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-colors" title="Collapse"><X className="h-4 w-4" /></button>
                                 </div>
                             </div>
-                            <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-1.5 flex-wrap shrink-0">
-                                {Object.keys(LAYER_COLORS).map(k => {
-                                    const c = LAYER_COLORS[k];
-                                    return <span key={k} className="text-[8px] font-bold px-1.5 py-0.5 rounded font-mono leading-none" style={{ backgroundColor: c.bg, color: c.fg }} title={c.name}>{k}</span>;
-                                })}
+                            <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 shrink-0">
+                                <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Layers — who does what</div>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                    {Object.keys(LAYER_COLORS).map(k => {
+                                        const c = LAYER_COLORS[k];
+                                        return (
+                                            <span key={k} className="flex items-center gap-1.5 min-w-0">
+                                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded font-mono leading-none shrink-0 w-[58px] text-center" style={{ backgroundColor: c.bg, color: c.fg }}>{k}</span>
+                                                <span className="text-[9px] text-gray-600 font-medium truncate">{c.name}</span>
+                                            </span>
+                                        );
+                                    })}
+                                </div>
                             </div>
                             <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
                                 {events.length === 0 && (
@@ -906,20 +914,53 @@ export const checkout: CheckoutProps = {
             ],
         };
 
+        // End-to-end request lifecycle — each step lights up the active nodes, arrows and labels
+        const FLOW_ACCENT = '#3838E7';
+        const FLOW_STEPS = [
+            { nodes: ['fe'],                  arrows: [],     label: '1 · User sends a message + context from the Frontend' },
+            { nodes: ['fe', 'ms'],            arrows: [0],    label: '2 · Frontend opens SSE to the Microservice (user JWT)' },
+            { nodes: ['ms', 'mysql', 'mongo'],arrows: [1, 2], label: '3 · Microservice checks the registry & writes the message' },
+            { nodes: ['ms', 'py'],            arrows: [3],    label: '4 · Microservice proxies the request to Python (forwards JWT)' },
+            { nodes: ['py', 'mongo'],         arrows: [4],    label: '5 · Python pulls extra history if the window is not enough' },
+            { nodes: ['py', 'llm'],           arrows: [5],    label: '6 · Python assembles the prompt & calls the LLM' },
+            { nodes: ['llm', 'py'],           arrows: [5],    label: '7 · LLM streams tokens back to Python' },
+            { nodes: ['py', 'ms'],            arrows: [3],    label: '8 · Python streams the answer to the Microservice' },
+            { nodes: ['ms', 'fe'],            arrows: [0],    label: '9 · Microservice streams to the Frontend & saves the result' },
+        ];
+
         const ArchitectureOverlay = ({ open, onClose }) => {
             const [sel, setSel] = useState(null);
             const [flow, setFlow] = useState(false);
+            const [flowStep, setFlowStep] = useState(0);
+            const detailRef = useRef(null);
+
             useEffect(() => {
                 if (!open) return;
                 const onKey = (e) => { if (e.key === 'Escape') onClose(); };
                 window.addEventListener('keydown', onKey);
                 return () => window.removeEventListener('keydown', onKey);
             }, [open, onClose]);
-            useEffect(() => { if (!open) { setSel(null); } }, [open]);
+            useEffect(() => { if (!open) { setSel(null); setFlow(false); } }, [open]);
+
+            // advance the end-to-end flow highlight while it is active
+            useEffect(() => {
+                if (!flow) return;
+                setFlowStep(0);
+                const id = setInterval(() => setFlowStep(s => (s + 1) % FLOW_STEPS.length), 1200);
+                return () => clearInterval(id);
+            }, [flow]);
+
+            // auto-scroll the detail card into view whenever a component is selected
+            useEffect(() => {
+                if (!sel) return;
+                const t = setTimeout(() => { detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 180);
+                return () => clearTimeout(t);
+            }, [sel]);
 
             if (!open) return null;
             const selNode = ARCH_NODES.find(n => n.id === sel);
             const selDetail = sel ? ARCH_DETAILS[sel] : null;
+            const active = flow ? FLOW_STEPS[flowStep] : null;
 
             return (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
@@ -948,6 +989,16 @@ export const checkout: CheckoutProps = {
                             </p>
                         </div>
 
+                        {/* flow step caption */}
+                        <AnimatePresence>
+                            {active && (
+                                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                                    className="mx-6 mt-2 px-4 py-2 bg-primary text-white rounded-lg text-[12px] font-semibold text-center shadow-sm">
+                                    {active.label}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         {/* diagram */}
                         <div className="px-6 py-4 overflow-x-auto">
                             <div className="relative mx-auto" style={{ width: 860, height: 566 }}>
@@ -964,34 +1015,51 @@ export const checkout: CheckoutProps = {
                                     <defs>
                                         <marker id="ah" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b" /></marker>
                                         <marker id="ahd" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#94a3b8" /></marker>
+                                        <marker id="ahf" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#3838E7" /></marker>
                                     </defs>
-                                    {ARCH_ARROWS.map((a, i) => (
-                                        <path key={i} d={a.d} fill="none" stroke={a.dashed ? '#94a3b8' : '#64748b'} strokeWidth="1.5"
-                                            strokeDasharray={a.dashed ? '5 4' : ''} markerEnd={`url(#${a.dashed ? 'ahd' : 'ah'})`} />
-                                    ))}
-                                    {flow && (
-                                        <motion.circle r="6" fill="#3838E7"
-                                            animate={{ cx: [430, 430, 444, 444, 430, 430, 444, 444, 430], cy: [78, 150, 208, 350, 410, 350, 208, 150, 78] }}
-                                            transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }} />
-                                    )}
+                                    {ARCH_ARROWS.map((a, i) => {
+                                        const on = active && active.arrows.includes(i);
+                                        const dim = active && !on;
+                                        return (
+                                            <path key={i} d={a.d} fill="none"
+                                                stroke={on ? FLOW_ACCENT : (a.dashed ? '#94a3b8' : '#64748b')}
+                                                strokeWidth={on ? 3.5 : 1.5}
+                                                strokeOpacity={dim ? 0.2 : 1}
+                                                strokeDasharray={a.dashed ? '5 4' : ''}
+                                                markerEnd={`url(#${on ? 'ahf' : (a.dashed ? 'ahd' : 'ah')})`}
+                                                style={{ transition: 'stroke 0.3s, stroke-width 0.3s, stroke-opacity 0.3s' }} />
+                                        );
+                                    })}
                                 </svg>
 
                                 {/* arrow labels */}
-                                {ARCH_ARROWS.map((a, i) => (
-                                    <div key={i} style={{ left: a.lx, top: a.ly }}
-                                        className="absolute -translate-x-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-white/90 rounded text-[8.5px] font-medium text-gray-500 border border-gray-100 whitespace-nowrap pointer-events-none">
-                                        {a.label}
-                                    </div>
-                                ))}
+                                {ARCH_ARROWS.map((a, i) => {
+                                    const on = active && active.arrows.includes(i);
+                                    const dim = active && !on;
+                                    return (
+                                        <div key={i} style={{ left: a.lx, top: a.ly, opacity: dim ? 0.3 : 1 }}
+                                            className={cn("absolute -translate-x-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[8.5px] whitespace-nowrap pointer-events-none transition-all",
+                                                on ? "bg-primary text-white border border-primary font-bold shadow-sm" : "bg-white/90 text-gray-500 border border-gray-100 font-medium")}>
+                                            {a.label}
+                                        </div>
+                                    );
+                                })}
 
                                 {/* component boxes */}
                                 {ARCH_NODES.map(n => {
                                     const color = NODE_COLOR[n.c];
                                     const isSel = sel === n.id;
+                                    const on = active && active.nodes.includes(n.id);
+                                    const dim = active && !on;
                                     return (
                                         <button key={n.id} onClick={() => setSel(isSel ? null : n.id)}
-                                            style={{ left: n.x, top: n.y, width: n.w, height: n.h, borderColor: isSel ? color : '#e5e7eb', boxShadow: isSel ? `0 0 0 4px ${color}33` : undefined }}
-                                            className="absolute flex flex-col items-center justify-center rounded-lg border-2 bg-white shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+                                            style={{ left: n.x, top: n.y, width: n.w, height: n.h,
+                                                borderColor: on ? FLOW_ACCENT : (isSel ? color : '#e5e7eb'),
+                                                boxShadow: on ? `0 0 0 5px ${FLOW_ACCENT}33` : (isSel ? `0 0 0 4px ${color}33` : undefined),
+                                                opacity: dim ? 0.4 : 1,
+                                                transition: 'all 0.3s' }}
+                                            className={cn("absolute flex flex-col items-center justify-center rounded-lg border-2 shadow-sm hover:shadow-md hover:-translate-y-0.5",
+                                                on ? "bg-primary/5" : "bg-white")}>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
                                                 <span className="text-[12px] font-bold text-gray-800">{n.label}</span>
@@ -1018,7 +1086,7 @@ export const checkout: CheckoutProps = {
                         {/* detail card */}
                         <AnimatePresence>
                             {selNode && selDetail && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                                <motion.div ref={detailRef} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                                     className="mx-6 mb-6 overflow-hidden">
                                     <div className="border border-gray-200 rounded-xl overflow-hidden" style={{ borderTopColor: NODE_COLOR[selNode.c], borderTopWidth: 3 }}>
                                         <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
