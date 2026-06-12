@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kai v2.2 - Experiment Copilot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3838E7',
+                        background: '#FDFDFF',
+                    },
+                    fontFamily: {
+                        sans: ['IBM Plex Sans', 'sans-serif'],
+                        mono: ['IBM Plex Mono', 'monospace'],
+                    },
+                    borderRadius: { 'md': '8px', 'lg': '12px' }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@11.0.8/dist/framer-motion.js"></script>
+    <style>
+        body { background-color: #FDFDFF; font-family: 'IBM Plex Sans', sans-serif; color: #1a1a1b; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0.15; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1); }
+        }
+        .typing-dot { animation: blink 1.4s ease-in-out infinite; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        const Sparkles = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="M5 3v4"/><path d="M9 5H5"/></svg>;
+        const X = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+        const MessageSquare = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
+        const Settings2 = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>;
+        const BarChart3 = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>;
+        const ChevronRight = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m9 18 6-6-6-6"/></svg>;
+        const Plus = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
+        const Wand2 = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.21 1.21 0 0 0 1.72 0L21.64 5.36a1.21 1.21 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 19v3"/></svg>;
+        const Bell = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
+        const Search = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
+        const ChevronDown = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>;
+        const Mail = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
+        const Pause = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="4" height="16" x="6" y="4"/><rect width="4" height="16" x="14" y="4"/></svg>;
+        const Play = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+        const CheckCircle = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        const AlertTriangle = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>;
+        const Zap = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+        const Network = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>;
+        const Code = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>;
+        const Trash = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>;
+
+        const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+        // ── Shared layer palette (used by both the Under-the-hood feed and the Architecture diagram) ──
+        const LAYER_COLORS = {
+            'FE':       { name: 'Frontend',           bg: '#F3E8FF', fg: '#7E22CE', solid: '#A855F7' },
+            'MS':       { name: 'Java Microservice',  bg: '#CCFBF1', fg: '#0F766E', solid: '#14B8A6' },
+            'PY':       { name: 'kam-assistant',      bg: '#FFE4DE', fg: '#D6452F', solid: '#FF7F6B' },
+            'LLM':      { name: 'LLM provider',       bg: '#FEF3C7', fg: '#B45309', solid: '#F59E0B' },
+            'DB-SQL':   { name: 'MySQL',              bg: '#EEF2F6', fg: '#475569', solid: '#94A3B8' },
+            'DB-MONGO': { name: 'MongoDB',            bg: '#EEF2F6', fg: '#475569', solid: '#94A3B8' },
+        };
+
+        const QuickTooltip = ({ text, children }) => {
+            const [show, setShow] = React.useState(false);
+            return (
+                <div className="relative">
+                    <div onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+                        {children}
+                    </div>
+                    <AnimatePresence>
+                        {show && (
+                            <motion.div initial={{ opacity: 0, y: 2 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 2 }} transition={{ duration: 0.1 }} className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[11px] px-2 py-1 rounded whitespace-nowrap pointer-events-none">
+                                {text}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-1 h-1 bg-gray-800" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const MAIN_TOOLS = [
+            { id: 'query_experiment_insights', icon: BarChart3, title: "Query experiment insights", desc: "Semantic breakdown of results, winner status & next steps" },
+            { id: 'set_experiment_state', icon: Settings2, title: "Set experiment state", desc: "Pause, resume, stop or archive experiments" },
+            { id: 'audit_and_cleanup_workspace', icon: Sparkles, title: "Audit & clean up workspace", desc: "Find stale flags and concluded experiments" },
+            { id: 'simulate_user_experience', icon: Search, title: "Simulate user assignment", desc: "See which variants a user profile qualifies for" },
+            { id: 'manage_progressive_rollout', icon: Zap, title: "Manage progressive rollout", desc: "Trigger safe ramps and set guardrails" },
+            { id: 'generate_variant_from_design', icon: Wand2, title: "Generate variant from design", desc: "Turn a Figma URL into HTML/React code" },
+        ];
+
+        const ALL_TOOLS = [
+            { id: 'get_experiment_details', icon: BarChart3, title: "Get experiment details", desc: "Configuration and metadata retrieval" },
+            { id: 'list_experiments', icon: BarChart3, title: "List experiments", desc: "Searchable and filterable project overview" },
+            { id: 'get_variant_code', icon: Wand2, title: "Get variant code", desc: "Secure retrieval of implementation logic" },
+            { id: 'list_feature_flags', icon: Zap, title: "List feature flags", desc: "Real-time flag visibility" },
+            { id: 'get_feature_flag_details', icon: Settings2, title: "Get feature flag details", desc: "Environment-specific settings and rules" },
+            { id: 'create_feature_flag', icon: Plus, title: "Create feature flag", desc: "Native flag instantiation" },
+            { id: 'enable_disable_feature_flag', icon: Zap, title: "Enable/disable feature flag", desc: "Immediate state control" },
+            { id: 'delete_feature_flag', icon: X, title: "Delete feature flag", desc: "Cleanup of simple flag assets" },
+            { id: 'audit_recent_changes', icon: Sparkles, title: "Audit recent changes", desc: "Operational visibility and logs" },
+            { id: 'duplicate_feature_flag', icon: Plus, title: "Duplicate feature flag", desc: "Rapid iteration of flag logic" },
+            { id: 'get_experiment_results_summary', icon: BarChart3, title: "Get experiment results summary", desc: "High-level pulse/outcomes for AI parsing" },
+            { id: 'goal_list', icon: Sparkles, title: "List goals", desc: "View all tracking goals" },
+            { id: 'goal_get', icon: Sparkles, title: "Get goal details", desc: "Retrieve specific goal configuration" },
+            { id: 'goal_create', icon: Plus, title: "Create goal", desc: "Add new tracking goal" },
+            { id: 'goal_delete', icon: X, title: "Delete goal", desc: "Remove a goal" },
+            { id: 'segment_list', icon: Sparkles, title: "List segments", desc: "View all audience segments" },
+            { id: 'segment_get', icon: Sparkles, title: "Get segment details", desc: "Retrieve segment configuration" },
+            { id: 'segment_create', icon: Plus, title: "Create segment", desc: "Define new audience segment" },
+            { id: 'targeting_rule_list', icon: Settings2, title: "List targeting rules", desc: "View all targeting rules" },
+            { id: 'targeting_rule_create', icon: Plus, title: "Create targeting rule", desc: "Add new targeting rule" },
+            { id: 'feature_flag_variation_create', icon: Plus, title: "Create flag variation", desc: "Add variant to feature flag" },
+            { id: 'feature_flag_rule_targeted_create', icon: Settings2, title: "Create targeted rule", desc: "Set up targeted delivery rule" },
+            { id: 'feature_flag_rule_progressive_create', icon: Zap, title: "Create progressive rule", desc: "Set up progressive rollout rule" },
+        ];
+
+        const MCP_TOOLS = [...MAIN_TOOLS, ...ALL_TOOLS];
+
+        const RECENT_TOOL_IDS = ['query_experiment_insights', 'audit_and_cleanup_workspace', 'list_experiments'];
+        const RECENT_TOOLS = RECENT_TOOL_IDS.map(id => MCP_TOOLS.find(t => t.id === id)).filter(Boolean);
+
+        const SUGGESTIONS = [
+            "Query experiment results",
+            "Clean up my stale flags",
+            "Pause an experiment",
+            "Ship a PBX variant to code",
+        ];
+
+        const getMockResponse = (text) => {
+            const l = text.toLowerCase();
+            // Advanced tools (rich responses)
+            if (l.includes('query') && l.includes('result'))
+                return { tool: 'query_experiment_insights', label: 'Query Experiment Insights', type: 'queryfilter' };
+            if (l.includes('checkout') || l.includes('winning') || l.includes('insight') || l.includes('result'))
+                return { tool: 'query_experiment_insights', label: 'Query Experiment Insights', type: 'insights' };
+            if (l.includes('stale') || l.includes('clean') || l.includes('audit') || l.includes('flags'))
+                return { tool: 'audit_and_cleanup_workspace', label: 'Audit & Cleanup Workspace', type: 'audit' };
+            if (l.includes('pause') && (l.includes('experiment') || l.includes('an ')))
+                return { tool: 'set_experiment_state', label: 'Set Experiment State', type: 'pausefilter' };
+            if (l.includes('pause') || l.includes('stop') || l.includes('pricing page') || l.includes('state'))
+                return { tool: 'set_experiment_state', label: 'Set Experiment State', type: 'pause' };
+            if (l.includes('simulate') || l.includes('assignment') || l.includes('user profile'))
+                return { tool: 'simulate_user_experience', label: 'Simulate User Experience', type: 'simulate' };
+            if (l.includes('rollout') || l.includes('ramp') || l.includes('progressive'))
+                return { tool: 'manage_progressive_rollout', label: 'Manage Progressive Rollout', type: 'rollout' };
+            if (l.includes('ship') && l.includes('pbx') || l.includes('transpose') || l.includes('variant to code'))
+                return { tool: 'generate_variant_from_design', label: 'Ship Variant to Code', type: 'shipvariant' };
+            if (l.includes('generate') || l.includes('variant') || l.includes('figma') || l.includes('design'))
+                return { tool: 'generate_variant_from_design', label: 'Generate Variant from Design', type: 'generate' };
+            // Baseline tools (simple back-and-forth)
+            if (l.includes('list') && (l.includes('experiment') || l.includes('flag')))
+                return { tool: 'list_experiments', label: 'List Experiments', type: 'followup', question: 'Searching for active experiments... would you like to filter by status, owner, or date range?', quickReplies: ['Only running', 'Owned by me', 'Last 7 days'] };
+            if (l.includes('get details') || l.includes('details'))
+                return { tool: 'get_experiment_details', label: 'Get Experiment Details', type: 'followup', question: 'Which experiment? (provide experiment ID or name)', quickReplies: ['Pricing Page Variation - 1', 'Checkout Page Redesign', 'Hero Banner Test'] };
+            if (l.includes('goal') || l.includes('tracking'))
+                return { tool: 'goal_list', label: 'List Goals', type: 'followup', question: 'Fetching tracking goals... found 12 goals. Need help with a specific one?', quickReplies: ['Conversion goals', 'Revenue goals', 'Show all'] };
+            if (l.includes('segment') || l.includes('audience'))
+                return { tool: 'segment_list', label: 'List Segments', type: 'followup', question: 'Loading audience segments... how would you like to filter them?', quickReplies: ['By traffic size', 'Recently used', 'Show all'] };
+            if (l.includes('duplicate') || l.includes('copy'))
+                return { tool: 'duplicate_feature_flag', label: 'Duplicate Feature Flag', type: 'followup', question: 'Which flag should I duplicate? (provide flag key or name)', quickReplies: ['checkout-v1-legacy', 'pricing-table-old'] };
+            if (l.includes('delete') || l.includes('remove'))
+                return { tool: 'delete_feature_flag', label: 'Delete Feature Flag', type: 'followup', question: 'Which flag do you want to delete? (provide flag key — this action is permanent)', quickReplies: ['checkout-v1-legacy', 'hero-banner-test-q2', 'Cancel'] };
+            if (l.includes('code') || l.includes('implementation'))
+                return { tool: 'get_variant_code', label: 'Get Variant Code', type: 'followup', question: 'Which variant? (experiment ID + variant name)', quickReplies: ['#4089 Variant A', '#4101 Variant B'] };
+            if (l.includes('recent') || l.includes('history') || l.includes('changelog'))
+                return { tool: 'audit_recent_changes', label: 'Audit Recent Changes', type: 'followup', question: 'Pulling activity logs... showing changes from the last 7 days. Want to filter by user or action type?', quickReplies: ['By me', 'Flag changes only', 'Last 24 hours'] };
+            return null;
+        };
+
+        const InsightsContent = () => (
+            <div>
+                <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
+                    Here's the breakdown for <span className="font-semibold text-gray-800">Checkout Page Redesign</span> · ID #4089:
+                </p>
+                <div className="grid grid-cols-3 gap-1.5 mb-3">
+                    {[
+                        { label: 'Control', value: '12.4%', sub: 'baseline', winner: false },
+                        { label: 'Variant A', value: '14.8%', sub: '+19.4% ↑', winner: true },
+                        { label: 'Variant B', value: '13.2%', sub: '+6.5% ↑', winner: false },
+                    ].map(s => (
+                        <div key={s.label} className={`p-2.5 rounded-lg border ${s.winner ? 'border-primary/20 bg-primary/5' : 'border-gray-100 bg-gray-50'}`}>
+                            <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">{s.label}</div>
+                            <div className={`text-base font-bold ${s.winner ? 'text-primary' : 'text-gray-800'}`}>{s.value}</div>
+                            <div className={`text-[10px] font-medium ${s.winner ? 'text-primary/70' : 'text-gray-400'}`}>{s.sub}</div>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex items-center gap-2 mb-3">
+                    <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{width: '94.2%'}} />
+                    </div>
+                    <span className="text-[11px] font-semibold text-gray-700 whitespace-nowrap">94.2% confidence</span>
+                </div>
+                <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-100 rounded-lg mb-3">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-amber-700 leading-relaxed">Variant A is degrading page load by +180ms. Recommend a performance review before shipping.</p>
+                </div>
+                <div className="flex gap-2">
+                    <button className="px-3 py-1.5 bg-primary text-white rounded text-[11px] font-semibold hover:bg-blue-700 transition-colors">Transpose to code</button>
+                    <button className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Pause losing variants</button>
+                </div>
+            </div>
+        );
+
+        const AuditContent = () => {
+            const flags = ['checkout-v1-legacy', 'hero-banner-test-q2', 'mobile-nav-experiment', 'pricing-table-old'];
+            const [copied, setCopied] = React.useState(false);
+            const copyIds = () => {
+                navigator.clipboard.writeText(flags.join(', '));
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            };
+            return (
+                <div>
+                    <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
+                        Found <span className="font-semibold text-gray-800">4 stale items</span> in your workspace:
+                    </p>
+                    <div className="space-y-1.5 mb-3">
+                        {[
+                            { name: 'checkout-v1-legacy', sev: 'high', reason: '100% rolled out · 8 months old' },
+                            { name: 'hero-banner-test-q2', sev: 'high', reason: 'Concluded · never cleaned up' },
+                            { name: 'mobile-nav-experiment', sev: 'med', reason: 'Paused for 3+ months' },
+                            { name: 'pricing-table-old', sev: 'med', reason: 'Winner shipped · flag still live' },
+                        ].map(f => (
+                            <div key={f.name} className="flex items-center gap-2.5 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                                <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${f.sev === 'high' ? 'bg-red-400' : 'bg-amber-400'}`} />
+                                <span className="text-[11px] font-mono font-medium text-gray-800 flex-1 truncate">{f.name}</span>
+                                <span className="text-[10px] text-gray-400 whitespace-nowrap">{f.reason}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex gap-2">
+                        <button className="px-3 py-1.5 bg-primary text-white rounded text-[11px] font-semibold hover:bg-blue-700 transition-colors">Delete all stale flags</button>
+                        <button onClick={copyIds} className={`px-3 py-1.5 border rounded text-[11px] font-semibold transition-colors ${copied ? 'bg-green-50 border-green-200 text-green-600' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>{copied ? '✓ Copied' : 'Copy flag IDs'}</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const PauseContent = () => (
+            <div>
+                <div className="flex items-center gap-2.5 mb-3">
+                    <div className="h-7 w-7 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                    </div>
+                    <span className="text-[12px] font-semibold text-gray-800">Pricing Page Variation - 1 has been paused</span>
+                </div>
+                <div className="space-y-1.5 pl-9 mb-3">
+                    {[
+                        ['Environments', 'Production, Staging'],
+                        ['Variants affected', 'Control, Variant A, Variant B'],
+                        ['Traffic', 'Reset to 0%'],
+                        ['Reason logged', 'Manual pause via Kai'],
+                    ].map(([k, v]) => (
+                        <div key={k} className="flex gap-2 text-[11px]">
+                            <span className="text-gray-400 w-28 shrink-0">{k}</span>
+                            <span className="text-gray-700 font-medium">{v}</span>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex gap-2 pl-9">
+                    <button className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Notify team on Slack</button>
+                    <button className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Archive experiment</button>
+                </div>
+            </div>
+        );
+
+        const SimulateContent = () => (
+            <div>
+                <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
+                    Simulated profile: <span className="font-mono text-[11px] bg-gray-100 px-1.5 py-0.5 rounded">country=FR · device=mobile · is_vip=true</span>
+                </p>
+                <div className="space-y-2 mb-3">
+                    {[
+                        { flag: 'checkout-redesign', variant: 'Variant A', rule: 'EU Segment · VIP tier', color: 'primary' },
+                        { flag: 'mobile-nav-v2', variant: 'Control', rule: 'Mobile device targeting', color: 'gray' },
+                        { flag: 'pricing-table-new', variant: 'Not eligible', rule: 'Excluded: experiment concluded', color: 'red' },
+                    ].map(r => (
+                        <div key={r.flag} className="p-2.5 bg-gray-50 border border-gray-100 rounded-lg">
+                            <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[11px] font-mono font-medium text-gray-800">{r.flag}</span>
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${r.color === 'primary' ? 'bg-primary/10 text-primary' : r.color === 'red' ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-500'}`}>{r.variant}</span>
+                            </div>
+                            <span className="text-[10px] text-gray-400">{r.rule}</span>
+                        </div>
+                    ))}
+                </div>
+                <button className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Try a different profile</button>
+            </div>
+        );
+
+        const RolloutContent = () => (
+            <div>
+                <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
+                    Ramping <span className="font-semibold text-gray-800">checkout-redesign</span> to <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">50%</span>:
+                </p>
+                <div className="mb-3 p-3 bg-gray-50 border border-gray-100 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Traffic Allocation</span>
+                        <span className="text-[11px] font-bold text-primary">50%</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{width: '50%'}} />
+                    </div>
+                </div>
+                <div className="space-y-1.5 mb-3">
+                    {[
+                        { label: 'Conversion Rate', val: '12.4%', trend: '+2.1%', color: 'green' },
+                        { label: 'Page Load Time', val: '1.2s', trend: '-15ms', color: 'green' },
+                        { label: 'Error Rate', val: '0.03%', trend: '-0.01%', color: 'green' },
+                    ].map(m => (
+                        <div key={m.label} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-100 rounded">
+                            <span className="text-[11px] font-medium text-gray-600">{m.label}</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-gray-900">{m.val}</span>
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${m.color === 'green' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>{m.trend}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex items-center gap-2 mb-3 p-2.5 bg-green-50 border border-green-100 rounded-lg">
+                    <CheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                    <p className="text-[11px] text-green-700 font-medium">All guardrails green. Safe to proceed.</p>
+                </div>
+                <button className="w-full px-3 py-1.5 bg-primary text-white rounded text-[11px] font-semibold hover:bg-blue-700 transition-colors">Confirm ramp to 50%</button>
+            </div>
+        );
+
+        const GenerateContent = () => {
+            const [codeFormat, setCodeFormat] = React.useState('react');
+            const codeSnippets = {
+                react: `<button
+  className="px-4 py-2 bg-blue-600
+    text-white rounded-lg
+    hover:bg-blue-700
+    transition-colors"
+>
+  Checkout
+</button>`,
+                html: `<button style="
+  padding: 8px 16px;
+  background: #2563eb;
+  color: white;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;"
+>
+  Checkout
+</button>`
+            };
+            return (
+                <div>
+                    <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
+                        Generated from <span className="font-mono text-[11px] bg-gray-100 px-1.5 py-0.5 rounded">Figma Component</span> · <span className="text-primary font-semibold cursor-pointer hover:underline">View design</span>
+                    </p>
+                    <div className="flex gap-2 mb-3">
+                        {['react', 'html'].map(fmt => (
+                            <button key={fmt} onClick={() => setCodeFormat(fmt)}
+                                className={`px-2.5 py-1.5 text-[10px] font-semibold rounded border transition-colors ${
+                                    codeFormat === fmt ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-gray-50 border-gray-100 text-gray-500 hover:border-gray-200'
+                                }`}>
+                                {fmt.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="mb-3 p-3 bg-gray-900 rounded-lg border border-gray-800 overflow-x-auto">
+                        <code className="font-mono text-[10px] text-gray-100 leading-relaxed whitespace-pre">{codeSnippets[codeFormat]}</code>
+                    </div>
+                    <div className="flex gap-2">
+                        <button className="flex-1 px-3 py-1.5 bg-primary text-white rounded text-[11px] font-semibold hover:bg-blue-700 transition-colors">Copy to clipboard</button>
+                        <button className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">View on Figma</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const QueryFilterContent = () => {
+            const [filter, setFilter] = React.useState(null);
+            const [selectedExp, setSelectedExp] = React.useState(null);
+            const experiments = [
+                { name: 'Checkout Page Redesign', id: '#4089', status: 'Running', days: '3 days' },
+                { name: 'Pricing Table Test', id: '#4088', status: 'Running', days: '1 day' },
+                { name: 'Mobile Nav v2', id: '#4086', status: 'Concluded', days: '21 days' },
+            ];
+
+            if (selectedExp) {
+                return (
+                    <div>
+                        <button onClick={() => setSelectedExp(null)} className="text-[11px] font-semibold text-gray-500 flex items-center gap-1 mb-3 hover:text-gray-700 transition-colors">
+                            <ChevronDown className="h-3 w-3 rotate-90" /> Back to list
+                        </button>
+                        <InsightsContent />
+                    </div>
+                );
+            }
+
+            return (
+                <div>
+                    {!filter ? (
+                        <>
+                            <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">Which timeframe? Or type an experiment name:</p>
+                            <div className="flex gap-2 mb-3">
+                                {['Last 7 days', 'Last 30 days'].map(f => (
+                                    <button key={f} onClick={() => setFilter(f)} className="px-3 py-1.5 bg-gray-100 hover:bg-primary/10 border border-gray-200 hover:border-primary/30 text-gray-600 hover:text-primary rounded text-[11px] font-semibold transition-colors">{f}</button>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">Experiments from <span className="font-semibold text-gray-800">{filter}</span>:</p>
+                            <div className="space-y-2 mb-3">
+                                {experiments.map(e => (
+                                    <button key={e.id} onClick={() => setSelectedExp(e)} className="w-full text-left p-2.5 bg-gray-50 border border-gray-100 hover:bg-primary/5 hover:border-primary/20 rounded-lg transition-colors group cursor-pointer">
+                                        <div className="flex items-center justify-between mb-0.5">
+                                            <span className="text-[11px] font-semibold text-gray-900 group-hover:text-primary">{e.name}</span>
+                                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${e.status === 'Running' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}`}>{e.status}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] text-gray-400 font-mono">{e.id}</span>
+                                            <span className="text-[10px] text-gray-400">{e.days} ago</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={() => setFilter(null)} className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Change filter</button>
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        const PauseFilterContent = () => {
+            const [filter, setFilter] = React.useState(null);
+            const experiments = [
+                { name: 'Checkout Page Redesign', id: '#4089' },
+                { name: 'Pricing Table Test', id: '#4088' },
+                { name: 'Mobile Nav v2', id: '#4086' },
+            ];
+            return (
+                <div>
+                    {!filter ? (
+                        <>
+                            <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">Filter experiments or type a name:</p>
+                            <div className="flex gap-2 mb-3">
+                                {['Last 7 days', 'Last 30 days'].map(f => (
+                                    <button key={f} onClick={() => setFilter(f)} className="px-3 py-1.5 bg-gray-100 hover:bg-primary/10 border border-gray-200 hover:border-primary/30 text-gray-600 hover:text-primary rounded text-[11px] font-semibold transition-colors">{f}</button>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">Experiments from <span className="font-semibold text-gray-800">{filter}</span>:</p>
+                            <div className="space-y-2 mb-3">
+                                {experiments.map(e => (
+                                    <div key={e.id} className="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-100 rounded-lg hover:bg-red-50 hover:border-red-100 transition-colors group cursor-pointer">
+                                        <div>
+                                            <div className="text-[11px] font-semibold text-gray-900">{e.name}</div>
+                                            <div className="text-[10px] text-gray-400 font-mono">{e.id}</div>
+                                        </div>
+                                        <button className="px-2.5 py-1 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-100 rounded opacity-0 group-hover:opacity-100 transition-opacity">Pause</button>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={() => setFilter(null)} className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Change filter</button>
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        const ShipVariantContent = () => {
+            const [codeFormat, setCodeFormat] = React.useState('react');
+            const code = {
+                react: `// Ship: Checkout Redesign v1.2
+import { Button } from '@ui/button';
+
+export function CheckoutPage() {
+  return (
+    <section className="checkout-wrapper">
+      <Button
+        className="btn-primary-v2"
+        onClick={handleCheckout}
+      >
+        Proceed to Payment
+      </Button>
+    </section>
+  );
+}`,
+                typescript: `interface CheckoutProps {
+  variantId: string;
+  timestamp: number;
+}
+
+export const checkout: CheckoutProps = {
+  variantId: "checkout-redesign-v1.2",
+  timestamp: Date.now()
+};`
+            };
+            return (
+                <div>
+                    <p className="text-[12px] text-gray-600 mb-3 leading-relaxed">
+                        <span className="font-semibold text-gray-800">Checkout Redesign</span> · Ready to ship <span className="text-green-600 font-semibold">↗</span>
+                    </p>
+                    <div className="flex gap-2 mb-3">
+                        {['react', 'typescript'].map(fmt => (
+                            <button key={fmt} onClick={() => setCodeFormat(fmt)} className={`px-2.5 py-1.5 text-[10px] font-semibold rounded border transition-colors ${codeFormat === fmt ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>{fmt.toUpperCase()}</button>
+                        ))}
+                    </div>
+                    <div className="mb-3 p-3 bg-gray-900 rounded-lg border border-gray-800 overflow-x-auto">
+                        <code className="font-mono text-[9px] text-gray-100 leading-relaxed whitespace-pre">{code[codeFormat]}</code>
+                    </div>
+                    <div className="space-y-2">
+                        <button className="w-full px-3 py-1.5 bg-primary text-white rounded text-[11px] font-semibold hover:bg-blue-700 transition-colors">Copy to clipboard</button>
+                        <button className="w-full px-3 py-1.5 border border-gray-200 text-gray-600 rounded text-[11px] font-semibold hover:border-gray-300 transition-colors">Open in VS Code</button>
+                        <p className="text-[10px] text-gray-400 text-center">Or paste the command in your terminal to integrate</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const getRichContent = (type) => {
+            if (type === 'insights') return <InsightsContent />;
+            if (type === 'audit') return <AuditContent />;
+            if (type === 'pause') return <PauseContent />;
+            if (type === 'simulate') return <SimulateContent />;
+            if (type === 'rollout') return <RolloutContent />;
+            if (type === 'generate') return <GenerateContent />;
+            if (type === 'queryfilter') return <QueryFilterContent />;
+            if (type === 'pausefilter') return <PauseFilterContent />;
+            if (type === 'shipvariant') return <ShipVariantContent />;
+            return null;
+        };
+
+        const ToolCallBadge = ({ toolId, toolLabel }) => (
+            <div className="flex items-center gap-1.5 mb-1.5 px-0.5">
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-primary/5 border border-primary/10 rounded text-[10px] text-primary font-medium">
+                    <Zap className="h-2.5 w-2.5" />
+                    <span className="font-mono">{toolId}</span>
+                </div>
+                <span className="text-[10px] text-gray-300">·</span>
+                <span className="text-[10px] text-gray-400">{toolLabel}</span>
+            </div>
+        );
+
+        const StreamingText = ({ text, speed = 12 }) => {
+            const [shown, setShown] = React.useState('');
+            React.useEffect(() => {
+                setShown('');
+                if (!text) return;
+                let i = 0;
+                const id = setInterval(() => {
+                    i++;
+                    setShown(text.slice(0, i));
+                    if (i >= text.length) clearInterval(id);
+                }, speed);
+                return () => clearInterval(id);
+            }, [text]);
+            return <span className="whitespace-pre-wrap">{shown}{shown.length < text.length && <span className="inline-block w-0.5 h-3 bg-gray-400 ml-0.5 align-middle animate-pulse" />}</span>;
+        };
+
+        const MessageBubble = ({ message, onSendMessage, isLatest }) => {
+            const isUser = message.role === 'user';
+            const shouldStream = !isUser && !message.richContent && message.content && message.streamed;
+            return (
+                <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
+                    {!isUser && message.toolCall && (
+                        <ToolCallBadge toolId={message.toolCall.id} toolLabel={message.toolCall.label} />
+                    )}
+                    <div className={cn(
+                        "px-3.5 py-2.5 rounded-2xl text-[12px] leading-relaxed max-w-[95%]",
+                        isUser
+                            ? "bg-[#F0F1FF] text-blue-900 border border-[#E5E7FF] rounded-tr-sm font-medium"
+                            : "bg-white text-gray-700 border border-gray-100 shadow-sm rounded-tl-sm"
+                    )}>
+                        {message.richContent ? message.richContent : (
+                            shouldStream
+                                ? <StreamingText text={message.content} />
+                                : <span className="whitespace-pre-wrap">{message.content}</span>
+                        )}
+                    </div>
+                    {!isUser && message.quickReplies && message.quickReplies.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2 max-w-[95%]">
+                            {message.quickReplies.map((qr, i) => (
+                                <button key={i} onClick={() => onSendMessage && onSendMessage(qr)}
+                                    className="px-2.5 py-1 bg-white hover:bg-primary/5 border border-gray-200 hover:border-primary/30 rounded-full text-[11px] text-gray-600 hover:text-primary font-medium transition-all">
+                                    {qr}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {!isUser && message.nextSteps && message.nextSteps.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2 max-w-[95%]">
+                            {message.nextSteps.map((ns, i) => (
+                                <button key={i} onClick={() => onSendMessage && onSendMessage(ns)}
+                                    className="px-2 py-0.5 bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-full text-[10px] text-gray-600 font-normal transition-all">
+                                    {ns}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const SkeletonLine = ({ w = 'full', h = '2.5' }) => (
+            <div className={`h-${h} bg-gray-100 rounded animate-pulse`} style={{ width: w === 'full' ? '100%' : w }} />
+        );
+
+        const InsightsSkeleton = () => (
+            <div className="space-y-3">
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse w-3/4" />
+                <div className="grid grid-cols-3 gap-1.5">
+                    {[0, 1, 2].map(i => (
+                        <div key={i} className="p-2.5 rounded-lg border border-gray-100 bg-gray-50 space-y-1.5">
+                            <div className="h-2 bg-gray-200 rounded animate-pulse w-1/2" />
+                            <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                            <div className="h-2 bg-gray-100 rounded animate-pulse w-2/3" />
+                        </div>
+                    ))}
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full animate-pulse" />
+            </div>
+        );
+
+        const AuditSkeleton = () => (
+            <div className="space-y-2">
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse w-2/3" />
+                {[0, 1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-2.5 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="h-1.5 w-1.5 rounded-full bg-gray-200 animate-pulse" />
+                        <div className="h-2.5 bg-gray-200 rounded animate-pulse flex-1" />
+                        <div className="h-2 bg-gray-100 rounded animate-pulse w-20" />
+                    </div>
+                ))}
+            </div>
+        );
+
+        const ListSkeleton = () => (
+            <div className="space-y-2">
+                {[0, 1, 2].map(i => (
+                    <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-100">
+                        <div className="h-3 w-3 rounded bg-gray-200 animate-pulse" />
+                        <div className="h-2.5 bg-gray-200 rounded animate-pulse flex-1" />
+                    </div>
+                ))}
+            </div>
+        );
+
+        const GenericSkeleton = () => (
+            <div className="space-y-2.5">
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse" />
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse w-5/6" />
+                <div className="h-2.5 bg-gray-100 rounded animate-pulse w-3/4" />
+            </div>
+        );
+
+        const getSkeletonForType = (type) => {
+            if (type === 'insights' || type === 'queryfilter') return <InsightsSkeleton />;
+            if (type === 'audit') return <AuditSkeleton />;
+            if (type === 'pausefilter') return <ListSkeleton />;
+            return <GenericSkeleton />;
+        };
+
+        const SimpleChart = ({ expanded = false }) => {
+            const data = [
+                { label: 'Control', val: 12.4, color: '#94a3b8' },
+                { label: 'Var A', val: 14.8, color: '#3838E7' },
+                { label: 'Var B', val: 13.2, color: '#818cf8' },
+            ];
+            return (
+                <div className={cn("w-full bg-white border border-gray-100 rounded-lg p-4 mt-2", expanded ? "h-64" : "h-32")}>
+                    <div className="flex items-end justify-around h-full gap-4">
+                        {data.map((d, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                                <motion.div initial={{ height: 0 }} animate={{ height: `${(d.val / 16) * 100}%` }} className="w-full rounded-t" style={{ backgroundColor: d.color }} />
+                                <span className="text-[10px] font-medium text-gray-400 mt-2 uppercase">{d.label}</span>
+                                <span className="text-[10px] font-semibold text-gray-900">{d.val}%</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const Modal = ({ isOpen, onClose, title, subtitle, children, footer }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+                    <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6 border-b border-gray-100 flex items-start justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Wand2 className="h-5 w-5 text-primary" />{title}</h2>
+                                <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+                            </div>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="h-5 w-5 text-gray-400" /></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto max-h-[70vh]">{children}</div>
+                        {footer && <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">{footer}</div>}
+                    </motion.div>
+                </div>
+            );
+        };
+
+        // ════════════════════════════════════════════════════════════════
+        //  UNDER THE HOOD — live raw event feed
+        // ════════════════════════════════════════════════════════════════
+
+        const UthBadge = ({ layer }) => {
+            const c = LAYER_COLORS[layer] || LAYER_COLORS['MS'];
+            return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded font-mono shrink-0 leading-none" style={{ backgroundColor: c.bg, color: c.fg }}>{layer}</span>;
+        };
+
+        const UthRow = ({ ev }) => {
+            const [open, setOpen] = useState(false);
+
+            if (ev.kind === 'turn-sep') {
+                return (
+                    <div className="flex items-center gap-2 my-2 select-none px-1">
+                        <div className="flex-1 h-px bg-gray-200" />
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Turn {ev.turn}</span>
+                        <div className="flex-1 h-px bg-gray-200" />
+                    </div>
+                );
+            }
+            if (ev.kind === 'turn-summary') {
+                const p = ev.payload;
+                return (
+                    <motion.div initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }}
+                        className="my-1.5 px-2.5 py-1.5 bg-primary/5 border border-primary/10 rounded-md text-[10px] text-primary font-semibold leading-snug">
+                        ✓ Turn complete — {p.ms}ms · {p.inputTokens.toLocaleString()} input tokens ({p.cachedInput.toLocaleString()} cached) · {p.outputTokens} output tokens
+                    </motion.div>
+                );
+            }
+            if (ev.kind === 'token-stream') {
+                return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 px-1 py-0.5">
+                        <span className="text-[9px] text-gray-300 font-mono shrink-0 w-11 text-right">{ev.ts}</span>
+                        <UthBadge layer={ev.layer} />
+                        <span className="text-[10px] text-gray-400 font-mono italic">… streaming ({ev.payload.tokens} tokens)</span>
+                    </motion.div>
+                );
+            }
+
+            const summary = JSON.stringify(ev.payload);
+            return (
+                <motion.div initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}
+                    onClick={() => setOpen(o => !o)}
+                    className="group flex flex-col px-1 py-0.5 rounded hover:bg-gray-50 cursor-pointer">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[9px] text-gray-300 font-mono shrink-0 w-11 text-right">{ev.ts}</span>
+                        <UthBadge layer={ev.layer} />
+                        <span className="text-[10px] font-semibold text-gray-700 shrink-0">{ev.type}</span>
+                        <span className="text-[10px] text-gray-400 font-mono truncate flex-1">{summary}</span>
+                    </div>
+                    <AnimatePresence>
+                        {open && (
+                            <motion.pre initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                                className="mt-1 ml-[52px] mr-1 p-2.5 bg-gray-900 text-gray-100 rounded-md text-[9px] font-mono overflow-x-auto leading-relaxed whitespace-pre">
+{JSON.stringify(ev.payload, null, 2)}
+                            </motion.pre>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
+            );
+        };
+
+        const UnderTheHoodPanel = ({ events, open, kaiOpen, onClear, onClose }) => {
+            const endRef = useRef(null);
+            useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [events]);
+            return (
+                <AnimatePresence>
+                    {open && (
+                        <motion.div
+                            initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }}
+                            transition={{ type: 'tween', duration: 0.2 }}
+                            className={cn("fixed bottom-6 h-[75vh] max-h-[800px] w-[440px] flex flex-col bg-white border border-gray-200 shadow-2xl rounded-xl z-40 overflow-hidden",
+                                kaiOpen ? "right-[424px]" : "right-6")}
+                        >
+                            <div className="bg-gray-900 px-4 py-3 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <Code className="h-3.5 w-3.5 text-gray-300" />
+                                    <span className="font-semibold text-[13px] text-white">Under the hood</span>
+                                    <span className="text-[9px] font-medium text-gray-400 bg-white/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /> live feed
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <button onClick={onClear} className="p-1.5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-colors" title="Clear feed"><Trash className="h-3.5 w-3.5" /></button>
+                                    <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-colors" title="Collapse"><X className="h-4 w-4" /></button>
+                                </div>
+                            </div>
+                            <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-1.5 flex-wrap shrink-0">
+                                {Object.keys(LAYER_COLORS).map(k => {
+                                    const c = LAYER_COLORS[k];
+                                    return <span key={k} className="text-[8px] font-bold px-1.5 py-0.5 rounded font-mono leading-none" style={{ backgroundColor: c.bg, color: c.fg }} title={c.name}>{k}</span>;
+                                })}
+                            </div>
+                            <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
+                                {events.length === 0 && (
+                                    <div className="h-full flex flex-col items-center justify-center text-center px-8">
+                                        <Code className="h-8 w-8 text-gray-200 mb-3" />
+                                        <p className="text-[12px] text-gray-400 font-medium">No events yet</p>
+                                        <p className="text-[11px] text-gray-300 mt-1 leading-relaxed">Send a message in Kai to watch the architecture light up — every layer, in real time.</p>
+                                    </div>
+                                )}
+                                {events.map(ev => <UthRow key={ev._id} ev={ev} />)}
+                                <div ref={endRef} />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            );
+        };
+
+        // ════════════════════════════════════════════════════════════════
+        //  ARCHITECTURE DIAGRAM — interactive onboarding overlay
+        // ════════════════════════════════════════════════════════════════
+
+        const NODE_COLOR = { FE: '#A855F7', MS: '#14B8A6', PY: '#FF7F6B', LLM: '#F59E0B', GRAY: '#94A3B8' };
+
+        const ARCH_NODES = [
+            { id: 'fe',    label: 'KAI Frontend',      sub: 'SPA · SSE client',              c: 'FE',   x: 330, y: 20,  w: 200, h: 58 },
+            { id: 'ms',    label: 'Java Microservice', sub: 'storage + stream proxy',        c: 'MS',   x: 330, y: 150, w: 200, h: 58 },
+            { id: 'mysql', label: 'MySQL',             sub: 'platform · registry',           c: 'GRAY', x: 60,  y: 250, w: 150, h: 52 },
+            { id: 'mongo', label: 'MongoDB',           sub: 'chat content',                  c: 'GRAY', x: 240, y: 250, w: 150, h: 52 },
+            { id: 'media', label: 'Media Storage',     sub: 'files / images',                c: 'GRAY', x: 650, y: 150, w: 160, h: 58 },
+            { id: 'py',    label: 'kam-assistant',     sub: 'Python · LangGraph · stateless',c: 'PY',   x: 315, y: 350, w: 230, h: 60 },
+            { id: 'llm',   label: 'LLM provider',      sub: 'OpenAI · stateless',            c: 'LLM',  x: 330, y: 490, w: 200, h: 56 },
+        ];
+
+        const ARCH_TIERS = [
+            { label: 'CLIENT',            top: 20,  height: 58 },
+            { label: 'GATEWAY / STORAGE', top: 150, height: 152 },
+            { label: 'AI',                top: 350, height: 60 },
+            { label: 'PROVIDER',          top: 490, height: 56 },
+        ];
+
+        const ARCH_ARROWS = [
+            { d: 'M430,78 L430,150',   label: 'REST + SSE (user JWT)',                 lx: 430, ly: 114, dashed: false },
+            { d: 'M392,206 L168,250',  label: 'registry',                             lx: 250, ly: 218, dashed: false },
+            { d: 'M424,206 L322,250',  label: 'content',                              lx: 388, ly: 232, dashed: false },
+            { d: 'M444,208 L444,350',  label: 'SSE proxy (forwards user JWT)',         lx: 568, ly: 252, dashed: false },
+            { d: 'M416,350 L416,208',  label: 'internal: fetch history (service token)', lx: 250, ly: 332, dashed: true },
+            { d: 'M430,410 L430,490',  label: 'stateless calls + prompt caching',      lx: 430, ly: 450, dashed: false },
+            { d: 'M530,49 L688,150',   label: 'upload (user JWT)',                     lx: 626, ly: 86,  dashed: true },
+            { d: 'M545,378 L688,206',  label: 'download attachments (user JWT)',       lx: 648, ly: 302, dashed: true },
+        ];
+
+        const ARCH_DETAILS = {
+            fe: [
+                { label: 'Responsible for', text: 'ChatGPT-like UI, opening SSE to the microservice, rendering the stream including step events (agent steps), uploading files to media storage, collecting and sending the Context (domain_type/domain_id), and the Stop button.' },
+                { label: 'NOT responsible for', text: 'History business logic, talking to Python directly.' },
+                { label: 'Key detail', text: 'Re-injects fresh context every time the user opens KAI, even within the same chat.' },
+            ],
+            ms: [
+                { label: 'Stack', text: 'Java + Spring Boot, modeled on ms-pbx-prompt-storage. A thin service: storage + stream proxy. NO AI logic, NO LLM access.' },
+                { label: 'Responsible for', text: 'Chat registry in MySQL (ownership, sharing, title), content in MongoDB (messages, summary), pagination, SSE proxying between Frontend and Python, forwarding the user JWT to Python, persisting messages in final form, idempotency (clientMsgId dedup → 409), per-chat generation lock (409 generation_in_progress on concurrent appends), and stop generation.' },
+                { label: 'Key principle', text: '"Heavy on storage, thin on intelligence." Knows nothing about LLMs, tokens, prompts, or summarization — it only stores results. It is the ONLY component that writes to the databases.' },
+            ],
+            mysql: [
+                { label: 'Role', text: 'The chat REGISTRY — shared platform database. Tables: kai_chat, kai_chat_share.' },
+                { label: 'Stores', text: 'Ownership (customer_id / account_id), sharing permissions, chat title, soft delete. JOINs with platform account/user tables. This is the authority on chat existence and permissions.' },
+                { label: 'Sharing model', text: 'Participants are READ-ONLY (they can read messages, POST append returns 403). Sharing only within accounts of the same customer.' },
+            ],
+            mongo: [
+                { label: 'Role', text: 'The chat CONTENT — separate logical database (kai_chat), possibly shared cluster.' },
+                { label: 'Stores', text: 'Messages (final form only, never tokens; user + assistant roles only, ordered by seq), toolCalls on assistant messages (READ tools: no output; WRITE tools: created entity IDs for audit), the summary blob (opaque — computed by Python, just stored here), context snapshots, operational fields (activeGeneration lock, tokenUsage incl. cachedInput).' },
+                { label: 'Files', text: 'Stored as REFERENCES only — bytes live in media storage.' },
+            ],
+            media: [
+                { label: 'Role', text: 'Stores files and images uploaded by users.' },
+                { label: 'Flow', text: 'Frontend uploads directly (user JWT) and gets a ref (media://...). Only refs go into messages. Python downloads bytes by ref with the same user JWT, converts to base64 inline for the LLM.' },
+                { label: 'History handling', text: 'Attachments in history are never re-expanded — placeholder [attachment: name] + on-demand load_attachment(ref) tool. Cascading cleanup on chat deletion.' },
+            ],
+            py: [
+                { label: 'Role', text: 'The AI brain — completely STATELESS between requests. No sessions, no local history (SQLite checkpoints are dropped; ephemeral MemorySaver seeded from the microservice\'s window per request).' },
+                { label: 'Responsible for', text: 'Context assembly, master prompt, domain injection, LLM calls, streaming tokens + step events, summarization/compaction, chat title generation, quick-help pills (if PM chooses generation), agent tools (GraphQL, docs search, search_conversation, load_attachment, MCP tools), slash command resolution, token usage diagnostics, cancelling generation on disconnect. Never writes to any database.' },
+                { label: 'Prompt assembly (5 layers)', text: '① stable cacheable prefix → ② summary → ③ grow-then-compact window (T_high ≈16k, T_low ≈6–8k tokens) → ④ volatile domain context → ⑤ new user message.' },
+            ],
+            llm: [
+                { label: 'Role', text: 'Stateless API — the model only "remembers" what is sent in each request.' },
+                { label: 'Cost/latency optimizations', text: 'Provider prompt caching (the stable prefix is cached server-side), bounded window with compaction, and agentic retrieval (the agent pulls older history on demand via the search_conversation tool instead of stuffing the whole chat into the prompt).' },
+            ],
+        };
+
+        const ArchitectureOverlay = ({ open, onClose }) => {
+            const [sel, setSel] = useState(null);
+            const [flow, setFlow] = useState(false);
+            useEffect(() => {
+                if (!open) return;
+                const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+                window.addEventListener('keydown', onKey);
+                return () => window.removeEventListener('keydown', onKey);
+            }, [open, onClose]);
+            useEffect(() => { if (!open) { setSel(null); } }, [open]);
+
+            if (!open) return null;
+            const selNode = ARCH_NODES.find(n => n.id === sel);
+            const selDetail = sel ? ARCH_DETAILS[sel] : null;
+
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+                    <motion.div initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-[920px] max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        {/* header */}
+                        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between z-10">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2"><Network className="h-5 w-5 text-primary" /> KAI Chat — Architecture</h2>
+                                <p className="text-[12px] text-gray-500 mt-0.5">Click any component to see what it does. Onboarding map for all squads.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setFlow(f => !f)}
+                                    className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all",
+                                        flow ? "bg-primary text-white border-primary" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300")}>
+                                    <Zap className="h-3.5 w-3.5" /> {flow ? 'Stop flow' : 'Highlight flow'}
+                                </button>
+                                <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="h-5 w-5 text-gray-400" /></button>
+                            </div>
+                        </div>
+
+                        {/* principle banner */}
+                        <div className="mx-6 mt-4 px-4 py-2.5 bg-primary/5 border border-primary/10 rounded-lg">
+                            <p className="text-[12px] text-primary font-semibold text-center italic leading-snug">
+                                The microservice is heavy on storage and thin on intelligence; Python is heavy on intelligence and stateless on storage.
+                            </p>
+                        </div>
+
+                        {/* diagram */}
+                        <div className="px-6 py-4 overflow-x-auto">
+                            <div className="relative mx-auto" style={{ width: 860, height: 566 }}>
+                                {/* tier labels */}
+                                {ARCH_TIERS.map(t => (
+                                    <div key={t.label} style={{ top: t.top, height: t.height, left: 0, writingMode: 'vertical-rl' }}
+                                        className="absolute flex items-center justify-center text-[8px] font-bold text-gray-300 uppercase tracking-widest rotate-180">
+                                        {t.label}
+                                    </div>
+                                ))}
+
+                                {/* arrows */}
+                                <svg className="absolute inset-0 pointer-events-none" width="860" height="566" viewBox="0 0 860 566">
+                                    <defs>
+                                        <marker id="ah" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b" /></marker>
+                                        <marker id="ahd" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#94a3b8" /></marker>
+                                    </defs>
+                                    {ARCH_ARROWS.map((a, i) => (
+                                        <path key={i} d={a.d} fill="none" stroke={a.dashed ? '#94a3b8' : '#64748b'} strokeWidth="1.5"
+                                            strokeDasharray={a.dashed ? '5 4' : ''} markerEnd={`url(#${a.dashed ? 'ahd' : 'ah'})`} />
+                                    ))}
+                                    {flow && (
+                                        <motion.circle r="6" fill="#3838E7"
+                                            animate={{ cx: [430, 430, 444, 444, 430, 430, 444, 444, 430], cy: [78, 150, 208, 350, 410, 350, 208, 150, 78] }}
+                                            transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }} />
+                                    )}
+                                </svg>
+
+                                {/* arrow labels */}
+                                {ARCH_ARROWS.map((a, i) => (
+                                    <div key={i} style={{ left: a.lx, top: a.ly }}
+                                        className="absolute -translate-x-1/2 -translate-y-1/2 px-1.5 py-0.5 bg-white/90 rounded text-[8.5px] font-medium text-gray-500 border border-gray-100 whitespace-nowrap pointer-events-none">
+                                        {a.label}
+                                    </div>
+                                ))}
+
+                                {/* component boxes */}
+                                {ARCH_NODES.map(n => {
+                                    const color = NODE_COLOR[n.c];
+                                    const isSel = sel === n.id;
+                                    return (
+                                        <button key={n.id} onClick={() => setSel(isSel ? null : n.id)}
+                                            style={{ left: n.x, top: n.y, width: n.w, height: n.h, borderColor: isSel ? color : '#e5e7eb', boxShadow: isSel ? `0 0 0 4px ${color}33` : undefined }}
+                                            className="absolute flex flex-col items-center justify-center rounded-lg border-2 bg-white shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+                                                <span className="text-[12px] font-bold text-gray-800">{n.label}</span>
+                                            </div>
+                                            <span className="text-[9px] text-gray-400 font-medium mt-0.5">{n.sub}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* legend */}
+                        <div className="px-6 pb-2 flex items-center justify-center gap-6">
+                            <div className="flex items-center gap-2">
+                                <svg width="30" height="8"><defs><marker id="ahleg" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b" /></marker></defs><line x1="0" y1="4" x2="26" y2="4" stroke="#64748b" strokeWidth="1.5" markerEnd="url(#ahleg)" /></svg>
+                                <span className="text-[10px] text-gray-500 font-medium">main flow (user JWT)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <svg width="30" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="5 4" /></svg>
+                                <span className="text-[10px] text-gray-500 font-medium">internal (service token)</span>
+                            </div>
+                        </div>
+
+                        {/* detail card */}
+                        <AnimatePresence>
+                            {selNode && selDetail && (
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                                    className="mx-6 mb-6 overflow-hidden">
+                                    <div className="border border-gray-200 rounded-xl overflow-hidden" style={{ borderTopColor: NODE_COLOR[selNode.c], borderTopWidth: 3 }}>
+                                        <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="h-2.5 w-2.5 rounded-full" style={{ background: NODE_COLOR[selNode.c] }} />
+                                                <span className="text-[14px] font-bold text-gray-900">{selNode.label}</span>
+                                                <span className="text-[11px] text-gray-400 font-medium">{selNode.sub}</span>
+                                            </div>
+                                            <button onClick={() => setSel(null)} className="p-1 hover:bg-gray-200 rounded text-gray-400"><X className="h-4 w-4" /></button>
+                                        </div>
+                                        <div className="p-4 space-y-3">
+                                            {selDetail.map((d, i) => (
+                                                <div key={i}>
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: NODE_COLOR[selNode.c] }}>{d.label}</div>
+                                                    <p className="text-[12px] text-gray-600 leading-relaxed">{d.text}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [kaiOpen, setKaiOpen] = useState(true);
+            const [input, setInput] = useState("");
+            const [showSlashMenu, setShowSlashMenu] = useState(false);
+            const [pbxModalOpen, setPbxModalOpen] = useState(false);
+            const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
+            const [chartModalOpen, setChartModalOpen] = useState(false);
+            const [allToolsOpen, setAllToolsOpen] = useState(false);
+            const [expandedAllTools, setExpandedAllTools] = useState(false);
+            const [view, setView] = useState("dashboard");
+            const [typingState, setTypingState] = useState(null);
+            const messagesEndRef = useRef(null);
+            const textareaRef = useRef(null);
+
+            // ── Under the hood / Architecture state ──
+            const [uthOpen, setUthOpen] = useState(true);
+            const [archOpen, setArchOpen] = useState(false);
+            const [uthEvents, setUthEvents] = useState([]);
+            const pageLoadRef = useRef(Date.now());
+            const uthTurnRef = useRef(0);
+            const uthSeqRef = useRef(44);
+            const uthTimersRef = useRef([]);
+            const compactedRef = useRef(false);
+
+            const relTime = () => '+' + ((Date.now() - pageLoadRef.current) / 1000).toFixed(1) + 's';
+            const uid = () => Math.random().toString(36).slice(2, 9);
+            const pad = (n) => 'msg_' + String(n).padStart(6, '0');
+            const trunc = (s, n) => (s.length > n ? s.slice(0, n) + '…' : s);
+            const pushUth = (ev) => setUthEvents(prev => [...prev, { _id: uid(), ts: relTime(), ...ev }]);
+            const schedule = (delay, fn) => { const id = setTimeout(fn, delay); uthTimersRef.current.push(id); };
+            const clearUth = () => {
+                uthTimersRef.current.forEach(clearTimeout);
+                uthTimersRef.current = [];
+                setUthEvents([]);
+                uthTurnRef.current = 0;
+                uthSeqRef.current = 44;
+                compactedRef.current = false;
+            };
+
+            const genTitle = (text) => {
+                const words = text.replace(/^\/\S+\s*/, '').split(/\s+/).filter(Boolean).slice(0, 5).join(' ');
+                return (words.charAt(0).toUpperCase() + words.slice(1)) || 'New chat';
+            };
+
+            // Mirror the real KAI event sequence as a timed simulation
+            const runUnderTheHood = (text, mock, isFirst, totalMsgCount) => {
+                const turn = ++uthTurnRef.current;
+                const chatId = 'chat_abc123';
+                const clientMsgId = 'fe-' + uid();
+                const userSeq = uthSeqRef.current;
+                const assistantSeq = userSeq + 1;
+                const domain = { domain_type: 'experiment', domain_id: '4101' };
+
+                // ── plausible token math ──
+                const compactionRan = turn >= 5 && totalMsgCount > 10;
+                const summaryTokens = compactedRef.current ? 800 : 0;
+                const windowMsgs = Math.min((turn - 1) * 2, 20);
+                const windowTokens = Math.min((turn - 1) * 150, 3000);
+                const newMsgTokens = Math.max(1, Math.ceil(text.length / 4));
+                const cachedPrefix = 2000;
+                const inputTokens = cachedPrefix + summaryTokens + windowTokens + newMsgTokens;
+                const cachedInput = cachedPrefix;
+                const outputTokens = 200 + Math.floor(Math.random() * 200);
+                const totalTokens = inputTokens + outputTokens;
+
+                const usedTool = !!mock;
+                const doStep = usedTool || turn >= 3;
+                const stepTool = usedTool ? mock.tool : 'search_conversation';
+                const stepArgs = usedTool ? { input: trunc(text, 40) } : { query: trunc(text, 40), limit: 10 };
+
+                if (turn > 1) pushUth({ kind: 'turn-sep', turn });
+
+                // events 1–8 : fire immediately, staggered
+                schedule(0,   () => pushUth({ layer: 'FE',       type: 'user_message_sent',        payload: { text: trunc(text, 60), domain_type: domain.domain_type, domain_id: domain.domain_id, clientMsgId } }));
+                schedule(50,  () => pushUth({ layer: 'MS',       type: 'message_accepted',         payload: { chat_id: chatId, msg_id: pad(userSeq), seq: userSeq } }));
+                schedule(110, () => pushUth({ layer: 'DB-SQL',   type: 'chat_registry_read',       payload: { action: 'check ownership + lock', chat_id: chatId } }));
+                schedule(170, () => pushUth({ layer: 'DB-MONGO', type: 'message_written',          payload: { role: 'user', seq: userSeq, text: trunc(text, 60) } }));
+                schedule(220, () => pushUth({ layer: 'MS',       type: 'generation_lock_acquired', payload: { chat_id: chatId } }));
+                schedule(280, () => pushUth({ layer: 'MS',       type: 'append_forwarded_to_py',   payload: { endpoint: 'POST /append', chat_id: chatId, msg_id: pad(userSeq) } }));
+                schedule(340, () => pushUth({ layer: 'PY',       type: 'context_assembled',        payload: { layers: ['prefix_cache', 'summary', 'window_' + windowMsgs + '_msgs', 'domain_ctx', 'new_message'] } }));
+                schedule(400, () => pushUth({ layer: 'PY',       type: 'llm_call_start',           payload: { model: 'gpt-4o', estimated_prompt_tokens: inputTokens, cached_tokens: cachedInput } }));
+
+                // events 9–10 : after LLM latency
+                schedule(600, () => pushUth({ layer: 'LLM', type: 'prompt_cache_hit', payload: { cached_prefix_tokens: cachedInput, saving: '~' + (250 + Math.floor(Math.random() * 400)) + 'ms' } }));
+                schedule(650, () => pushUth({ layer: 'LLM', type: 'token', payload: { text: 'Here' } }));
+                schedule(690, () => pushUth({ layer: 'LLM', type: 'token', payload: { text: '’s' } }));
+                schedule(730, () => pushUth({ layer: 'LLM', type: 'token', payload: { text: ' the' } }));
+
+                // collapsed streaming line
+                let streamId = null;
+                schedule(770, () => { streamId = uid(); setUthEvents(prev => [...prev, { _id: streamId, ts: relTime(), kind: 'token-stream', layer: 'LLM', type: 'token', payload: { tokens: 3 } }]); });
+                const chunks = 18;
+                for (let i = 1; i <= chunks; i++) {
+                    schedule(770 + i * 45, () => {
+                        const n = Math.min(outputTokens, 3 + Math.round((outputTokens - 3) * (i / chunks)));
+                        setUthEvents(prev => prev.map(e => (e._id === streamId ? { ...e, payload: { tokens: n } } : e)));
+                    });
+                }
+                const streamEnd = 770 + chunks * 45 + 70; // ≈ 1650ms
+
+                // tool step mid-stream (200ms pause between call + result)
+                if (doStep) {
+                    schedule(920,  () => pushUth({ layer: 'PY', type: 'step',        payload: { tool: stepTool, args: stepArgs } }));
+                    schedule(1140, () => pushUth({ layer: 'PY', type: 'step_result', payload: { tool: stepTool, status: 'ok' } }));
+                }
+
+                // events 12–16 : after streaming ends
+                schedule(streamEnd,       () => pushUth({ layer: 'PY',       type: 'done',                    payload: { status: 'completed', total_tokens: totalTokens, output_tokens: outputTokens } }));
+                schedule(streamEnd + 60,  () => pushUth({ layer: 'PY',       type: 'event_usage',             payload: { input: inputTokens, output: outputTokens, cached_input: cachedInput } }));
+                schedule(streamEnd + 120, () => pushUth({ layer: 'MS',       type: 'assistant_message_saved', payload: { role: 'assistant', seq: assistantSeq, mongo_id: pad(assistantSeq) } }));
+                schedule(streamEnd + 180, () => pushUth({ layer: 'DB-MONGO', type: 'message_written',         payload: { role: 'assistant', seq: assistantSeq, tokenUsage: { input: inputTokens, cachedInput: cachedInput, output: outputTokens } } }));
+                schedule(streamEnd + 240, () => pushUth({ layer: 'MS',       type: 'generation_lock_released', payload: { chat_id: chatId } }));
+                schedule(streamEnd + 300, () => pushUth({ kind: 'turn-summary', turn, payload: { ms: streamEnd + 300, inputTokens, cachedInput, outputTokens } }));
+
+                // title (first message only) ~300ms after done
+                if (isFirst) {
+                    schedule(streamEnd + 340, () => pushUth({ layer: 'PY', type: 'event_title',        payload: { title: genTitle(text) } }));
+                    schedule(streamEnd + 400, () => pushUth({ layer: 'MS', type: 'chat_title_written', payload: { title: genTitle(text), db: 'MySQL kai_chat.title' } }));
+                }
+
+                // compaction (turn 5+ with > 10 messages)
+                if (compactionRan) {
+                    schedule(streamEnd + 360, () => pushUth({ layer: 'PY', type: 'event_summary', payload: { action: 'compaction_ran', old_window_msgs: windowMsgs, summary_tokens: 800 } }));
+                    schedule(streamEnd + 420, () => { pushUth({ layer: 'MS', type: 'summary_saved', payload: { db: 'MongoDB chat_content.summary' } }); compactedRef.current = true; });
+                }
+
+                uthSeqRef.current = assistantSeq + 1;
+            };
+
+            const [messages, setMessages] = useState([{
+                role: 'assistant',
+                content: "Hi Junaid! 👋\n\nI'm Kai, your experiment copilot. I can run tools directly — query results, pause experiments, audit stale flags, simulate user assignment, and more.\n\nType / to see available tools, or just ask me in plain language."
+            }]);
+
+            useEffect(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages, typingState]);
+
+            const sendMessage = (text) => {
+                if (!text.trim() || typingState) return;
+                const isFirstUserMsg = !messages.some(m => m.role === 'user');
+                runUnderTheHood(text, getMockResponse(text), isFirstUserMsg, messages.length + 1);
+                setMessages(prev => [...prev, { role: 'user', content: text }]);
+                setInput("");
+                setShowSlashMenu(false);
+
+                const NEXT_STEPS_BY_TYPE = {
+                    insights: ['Pause losing variants', 'Ship winner to 100%', 'Export results to Slack'],
+                    audit: ['Delete all stale flags', 'Schedule weekly audit', 'View flag dependencies'],
+                    pause: ['Resume experiment', 'Notify team on Slack', 'Archive experiment'],
+                    simulate: ['Try another user profile', 'Override assignment', 'View targeting rules'],
+                    rollout: ['Increase to 50%', 'Set guardrail metric', 'Pause rollout'],
+                    generate: ['Refine variant copy', 'A/B test against control', 'Push to staging'],
+                    queryfilter: ['Compare to previous week', 'Drill into segment', 'Pause underperformers'],
+                    pausefilter: ['Pause selected', 'Notify owners', 'Schedule auto-pause'],
+                    shipvariant: ['Open PR in GitHub', 'Run QA on staging', 'Schedule deploy'],
+                };
+
+                const mock = getMockResponse(text);
+                if (mock) {
+                    setTypingState({ step: 'tool_call', tool: { id: mock.tool, label: mock.label } });
+                    setTimeout(() => {
+                        setTypingState({ step: 'thinking', type: mock.type });
+                        setTimeout(() => {
+                            setTypingState(null);
+                            if (mock.type === 'followup') {
+                                setMessages(prev => [...prev, {
+                                    role: 'assistant',
+                                    toolCall: { id: mock.tool, label: mock.label },
+                                    content: mock.question,
+                                    streamed: true,
+                                    quickReplies: mock.quickReplies,
+                                }]);
+                            } else {
+                                const richContent = getRichContent(mock.type);
+                                setMessages(prev => [...prev, {
+                                    role: 'assistant',
+                                    toolCall: { id: mock.tool, label: mock.label },
+                                    content: '',
+                                    richContent: richContent || <p className="text-[12px] text-gray-600 leading-relaxed">I don't have a live connection in this prototype. Try one of the suggestions to see a full tool response.</p>,
+                                    nextSteps: NEXT_STEPS_BY_TYPE[mock.type],
+                                }]);
+                            }
+                        }, 1200);
+                    }, 1200);
+                } else {
+                    setTypingState({ step: 'thinking' });
+                    setTimeout(() => {
+                        setTypingState(null);
+                        setMessages(prev => [...prev, { role: 'assistant', content: "I don't have a live connection in this prototype. Try one of the suggestions or type / to browse available tools.", streamed: true }]);
+                    }, 1100);
+                }
+            };
+
+            const searchQuery = input.startsWith('/') ? input.slice(1).toLowerCase() : '';
+            const matchesTool = (t) => {
+                const title = t.title.toLowerCase();
+                if (title.startsWith(searchQuery)) return true;
+                if (searchQuery.length >= 3) {
+                    return title.split(/\s+/).some(word => word.startsWith(searchQuery));
+                }
+                return false;
+            };
+            const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(matchesTool);
+            const filteredAllTools = ALL_TOOLS.filter(matchesTool);
+            const showRecent = input === '/';
+            const hasSearchResults = input.startsWith('/');
+            const shouldAutoExpandAllTools = searchQuery.length > 0 && filteredAllTools.length > 0;
+            const flatNavTools = showRecent
+                ? [...RECENT_TOOLS, ...filteredMainTools, ...filteredAllTools]
+                : [...filteredMainTools, ...filteredAllTools];
+            const [selectedToolIdx, setSelectedToolIdx] = useState(0);
+            useEffect(() => { setSelectedToolIdx(0); }, [input]);
+
+            const showSuggestions = !typingState && messages.length === 1;
+
+            return (
+                <div className="flex flex-col h-screen bg-background overflow-hidden">
+                    <header className="h-14 border-b border-gray-200 bg-white flex items-center justify-between px-6 z-50 shadow-sm">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-2">
+                                <div className="h-6 w-6 bg-primary rounded flex items-center justify-center text-white font-black text-xs">K</div>
+                                <span className="font-bold text-lg tracking-tight">Kameleoon</span>
+                            </div>
+                            <nav className="flex items-center gap-5 text-[13px] font-semibold text-gray-500">
+                                <a href="#" className="text-gray-900">Experiments</a>
+                                <a href="#" className="hover:text-gray-900 transition-colors">Segments</a>
+                                <a href="#" className="hover:text-gray-900 transition-colors">Personalization</a>
+                            </nav>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <input type="text" placeholder="Search project..." className="pl-9 pr-4 py-1.5 w-64 bg-gray-100 border-none rounded text-xs focus:ring-1 focus:ring-primary focus:bg-white transition-all outline-none" />
+                            </div>
+                            <button className="p-1.5 hover:bg-gray-100 rounded text-gray-500"><Bell className="h-4 w-4" /></button>
+                            <button
+                                onClick={() => setArchOpen(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold border bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:text-gray-900 transition-all"
+                            >
+                                <Network className="h-3.5 w-3.5" />
+                                <span>Architecture</span>
+                            </button>
+                            <button
+                                onClick={() => setUthOpen(v => !v)}
+                                className={cn("flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold border transition-all",
+                                    uthOpen ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                                )}
+                            >
+                                <Code className="h-3.5 w-3.5" />
+                                <span>Under the hood</span>
+                            </button>
+                            <button
+                                onClick={() => setKaiOpen(!kaiOpen)}
+                                className={cn("flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold border transition-all",
+                                    kaiOpen ? "bg-gray-900 text-white border-gray-900" : "bg-white text-primary border-primary hover:bg-primary/5"
+                                )}
+                            >
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span>{kaiOpen ? "Hide Kai" : "Open Kai"}</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 flex overflow-hidden">
+                        <div className="flex-1 bg-gray-50 p-8 overflow-y-auto">
+                            <div className="max-w-5xl mx-auto">
+                                {view === "dashboard" ? (
+                                    <>
+                                        <div className="flex items-center justify-between mb-8">
+                                            <h1 className="text-2xl font-bold tracking-tight">Active Experiments</h1>
+                                            <button className="bg-primary text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-blue-700 transition-colors">Create New Test</button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {[1, 2, 3, 4].map(i => (
+                                                <div key={i} onClick={() => i === 1 ? setView("experiment") : null}
+                                                    className={cn("p-5 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-primary/20 transition-all",
+                                                        i === 1 ? "cursor-pointer ring-2 ring-primary/20 border-primary/30" : ""
+                                                    )}>
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded">Experiment ID: 410{i}</div>
+                                                        <div className="h-2 w-2 bg-green-500 rounded-full" />
+                                                    </div>
+                                                    <h3 className="font-bold text-base mb-1">Pricing Page Variation - {i}</h3>
+                                                    <p className="text-xs text-gray-500 mb-6 font-medium">Testing impact on conversion rate for EU traffic.</p>
+                                                    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                                                        <span className="text-[10px] font-bold text-gray-400">STATUS: RUNNING</span>
+                                                        <button className="text-xs font-bold text-primary hover:underline">Manage {i === 1 && <span className="text-[8px] bg-primary text-white px-1 ml-1 rounded">DEMO</span>}</button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <button onClick={() => setView("dashboard")} className="text-xs font-bold text-gray-500 flex items-center gap-1 hover:text-gray-900 transition-colors">
+                                            <ChevronDown className="h-3 w-3 rotate-90" /> BACK TO DASHBOARD
+                                        </button>
+                                        <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold">P1</div>
+                                                <div>
+                                                    <h1 className="text-2xl font-bold">Pricing Page Variation - 1</h1>
+                                                    <div className="flex gap-2 items-center mt-1">
+                                                        <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">RUNNING</span>
+                                                        <span className="text-[10px] font-bold text-gray-400">ID: 4101</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-6 py-6 border-y border-gray-100">
+                                                <div className="space-y-1"><div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Targeting</div><div className="text-sm font-semibold">EU Segment • 50/50 Split</div></div>
+                                                <div className="space-y-1"><div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Primary Goal</div><div className="text-sm font-semibold">Purchase Success</div></div>
+                                                <div className="space-y-1"><div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Started</div><div className="text-sm font-semibold">Oct 12, 2023 (3 days ago)</div></div>
+                                            </div>
+                                            <div className="mt-8">
+                                                <div className="h-48 bg-gray-50 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm font-bold">Results Visualization Mock</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Kai Sidebar */}
+                        <AnimatePresence>
+                            {kaiOpen && (
+                                <motion.aside
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    transition={{ type: "tween", duration: 0.2 }}
+                                    className="fixed bottom-6 right-6 w-[400px] h-[75vh] max-h-[800px] flex flex-col bg-white border border-gray-200 shadow-2xl rounded-xl z-50 overflow-hidden"
+                                >
+                                    <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between shrink-0">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-7 w-7 bg-primary/5 border border-primary/10 rounded-md flex items-center justify-center">
+                                                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                            </div>
+                                            <span className="font-semibold text-[13px] text-gray-900">Kai</span>
+                                            <span className="text-[10px] font-medium text-gray-400 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded">v2.2</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={() => { setMessages([{role: 'assistant', content: "Hi Junaid! 👋\n\nI'm Kai, your experiment copilot. I can run tools directly — query results, pause experiments, audit stale flags, simulate user assignment, and more.\n\nType / to see available tools, or just ask me in plain language."}]); clearUth(); }} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400" title="Reset chat"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"/></svg></button>
+                                            <button onClick={() => setKaiOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-md text-gray-400"><X className="h-4 w-4" /></button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                        {messages.map((m, i) => (
+                                            <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+                                                <MessageBubble message={m} onSendMessage={sendMessage} isLatest={i === messages.length - 1} />
+                                            </motion.div>
+                                        ))}
+
+                                        <AnimatePresence>
+                                            {typingState && (
+                                                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col items-start gap-2">
+                                                    {typingState.step === 'tool_call' && typingState.tool && (
+                                                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/5 border border-primary/10 rounded-lg text-[11px] text-primary font-medium">
+                                                            <Zap className="h-3 w-3 shrink-0" />
+                                                            <span>Calling</span>
+                                                            <span className="font-mono bg-primary/10 px-1.5 py-0.5 rounded">{typingState.tool.id}</span>
+                                                            <span className="flex gap-0.5 ml-0.5">
+                                                                <span className="h-1 w-1 bg-primary rounded-full typing-dot" />
+                                                                <span className="h-1 w-1 bg-primary rounded-full typing-dot" />
+                                                                <span className="h-1 w-1 bg-primary rounded-full typing-dot" />
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {typingState.step === 'thinking' && (
+                                                        typingState.type && typingState.type !== 'followup' ? (
+                                                            <div className="px-3.5 py-3 bg-white border border-gray-100 shadow-sm rounded-2xl rounded-tl-sm w-[320px] max-w-[95%]">
+                                                                {getSkeletonForType(typingState.type)}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="px-3.5 py-3 bg-white border border-gray-100 shadow-sm rounded-2xl rounded-tl-sm">
+                                                                <span className="flex gap-1">
+                                                                    <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
+                                                                    <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
+                                                                    <span className="h-1.5 w-1.5 bg-gray-300 rounded-full typing-dot" />
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {showSuggestions && (
+                                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-wrap gap-2 justify-end pt-2">
+                                                {SUGGESTIONS.map((s, i) => (
+                                                    <button key={i} onClick={() => sendMessage(s)}
+                                                        className="px-3 py-2 bg-transparent hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-lg text-[12px] text-gray-500 hover:text-gray-700 font-normal transition-all whitespace-nowrap"
+                                                    >
+                                                        {s}
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+
+                                        <div ref={messagesEndRef} />
+                                    </div>
+
+                                    <div className="p-3 bg-white border-t border-gray-100 relative shrink-0">
+                                        <AnimatePresence>
+                                            {showSlashMenu && hasSearchResults && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 8 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 8 }}
+                                                    className="absolute bottom-full mb-2 left-3 right-3 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-50"
+                                                >
+                                                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[12px] font-bold text-gray-400">/</span>
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tools</span>
+                                                        </div>
+                                                        {flatNavTools.length > 0 && (
+                                                            <span className="text-[9px] text-gray-300 font-medium">↑↓ navigate · ↵ select</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="max-h-64 overflow-y-auto">
+                                                        {flatNavTools.length === 0 && (
+                                                            <div className="px-4 py-6 text-center">
+                                                                <div className="text-[12px] text-gray-500 font-medium">No tools matching <span className="font-mono text-gray-700">"{searchQuery}"</span></div>
+                                                                <div className="text-[10px] text-gray-400 mt-1">Try a different keyword or just ask in plain language</div>
+                                                            </div>
+                                                        )}
+                                                        {showRecent && RECENT_TOOLS.length > 0 && (
+                                                            <>
+                                                                <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Recent</span>
+                                                                </div>
+                                                                {RECENT_TOOLS.map((tool, i) => {
+                                                                    const idx = i;
+                                                                    const isSel = selectedToolIdx === idx;
+                                                                    return (
+                                                                        <div key={`r-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
+                                                                            onMouseEnter={() => setSelectedToolIdx(idx)}
+                                                                            className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
+                                                                        >
+                                                                            <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
+                                                                                <tool.icon className="h-3 w-3" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <div className="text-[12px] font-semibold text-gray-900">{tool.title}</div>
+                                                                                <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                                <div className="h-px bg-gray-100 mx-3 my-1" />
+                                                            </>
+                                                        )}
+                                                        {filteredMainTools.length > 0 && (
+                                                            <>
+                                                                {showRecent && (
+                                                                    <div className="px-3 pt-1 pb-1">
+                                                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Featured</span>
+                                                                    </div>
+                                                                )}
+                                                                {filteredMainTools.map((tool, i) => {
+                                                                    const idx = (showRecent ? RECENT_TOOLS.length : 0) + i;
+                                                                    const isSel = selectedToolIdx === idx;
+                                                                    return (
+                                                                        <div key={`m-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
+                                                                            onMouseEnter={() => setSelectedToolIdx(idx)}
+                                                                            className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
+                                                                        >
+                                                                            <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
+                                                                                <tool.icon className="h-3 w-3" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <div className="text-[12px] font-semibold text-gray-900">{tool.title}</div>
+                                                                                <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </>
+                                                        )}
+                                                        {filteredAllTools.length > 0 && (
+                                                            <>
+                                                                {filteredMainTools.length > 0 && <div className="h-px bg-gray-100 mx-3 my-1" />}
+                                                                <button onClick={() => setExpandedAllTools(!expandedAllTools)}
+                                                                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left transition-colors">
+                                                                    <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${expandedAllTools || shouldAutoExpandAllTools ? 'rotate-180' : ''}`} />
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">All Tools</span>
+                                                                    <span className="text-[10px] text-gray-300 ml-auto">{filteredAllTools.length}</span>
+                                                                </button>
+                                                                <AnimatePresence>
+                                                                    {(expandedAllTools || shouldAutoExpandAllTools) && (
+                                                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                                                                            {filteredAllTools.map((tool, i) => {
+                                                                                const idx = (showRecent ? RECENT_TOOLS.length : 0) + filteredMainTools.length + i;
+                                                                                const isSel = selectedToolIdx === idx;
+                                                                                return (
+                                                                                    <div key={`a-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
+                                                                                        onMouseEnter={() => setSelectedToolIdx(idx)}
+                                                                                        className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
+                                                                                    >
+                                                                                        <div className="mt-0.5 h-6 w-6 rounded bg-gray-200/50 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0">
+                                                                                            <tool.icon className="h-3 w-3" />
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <div className="text-[12px] font-semibold text-gray-700">{tool.title}</div>
+                                                                                            <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </motion.div>
+                                                                    )}
+                                                                </AnimatePresence>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 focus-within:border-primary focus-within:bg-white transition-all">
+                                            <textarea
+                                                ref={textareaRef}
+                                                className="w-full h-14 resize-none outline-none text-[12px] font-medium text-gray-900 placeholder:text-gray-400 bg-transparent"
+                                                placeholder="Ask anything, or type / to use a tool..."
+                                                value={input}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setInput(val);
+                                                    setShowSlashMenu(val.startsWith('/'));
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (showSlashMenu && hasSearchResults && flatNavTools.length > 0) {
+                                                        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedToolIdx(p => (p + 1) % flatNavTools.length); return; }
+                                                        if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedToolIdx(p => (p - 1 + flatNavTools.length) % flatNavTools.length); return; }
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault();
+                                                            const tool = flatNavTools[selectedToolIdx];
+                                                            if (tool) { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }
+                                                            return;
+                                                        }
+                                                    }
+                                                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
+                                                    if (e.key === 'Escape') setShowSlashMenu(false);
+                                                }}
+                                            />
+                                            <div className="flex items-center justify-between">
+                                                <QuickTooltip text="Slash commands">
+                                                    <button onClick={() => setAllToolsOpen(true)} className="h-6 w-6 border border-gray-200 rounded-md flex items-center justify-center text-gray-300 hover:text-gray-400 hover:border-gray-300 transition-colors font-bold text-sm">
+                                                        /
+                                                    </button>
+                                                </QuickTooltip>
+                                                <button onClick={() => sendMessage(input)}
+                                                    className={cn("h-7 w-7 rounded-full flex items-center justify-center transition-colors",
+                                                        input.trim() ? "bg-primary text-white hover:bg-blue-700" : "bg-gray-200 text-gray-400"
+                                                    )}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                                </button>
+                                            </div>
+                                            <div className="flex justify-center">
+                                                <span className="text-[9px] text-gray-300 font-medium">↵ send · shift+↵ newline</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.aside>
+                            )}
+                        </AnimatePresence>
+
+                        <Modal isOpen={pbxModalOpen} onClose={() => setPbxModalOpen(false)} title="New A/B test by prompt" subtitle="Create an experiment in seconds by prompting the AI."
+                            footer={<><button onClick={() => setPbxModalOpen(false)} className="text-xs font-bold text-gray-500 flex items-center gap-1 hover:text-gray-700"><ChevronDown className="h-3 w-3 rotate-90" /> BACK</button><button className="px-6 py-2 bg-gray-100 text-gray-400 rounded-lg text-xs font-bold uppercase tracking-wider">CREATE</button></>}>
+                            <div className="space-y-4">
+                                <div className="space-y-1.5"><label className="text-[11px] font-bold text-gray-900 uppercase tracking-tight">Name</label><input type="text" placeholder="Give your experiment a name" className="w-full p-3 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-primary transition-all" /></div>
+                                <div className="space-y-1.5"><label className="text-[11px] font-bold text-gray-900 uppercase tracking-tight">Project</label><div className="w-full p-3 border border-gray-200 rounded-lg text-sm bg-white flex items-center justify-between text-gray-400 cursor-pointer">Select a project<ChevronDown className="h-4 w-4" /></div></div>
+                                <div className="space-y-1.5"><label className="text-[11px] font-bold text-gray-900 uppercase tracking-tight">URL</label><input type="text" placeholder="Enter the URL to launch the simulation" className="w-full p-3 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-primary transition-all" /></div>
+                                <div className="space-y-1.5"><div className="flex justify-between items-center"><label className="text-[11px] font-bold text-gray-900 uppercase tracking-tight">Description</label><span className="text-[10px] text-gray-400">0 / 500</span></div><textarea rows="4" placeholder="Describe the purpose of your experiment." className="w-full p-3 border border-gray-200 rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-primary transition-all resize-none"></textarea></div>
+                                <button className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-xs font-bold hover:bg-primary/5 transition-colors"><Plus className="h-3.5 w-3.5" /> ADD TAG</button>
+                            </div>
+                        </Modal>
+
+                        <Modal isOpen={chartModalOpen} onClose={() => setChartModalOpen(false)} title="EU Segment Results Summary" subtitle="Last 72 hours performance breakdown.">
+                            <SimpleChart expanded />
+                            <div className="mt-8 space-y-4">
+                                <div className="p-4 bg-gray-50 rounded-lg grid grid-cols-3 gap-4">
+                                    <div><div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Revenue Uplift</div><div className="text-xl font-bold text-green-600">+$2,410</div></div>
+                                    <div><div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Confidence</div><div className="text-xl font-bold text-gray-900">94.2%</div></div>
+                                    <div><div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Visitors</div><div className="text-xl font-bold text-gray-900">12,402</div></div>
+                                </div>
+                                <p className="text-xs font-medium text-gray-600 leading-relaxed">Variation A remains the clear winner with 94% statistical significance.</p>
+                            </div>
+                        </Modal>
+
+                        <Modal isOpen={workflowModalOpen} onClose={() => setWorkflowModalOpen(false)} title="Create new workflow" subtitle="Automate your experimentation process with AI-driven triggers.">
+                            <div className="grid grid-cols-2 gap-4">
+                                {[
+                                    { icon: Mail, title: "Send email", desc: "Notify stakeholders on results." },
+                                    { icon: MessageSquare, title: "Alert on Slack", desc: "Push stats to #xp-alerts." },
+                                    { icon: Pause, title: "Pause XP if", desc: "Automatically stop on regressions." },
+                                    { icon: Play, title: "Start XP if", desc: "Trigger tests on traffic surges." },
+                                ].map((wf, i) => (
+                                    <div key={i} className="p-4 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:border-primary/20 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center text-gray-400 group-hover:text-primary mb-3 shadow-sm"><wf.icon className="h-5 w-5" /></div>
+                                        <h4 className="text-[13px] font-semibold text-gray-800 mb-1">{wf.title}</h4>
+                                        <p className="text-[11px] text-gray-500 font-medium leading-relaxed">{wf.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </Modal>
+
+                        <Modal isOpen={allToolsOpen} onClose={() => setAllToolsOpen(false)} title="All Tools" subtitle="Complete MCP tool directory">
+                            <div className="space-y-6">
+                                <div>
+                                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2.5">Featured Tools</h3>
+                                    <div className="space-y-1.5">
+                                        {MAIN_TOOLS.map((tool, i) => (
+                                            <div key={i} onClick={() => { sendMessage(tool.title); setAllToolsOpen(false); }}
+                                                className="flex items-start gap-2.5 p-2.5 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all group">
+                                                <div className="mt-0.5 h-5 w-5 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary/10">
+                                                    <tool.icon className="h-2.5 w-2.5" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="text-[11px] font-semibold text-gray-900">{tool.title}</div>
+                                                    <div className="text-[10px] text-gray-400 leading-tight">{tool.desc}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2.5">Lot 1 Tools</h3>
+                                    <div className="space-y-1.5">
+                                        {ALL_TOOLS.map((tool, i) => (
+                                            <div key={i} onClick={() => { sendMessage(tool.title); setAllToolsOpen(false); }}
+                                                className="flex items-start gap-2.5 p-2.5 hover:bg-gray-100 border border-gray-100 hover:border-gray-200 rounded-lg cursor-pointer transition-all group">
+                                                <div className="mt-0.5 h-5 w-5 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0 group-hover:bg-gray-200">
+                                                    <tool.icon className="h-2.5 w-2.5" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="text-[11px] font-semibold text-gray-700">{tool.title}</div>
+                                                    <div className="text-[10px] text-gray-400 leading-tight">{tool.desc}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </Modal>
+
+                        <UnderTheHoodPanel events={uthEvents} open={uthOpen} kaiOpen={kaiOpen} onClear={clearUth} onClose={() => setUthOpen(false)} />
+                    </main>
+
+                    <ArchitectureOverlay open={archOpen} onClose={() => setArchOpen(false)} />
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
