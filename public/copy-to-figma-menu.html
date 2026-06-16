@@ -10,8 +10,7 @@
 
     :root {
       --green-90: #0D2B22;
-      --green-70: #1A5C44;
-      --lime-40: #CEDD70;
+      --lime-40:  #CEDD70;
       --beige-5:  #F9F8F4;
       --beige-10: #F2F0E8;
       --beige-20: #E3DFD0;
@@ -28,39 +27,33 @@
       padding: 40px 48px;
     }
 
-    /* ── Page header ── */
-    .page-header {
-      margin-bottom: 40px;
-    }
+    .page-header { margin-bottom: 40px; }
     .page-eyebrow {
       font-family: 'Noto Sans Mono', monospace;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--beige-60);
-      margin-bottom: 6px;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--beige-60); margin-bottom: 6px;
     }
     .page-title {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 24px;
-      font-weight: 600;
-      color: var(--green-90);
+      font-size: 24px; font-weight: 600; color: var(--green-90);
     }
-    .page-desc {
-      font-size: 14px;
-      color: var(--beige-60);
-      margin-top: 4px;
-    }
+    .page-desc { font-size: 14px; color: var(--beige-60); margin-top: 4px; }
 
-    /* ── Grid of options ── */
+    /* ── PBX editor theme ── */
+    --pbx-blue: #3838E7;
+    --pbx-blue-light: #EEEEFF;
+    --pbx-gray-bg: #F4F4F6;
+    --pbx-border: #E2E2E8;
+    --pbx-text: #1A1A2E;
+    --pbx-muted: #6B6B80;
+
     .options-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 32px;
     }
 
-    /* ── Option card ── */
     .option-card {
       background: var(--white);
       border: 1px solid var(--beige-20);
@@ -73,24 +66,16 @@
     }
     .option-number {
       font-family: 'Noto Sans Mono', monospace;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--beige-60);
-      margin-bottom: 4px;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--beige-60); margin-bottom: 4px;
     }
     .option-title {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--green-90);
+      font-size: 16px; font-weight: 600; color: var(--green-90);
     }
-    .option-subtitle {
-      font-size: 13px;
-      color: var(--beige-60);
-      margin-top: 2px;
-    }
+    .option-subtitle { font-size: 13px; color: var(--beige-60); margin-top: 2px; }
+
     .option-canvas {
       padding: 32px 24px;
       background: var(--beige-5);
@@ -100,18 +85,16 @@
       min-height: 380px;
     }
 
-    /* ── Shared menu shell ── */
+    /* ── Shared menu ── */
     .menu-shell {
       background: var(--white);
       border: 1px solid var(--beige-20);
       border-radius: 8px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.10);
       width: 220px;
-      overflow: visible;
       padding: 4px 0;
       position: relative;
     }
-
     .menu-item {
       display: flex;
       align-items: center;
@@ -121,251 +104,149 @@
       color: var(--green-90);
       cursor: pointer;
       transition: background 0.1s;
-      user-select: none;
       position: relative;
     }
-    .menu-item:hover {
-      background: var(--beige-10);
-    }
-    .menu-item.destructive {
-      color: var(--red-60);
-    }
-    .menu-item.destructive:hover {
-      background: #FFF5F5;
-    }
-    .menu-item .icon {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-      opacity: 0.65;
-    }
-    .menu-item.destructive .icon {
-      opacity: 0.85;
-    }
-    .menu-divider {
-      height: 1px;
-      background: var(--beige-20);
-      margin: 4px 0;
-    }
-    .menu-item .chevron-right {
-      margin-left: auto;
-      opacity: 0.45;
-    }
+    .menu-item:hover { background: var(--beige-10); }
+    .menu-item.destructive { color: var(--red-60); }
+    .menu-item.destructive:hover { background: #FFF5F5; }
+    .menu-item .icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.65; }
+    .menu-divider { height: 1px; background: var(--beige-20); margin: 4px 0; }
+    .menu-item .chevron-right { margin-left: auto; opacity: 0.45; }
 
-    /* Figma item highlight */
-    .menu-item.figma-item {
-      color: var(--green-90);
-    }
-    .menu-item.figma-item .figma-icon {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-    }
+    /* ── Figma icon reusable ── */
+    .figma-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
-    /* ── Option 1: Modal ── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(13, 43, 34, 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s;
-    }
-    .modal-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-    .modal {
-      background: var(--white);
-      border-radius: 12px;
-      border: 1px solid var(--beige-20);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.16);
-      width: 400px;
-      overflow: hidden;
-      transform: scale(0.97) translateY(6px);
-      transition: transform 0.15s;
-    }
-    .modal-overlay.open .modal {
-      transform: scale(1) translateY(0);
-    }
-    .modal-header {
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid var(--beige-20);
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-    }
-    .modal-header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .modal-icon-wrap {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      background: var(--beige-10);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .modal-title {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--green-90);
-    }
-    .modal-subtitle {
-      font-size: 13px;
-      color: var(--beige-60);
-      margin-top: 1px;
-    }
-    .modal-close {
-      width: 28px;
-      height: 28px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--beige-60);
-      flex-shrink: 0;
-    }
-    .modal-close:hover {
-      background: var(--beige-10);
-      color: var(--green-90);
-    }
-    .modal-body {
-      padding: 16px 24px 20px;
-    }
-    .modal-body-label {
-      font-family: 'Noto Sans Mono', monospace;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--beige-60);
-      margin-bottom: 10px;
-    }
-    .variant-list {
+    /* ── PBX editor card ── */
+    .pbx-scene {
+      width: 100%;
+      max-width: 320px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 10px;
     }
-    .variant-row {
+    .pbx-ready-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1A1A2E;
+      padding: 0 2px;
+    }
+    .pbx-card {
+      background: var(--white);
+      border: 1px solid #E2E2E8;
+      border-radius: 12px;
+      overflow: visible;
+      position: relative;
+    }
+    .pbx-card-inner {
+      border: 1px solid #E2E2E8;
+      border-radius: 10px;
+      margin: 10px;
+      overflow: visible;
+      position: relative;
+    }
+    .pbx-card-header {
+      padding: 14px 14px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--beige-20);
-      cursor: pointer;
-      transition: all 0.1s;
+    }
+    .pbx-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #3838E7;
+    }
+    .pbx-card-actions { display: flex; align-items: center; gap: 6px; }
+    .pbx-icon-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px; border: 1px solid #E2E2E8;
       background: var(--white);
-    }
-    .variant-row:hover {
-      background: var(--beige-10);
-      border-color: var(--beige-20);
-    }
-    .variant-row.winner {
-      background: #F6FAEA;
-      border-color: #C8DA5A;
-    }
-    .variant-row.winner:hover {
-      background: #EEF6D8;
-    }
-    .variant-row-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .variant-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #6B6B80;
+      transition: background 0.1s, border-color 0.1s;
       flex-shrink: 0;
     }
-    .variant-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--green-90);
-    }
-    .winner-badge {
-      font-family: 'Noto Sans Mono', monospace;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #5A7A10;
-      background: var(--lime-40);
-      padding: 2px 7px;
-      border-radius: 4px;
-    }
-    .variant-copy-icon {
-      color: var(--beige-60);
-      transition: color 0.1s;
-      display: flex;
-    }
-    .variant-row:hover .variant-copy-icon {
-      color: var(--green-90);
-    }
-    .modal-footer {
-      padding: 12px 24px;
-      border-top: 1px solid var(--beige-20);
-      display: flex;
-      justify-content: flex-end;
-    }
-    .btn-secondary {
-      padding: 8px 16px;
+    .pbx-icon-btn:hover { background: #F4F4F6; border-color: #C8C8D8; }
+    .pbx-card-inner:hover .pbx-icon-btn.kebab { border-color: #C8C8D8; }
+    .pbx-icon-btn.kebab { border-color: transparent; color: #9A9AB0; transition: background 0.1s, border-color 0.15s, color 0.15s; }
+    .pbx-card-inner:hover .pbx-icon-btn.kebab { color: #6B6B80; }
+    .pbx-icon-btn.kebab:hover { background: #F4F4F6; border-color: #C8C8D8 !important; color: #1A1A2E; }
+
+    .pbx-card-body { padding: 0 14px 14px; }
+    .pbx-body-text { font-size: 13px; color: #3A3A50; line-height: 1.5; margin-bottom: 12px; }
+    .pbx-launch-btn {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid #3838E7;
       border-radius: 8px;
-      border: 1px solid var(--beige-20);
+      background: transparent;
+      color: #3838E7;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.1s;
+    }
+    .pbx-launch-btn:hover { background: #EEEEFF; }
+
+    /* Bottom action row */
+    .pbx-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .pbx-action-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 12px;
+      border: 1px solid #E2E2E8;
+      border-radius: 8px;
       background: var(--white);
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--green-90);
+      font-size: 13px; font-weight: 500;
+      color: #1A1A2E;
       cursor: pointer;
       transition: background 0.1s;
     }
-    .btn-secondary:hover { background: var(--beige-10); }
+    .pbx-action-btn:hover { background: #F4F4F6; }
+    .pbx-action-btn.icon-only { padding: 7px 10px; }
+    .pbx-action-btn.figma-btn {
+      display: flex; align-items: center; gap: 6px;
+    }
 
-    /* ── Toast ── */
-    .toast {
-      position: fixed;
-      bottom: 32px;
-      left: 50%;
-      transform: translateX(-50%) translateY(16px);
-      background: var(--green-90);
-      color: var(--white);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 10px 18px;
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    /* Kebab dropdown */
+    .kebab-dropdown {
+      position: absolute;
+      top: calc(100% + 4px); right: 10px;
+      background: var(--white);
+      border: 1px solid #E2E2E8;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      width: 196px;
+      padding: 6px 0;
+      z-index: 10;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.2s, transform 0.2s;
-      z-index: 200;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
+      transform: translateY(-4px) scale(0.98);
+      transform-origin: top right;
+      transition: opacity 0.12s, transform 0.12s;
     }
-    .toast.show {
+    .kebab-dropdown.open {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
+      pointer-events: all;
+      transform: translateY(0) scale(1);
+    }
+    .kebab-dropdown .menu-item { font-size: 14px; color: #1A1A2E; padding: 9px 14px; }
+    .kebab-dropdown .menu-item:hover { background: #F4F4F6; }
+    .kebab-dropdown .menu-divider { background: #E2E2E8; }
+    .code-icon {
+      font-family: 'Noto Sans Mono', monospace;
+      font-size: 11px; font-weight: 600;
+      color: #6B6B80;
+      flex-shrink: 0;
     }
 
-    /* ── Option 2: Submenu demo ── */
-    .submenu-demo {
-      position: relative;
-    }
+    /* ── Option 2: submenu ── */
     .submenu {
       position: absolute;
       left: calc(100% + 6px);
@@ -380,12 +261,10 @@
       pointer-events: none;
       transform: translateX(-4px);
       transition: opacity 0.12s, transform 0.12s;
+      z-index: 10;
     }
-    .submenu.open {
-      opacity: 1;
-      pointer-events: all;
-      transform: translateX(0);
-    }
+    .submenu.open { opacity: 1; pointer-events: all; transform: translateX(0); }
+
     .submenu-item {
       display: flex;
       align-items: center;
@@ -396,73 +275,47 @@
       cursor: pointer;
       transition: background 0.1s;
     }
-    .submenu-item:hover {
-      background: var(--beige-10);
-    }
-    .submenu-item-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .submenu-item .winner-badge {
-      font-size: 10px;
-      padding: 1px 5px;
-    }
-    .submenu-divider {
-      height: 1px;
-      background: var(--beige-20);
-      margin: 4px 0;
-    }
-    .menu-item.figma-item.active,
-    .menu-item.figma-item:hover {
-      background: var(--beige-10);
-    }
+    .submenu-item:hover { background: var(--beige-10); }
+    .submenu-item-left { display: flex; align-items: center; gap: 8px; }
+    .submenu-divider { height: 1px; background: var(--beige-20); margin: 4px 0; }
 
-    /* dot colors */
+    .variant-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .dot-control { background: #94A3B8; }
     .dot-v1 { background: #2A7868; }
     .dot-v2 { background: #B3BEFF; }
     .dot-v3 { background: #CEDD70; border: 1px solid #b5c55e; }
 
-    /* Annotation strip */
-    .annotation {
-      margin-top: 16px;
-      padding: 12px 16px;
-      background: var(--beige-5);
-      border: 1px solid var(--beige-20);
-      border-radius: 8px;
-      font-size: 12.5px;
-      color: var(--beige-60);
-      line-height: 1.5;
+    .winner-badge {
+      font-family: 'Noto Sans Mono', monospace;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: #5A7A10; background: var(--lime-40);
+      padding: 2px 6px; border-radius: 4px;
     }
-    .annotation strong { color: var(--green-90); font-weight: 600; }
 
-    /* Figma SVG icon */
-    .figma-logo { flex-shrink: 0; }
-
-    /* Reset button for demos */
-    .reset-btn {
-      margin-top: 12px;
-      font-size: 12px;
-      color: var(--beige-60);
-      cursor: pointer;
-      text-decoration: underline;
-      text-align: center;
-      display: block;
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--green-90); color: var(--white);
+      font-size: 13px; font-weight: 500;
+      padding: 10px 18px; border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 200;
+      display: flex; align-items: center; gap: 8px;
+      white-space: nowrap;
     }
-    .reset-btn:hover { color: var(--green-90); }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* Instruction badge */
     .instruction {
       font-family: 'Noto Sans Mono', monospace;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--beige-60);
-      margin-bottom: 12px;
-      display: block;
-      text-align: center;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--beige-60); margin-bottom: 12px;
+      display: block; text-align: center;
     }
   </style>
 </head>
@@ -471,80 +324,103 @@
   <div class="page-header">
     <p class="page-eyebrow">UX Exploration</p>
     <h1 class="page-title">Copy to Figma — Interaction Patterns</h1>
-    <p class="page-desc">Two approaches for selecting a variant to copy. Click through each to compare.</p>
+    <p class="page-desc">Two entry points, same feature. Left: PBX in-editor kebab (direct copy, no variant picker). Right: Dashboard experiment kebab (variant submenu).</p>
   </div>
 
   <div class="options-grid">
 
-    <!-- ── Option 1: Modal ── -->
+    <!-- ── Option 1: PBX in-editor ── -->
     <div class="option-card">
       <div class="option-card-header">
-        <p class="option-number">Option 1</p>
-        <p class="option-title">Modal popup</p>
-        <p class="option-subtitle">Click "Copy to Figma" → full-screen overlay with variant list</p>
+        <p class="option-number">Entry point 1 — PBX Editor</p>
+        <p class="option-title">In-editor kebab</p>
+        <p class="option-subtitle">Alongside Copy JS / Copy CSS — clicking copies directly, no variant picker</p>
       </div>
-      <div class="option-canvas" id="canvas1">
-        <div>
-          <span class="instruction">Click the menu item to trigger</span>
-          <div class="menu-shell">
-            <div class="menu-item">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.667 2H5.333A1.333 1.333 0 0 0 4 3.333v9.334A1.333 1.333 0 0 0 5.333 14h5.334A1.333 1.333 0 0 0 12 12.667V3.333A1.333 1.333 0 0 0 10.667 2Z"/><path d="M8 5.333v5.334"/><path d="M5.333 8h5.334"/></svg>
-              Edit configuration
+      <div class="option-canvas">
+        <div style="width:100%;max-width:320px;">
+          <span class="instruction">Click the kebab to open</span>
+          <div class="pbx-scene">
+            <p class="pbx-ready-label">Your version is ready!</p>
+            <div class="pbx-card">
+              <div class="pbx-card-inner">
+                <div class="pbx-card-header">
+                  <span class="pbx-card-title">Add to cart CTAs</span>
+                  <div class="pbx-card-actions">
+                    <!-- Refresh icon -->
+                    <div class="pbx-icon-btn">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                      </svg>
+                    </div>
+                    <!-- Kebab -->
+                    <div class="pbx-icon-btn kebab" id="ref-kebab-btn" onclick="toggleRefMenu()" style="position:relative;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/>
+                      </svg>
+                      <!-- Dropdown -->
+                      <div class="kebab-dropdown" id="ref-dropdown">
+                        <div class="menu-item" onclick="copyAction('JS snippet')">
+                          <span class="code-icon">&lt;/&gt;</span>
+                          Copy JS
+                        </div>
+                        <div class="menu-item" onclick="copyAction('CSS snippet')">
+                          <span class="code-icon">&lt;/&gt;</span>
+                          Copy CSS
+                        </div>
+                        <div class="menu-divider"></div>
+                        <div class="menu-item" onclick="copyAction('Figma-compatible payload')">
+                          <svg class="figma-icon" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 28.5C19 25.98 20 23.56 21.78 21.78C23.56 20 25.98 19 28.5 19C31.02 19 33.44 20 35.22 21.78C37 23.56 38 25.98 38 28.5C38 31.02 37 33.44 35.22 35.22C33.44 37 31.02 38 28.5 38C25.98 38 23.56 37 21.78 35.22C20 33.44 19 31.02 19 28.5Z" fill="#1ABCFE"/>
+                            <path d="M0 47.5C0 44.98 1 42.56 2.78 40.78C4.56 39 6.98 38 9.5 38H19V47.5C19 50.02 18 52.44 16.22 54.22C14.44 56 12.02 57 9.5 57C6.98 57 4.56 56 2.78 54.22C1 52.44 0 50.02 0 47.5Z" fill="#0ACF83"/>
+                            <path d="M19 0V19H28.5C31.02 19 33.44 18 35.22 16.22C37 14.44 38 12.02 38 9.5C38 6.98 37 4.56 35.22 2.78C33.44 1 31.02 0 28.5 0H19Z" fill="#FF7262"/>
+                            <path d="M0 9.5C0 12.02 1 14.44 2.78 16.22C4.56 18 6.98 19 9.5 19H19V0H9.5C6.98 0 4.56 1 2.78 2.78C1 4.56 0 6.98 0 9.5Z" fill="#F24E1E"/>
+                            <path d="M0 28.5C0 31.02 1 33.44 2.78 35.22C4.56 37 6.98 38 9.5 38H19V19H9.5C6.98 19 4.56 19 2.78 20.78C1 22.56 0 24.98 0 27.5V28.5Z" fill="#A259FF"/>
+                          </svg>
+                          Copy to Figma
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="pbx-card-body">
+                  <p class="pbx-body-text">If you need a tweak, use the chat below. If your variations are ready, prepare for launch.</p>
+                  <button class="pbx-launch-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                    Prepare for launch
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="menu-item">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2Z"/><path d="M8 5v3l2 1"/></svg>
-              Simulate
-            </div>
-            <div class="menu-item">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.667 11.333V13.333H4.667L11.333 6.667 9.333 4.667 2.667 11.333ZM13.08 5.08a.533.533 0 0 0 0-.753L11.673 2.92a.533.533 0 0 0-.753 0L9.827 4.013l2 2L13.08 5.08Z"/></svg>
-              Rename
-            </div>
-            <div class="menu-item">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12"/><path d="M5.333 4V2.667h5.334V4"/><path d="M4 4l.667 9.333h6.666L12 4"/><path d="M6.667 7.333v3.334"/><path d="M9.333 7.333v3.334"/></svg>
-              Manage tags
-            </div>
-            <div class="menu-divider"></div>
-            <div class="menu-item">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5.333" height="5.333" rx="0.667"/><rect x="8.667" y="2" width="5.333" height="5.333" rx="0.667"/><rect x="2" y="8.667" width="5.333" height="5.333" rx="0.667"/><rect x="8.667" y="8.667" width="5.333" height="5.333" rx="0.667"/></svg>
-              Duplicate
-            </div>
-            <!-- FIGMA ITEM -->
-            <div class="menu-item figma-item" id="modal-trigger" style="cursor:pointer;">
-              <svg class="figma-logo figma-icon" width="16" height="16" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 28.5C19 25.9804 20.0009 23.5641 21.7825 21.7825C23.5641 20.0009 25.9804 19 28.5 19C31.0196 19 33.4359 20.0009 35.2175 21.7825C36.9991 23.5641 38 25.9804 38 28.5C38 31.0196 36.9991 33.4359 35.2175 35.2175C33.4359 36.9991 31.0196 38 28.5 38C25.9804 38 23.5641 36.9991 21.7825 35.2175C20.0009 33.4359 19 31.0196 19 28.5Z" fill="#1ABCFE"/>
-                <path d="M0 47.5C0 44.9804 1.00089 42.5641 2.78249 40.7825C4.56408 39.0009 6.98044 38 9.5 38H19V47.5C19 50.0196 17.9991 52.4359 16.2175 54.2175C14.4359 55.9991 12.0196 57 9.5 57C6.98044 57 4.56408 55.9991 2.78249 54.2175C1.00089 52.4359 0 50.0196 0 47.5Z" fill="#0ACF83"/>
-                <path d="M19 0V19H28.5C31.0196 19 33.4359 17.9991 35.2175 16.2175C36.9991 14.4359 38 12.0196 38 9.5C38 6.98044 36.9991 4.56408 35.2175 2.78249C33.4359 1.00089 31.0196 0 28.5 0H19Z" fill="#FF7262"/>
-                <path d="M0 9.5C0 12.0196 1.00089 14.4359 2.78249 16.2175C4.56408 17.9991 6.98044 19 9.5 19H19V0H9.5C6.98044 0 4.56408 1.00089 2.78249 2.78249C1.00089 4.56408 0 6.98044 0 9.5Z" fill="#F24E1E"/>
-                <path d="M0 28.5C0 31.0196 1.00089 33.4359 2.78249 35.2175C4.56408 36.9991 6.98044 38 9.5 38H19V19H9.5C6.98044 19 4.56408 19 2.78249 20.7825C1.00089 22.5641 0 24.9804 0 27.5V28.5Z" fill="#A259FF"/>
-              </svg>
-              Copy to Figma
-            </div>
-            <div class="menu-divider"></div>
-            <div class="menu-item">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12h12"/><path d="M2 8h12"/><path d="M2 4h12"/></svg>
-              Archive
-            </div>
-            <div class="menu-item destructive">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12"/><path d="M4.667 4V2.667h6.666V4"/><path d="M4 4l.667 9.333h6.666L12 4"/></svg>
-              Delete
+            <!-- Bottom action row -->
+            <div class="pbx-actions-row">
+              <div class="pbx-action-btn icon-only" title="Thumbs up">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+              </div>
+              <div class="pbx-action-btn icon-only" title="Thumbs down">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+              </div>
+              <div class="pbx-action-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                Duplicate
+              </div>
             </div>
           </div>
-          <a class="reset-btn" onclick="document.getElementById('modal-trigger').style.background=''">Reset</a>
         </div>
       </div>
     </div>
 
-    <!-- ── Option 2: Submenu ── -->
-    <div class="option-card">
-      <div class="option-card-header">
-        <p class="option-number">Option 2</p>
-        <p class="option-title">Cascading submenu</p>
-        <p class="option-subtitle">Hover "Copy to Figma" → second-level menu lists variants inline</p>
+    <!-- ── Option 2: Cascading submenu (chosen direction) ── -->
+    <div class="option-card" style="border-color: var(--lime-40); box-shadow: 0 0 0 2px #CEDD7055;">
+      <div class="option-card-header" style="background: #F6FAEA;">
+        <p class="option-number" style="color:#5A7A10;">Entry point 2 — Dashboard</p>
+        <p class="option-title">Experiment card kebab</p>
+        <p class="option-subtitle">Hover "Copy to Figma ›" → variant submenu, winning variation surfaced first</p>
       </div>
       <div class="option-canvas">
         <div>
           <span class="instruction">Hover the menu item to expand</span>
-          <div class="menu-shell submenu-demo" id="submenu-parent">
+          <div class="menu-shell" style="position:relative;overflow:visible;">
             <div class="menu-item">
               <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.667 2H5.333A1.333 1.333 0 0 0 4 3.333v9.334A1.333 1.333 0 0 0 5.333 14h5.334A1.333 1.333 0 0 0 12 12.667V3.333A1.333 1.333 0 0 0 10.667 2Z"/><path d="M8 5.333v5.334"/><path d="M5.333 8h5.334"/></svg>
               Edit configuration
@@ -558,7 +434,7 @@
               Rename
             </div>
             <div class="menu-item">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12"/><path d="M5.333 4V2.667h5.334V4"/><path d="M4 4l.667 9.333h6.666L12 4"/><path d="M6.667 7.333v3.334"/><path d="M9.333 7.333v3.334"/></svg>
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 4H2"/><path d="M6 4V2.667h4V4"/><path d="M4 4l.667 9.333h6.666L12 4"/></svg>
               Manage tags
             </div>
             <div class="menu-divider"></div>
@@ -566,21 +442,19 @@
               <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5.333" height="5.333" rx="0.667"/><rect x="8.667" y="2" width="5.333" height="5.333" rx="0.667"/><rect x="2" y="8.667" width="5.333" height="5.333" rx="0.667"/><rect x="8.667" y="8.667" width="5.333" height="5.333" rx="0.667"/></svg>
               Duplicate
             </div>
-            <!-- FIGMA ITEM with submenu -->
-            <div class="menu-item figma-item" id="submenu-trigger" style="position:relative;">
-              <svg class="figma-logo figma-icon" width="16" height="16" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 28.5C19 25.9804 20.0009 23.5641 21.7825 21.7825C23.5641 20.0009 25.9804 19 28.5 19C31.0196 19 33.4359 20.0009 35.2175 21.7825C36.9991 23.5641 38 25.9804 38 28.5C38 31.0196 36.9991 33.4359 35.2175 35.2175C33.4359 36.9991 31.0196 38 28.5 38C25.9804 38 23.5641 36.9991 21.7825 35.2175C20.0009 33.4359 19 31.0196 19 28.5Z" fill="#1ABCFE"/>
-                <path d="M0 47.5C0 44.9804 1.00089 42.5641 2.78249 40.7825C4.56408 39.0009 6.98044 38 9.5 38H19V47.5C19 50.0196 17.9991 52.4359 16.2175 54.2175C14.4359 55.9991 12.0196 57 9.5 57C6.98044 57 4.56408 55.9991 2.78249 54.2175C1.00089 52.4359 0 50.0196 0 47.5Z" fill="#0ACF83"/>
-                <path d="M19 0V19H28.5C31.0196 19 33.4359 17.9991 35.2175 16.2175C36.9991 14.4359 38 12.0196 38 9.5C38 6.98044 36.9991 4.56408 35.2175 2.78249C33.4359 1.00089 31.0196 0 28.5 0H19Z" fill="#FF7262"/>
-                <path d="M0 9.5C0 12.0196 1.00089 14.4359 2.78249 16.2175C4.56408 17.9991 6.98044 19 9.5 19H19V0H9.5C6.98044 0 4.56408 1.00089 2.78249 2.78249C1.00089 4.56408 0 6.98044 0 9.5Z" fill="#F24E1E"/>
-                <path d="M0 28.5C0 31.0196 1.00089 33.4359 2.78249 35.2175C4.56408 36.9991 6.98044 38 9.5 38H19V19H9.5C6.98044 19 4.56408 19 2.78249 20.7825C1.00089 22.5641 0 24.9804 0 27.5V28.5Z" fill="#A259FF"/>
+            <!-- Figma item with submenu -->
+            <div class="menu-item" id="submenu-trigger" style="position:relative;">
+              <svg class="figma-icon" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 28.5C19 25.98 20 23.56 21.78 21.78C23.56 20 25.98 19 28.5 19C31.02 19 33.44 20 35.22 21.78C37 23.56 38 25.98 38 28.5C38 31.02 37 33.44 35.22 35.22C33.44 37 31.02 38 28.5 38C25.98 38 23.56 37 21.78 35.22C20 33.44 19 31.02 19 28.5Z" fill="#1ABCFE"/>
+                <path d="M0 47.5C0 44.98 1 42.56 2.78 40.78C4.56 39 6.98 38 9.5 38H19V47.5C19 50.02 18 52.44 16.22 54.22C14.44 56 12.02 57 9.5 57C6.98 57 4.56 56 2.78 54.22C1 52.44 0 50.02 0 47.5Z" fill="#0ACF83"/>
+                <path d="M19 0V19H28.5C31.02 19 33.44 18 35.22 16.22C37 14.44 38 12.02 38 9.5C38 6.98 37 4.56 35.22 2.78C33.44 1 31.02 0 28.5 0H19Z" fill="#FF7262"/>
+                <path d="M0 9.5C0 12.02 1 14.44 2.78 16.22C4.56 18 6.98 19 9.5 19H19V0H9.5C6.98 0 4.56 1 2.78 2.78C1 4.56 0 6.98 0 9.5Z" fill="#F24E1E"/>
+                <path d="M0 28.5C0 31.02 1 33.44 2.78 35.22C4.56 37 6.98 38 9.5 38H19V19H9.5C6.98 19 4.56 19 2.78 20.78C1 22.56 0 24.98 0 27.5V28.5Z" fill="#A259FF"/>
               </svg>
               Copy to Figma
-              <svg class="chevron-right" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3l4 4-4 4"/></svg>
+              <svg class="chevron-right" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-left:auto;opacity:0.45;"><path d="M5 3l4 4-4 4"/></svg>
 
-              <!-- Submenu -->
               <div class="submenu" id="the-submenu">
-                <!-- Winner first -->
                 <div class="submenu-item" onclick="copyVariant('Variation 3')">
                   <div class="submenu-item-left">
                     <span class="variant-dot dot-v3"></span>
@@ -611,7 +485,7 @@
             </div>
             <div class="menu-divider"></div>
             <div class="menu-item">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12h12"/><path d="M2 8h12"/><path d="M2 4h12"/></svg>
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12h12M2 8h12M2 4h12"/></svg>
               Archive
             </div>
             <div class="menu-item destructive">
@@ -623,129 +497,54 @@
       </div>
     </div>
 
-  </div><!-- /options-grid -->
-
-  <!-- ── Modal overlay (Option 1) ── -->
-  <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <div class="modal-header-left">
-          <div class="modal-icon-wrap">
-            <svg width="20" height="20" viewBox="0 0 38 57" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 28.5C19 25.9804 20.0009 23.5641 21.7825 21.7825C23.5641 20.0009 25.9804 19 28.5 19C31.0196 19 33.4359 20.0009 35.2175 21.7825C36.9991 23.5641 38 25.9804 38 28.5C38 31.0196 36.9991 33.4359 35.2175 35.2175C33.4359 36.9991 31.0196 38 28.5 38C25.9804 38 23.5641 36.9991 21.7825 35.2175C20.0009 33.4359 19 31.0196 19 28.5Z" fill="#1ABCFE"/>
-              <path d="M0 47.5C0 44.9804 1.00089 42.5641 2.78249 40.7825C4.56408 39.0009 6.98044 38 9.5 38H19V47.5C19 50.0196 17.9991 52.4359 16.2175 54.2175C14.4359 55.9991 12.0196 57 9.5 57C6.98044 57 4.56408 55.9991 2.78249 54.2175C1.00089 52.4359 0 50.0196 0 47.5Z" fill="#0ACF83"/>
-              <path d="M19 0V19H28.5C31.0196 19 33.4359 17.9991 35.2175 16.2175C36.9991 14.4359 38 12.0196 38 9.5C38 6.98044 36.9991 4.56408 35.2175 2.78249C33.4359 1.00089 31.0196 0 28.5 0H19Z" fill="#FF7262"/>
-              <path d="M0 9.5C0 12.0196 1.00089 14.4359 2.78249 16.2175C4.56408 17.9991 6.98044 19 9.5 19H19V0H9.5C6.98044 0 4.56408 1.00089 2.78249 2.78249C1.00089 4.56408 0 6.98044 0 9.5Z" fill="#F24E1E"/>
-              <path d="M0 28.5C0 31.0196 1.00089 33.4359 2.78249 35.2175C4.56408 36.9991 6.98044 38 9.5 38H19V19H9.5C6.98044 19 4.56408 19 2.78249 20.7825C1.00089 22.5641 0 24.9804 0 27.5V28.5Z" fill="#A259FF"/>
-            </svg>
-          </div>
-          <div>
-            <div class="modal-title">Copy to Figma</div>
-            <div class="modal-subtitle">Select the variation to copy to clipboard</div>
-          </div>
-        </div>
-        <button class="modal-close" onclick="closeModal()">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4L4 12M4 4l8 8"/></svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-body-label">Variations</p>
-        <div class="variant-list">
-          <div class="variant-row winner" onclick="copyVariant('Variation 3')">
-            <div class="variant-row-left">
-              <span class="variant-dot dot-v3"></span>
-              <span class="variant-name">Variation 3</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="winner-badge">Winner</span>
-              <span class="variant-copy-icon">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="8" height="8" rx="1.5"/><path d="M4 10H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1"/></svg>
-              </span>
-            </div>
-          </div>
-          <div class="variant-row" onclick="copyVariant('Original')">
-            <div class="variant-row-left">
-              <span class="variant-dot dot-control"></span>
-              <span class="variant-name">Original</span>
-            </div>
-            <span class="variant-copy-icon">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="8" height="8" rx="1.5"/><path d="M4 10H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1"/></svg>
-            </span>
-          </div>
-          <div class="variant-row" onclick="copyVariant('Variation 1')">
-            <div class="variant-row-left">
-              <span class="variant-dot dot-v1"></span>
-              <span class="variant-name">Variation 1</span>
-            </div>
-            <span class="variant-copy-icon">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="8" height="8" rx="1.5"/><path d="M4 10H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1"/></svg>
-            </span>
-          </div>
-          <div class="variant-row" onclick="copyVariant('Variation 2')">
-            <div class="variant-row-left">
-              <span class="variant-dot dot-v2"></span>
-              <span class="variant-name">Variation 2</span>
-            </div>
-            <span class="variant-copy-icon">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="6" width="8" height="8" rx="1.5"/><path d="M4 10H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1"/></svg>
-            </span>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-      </div>
-    </div>
   </div>
 
-  <!-- ── Toast ── -->
+  <!-- Toast -->
   <div class="toast" id="toast">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#CEDD70" stroke-width="2"><path d="M13.333 4L6 11.333 2.667 8"/></svg>
-    <span id="toast-text">Variation 3 copied to clipboard</span>
+    <span id="toast-text">Copied to clipboard</span>
   </div>
 
   <script>
-    // ── Option 1: Modal ──
-    document.getElementById('modal-trigger').addEventListener('click', () => {
-      document.getElementById('modal-overlay').classList.add('open');
+    // ── Reference kebab toggle ──
+    function toggleRefMenu() {
+      const dropdown = document.getElementById('ref-dropdown');
+      dropdown.classList.toggle('open');
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#ref-kebab-btn') && !e.target.closest('#ref-dropdown')) {
+        document.getElementById('ref-dropdown').classList.remove('open');
+      }
     });
 
-    function closeModal(e) {
-      document.getElementById('modal-overlay').classList.remove('open');
+    function copyAction(type) {
+      document.getElementById('ref-dropdown').classList.remove('open');
+      showToast(type + ' copied to clipboard');
     }
 
-    // ── Option 2: Submenu hover ──
+    // ── Submenu hover ──
     const trigger = document.getElementById('submenu-trigger');
     const submenu = document.getElementById('the-submenu');
     let leaveTimer;
 
-    trigger.addEventListener('mouseenter', () => {
-      clearTimeout(leaveTimer);
-      submenu.classList.add('open');
-    });
-    trigger.addEventListener('mouseleave', (e) => {
-      leaveTimer = setTimeout(() => {
-        if (!submenu.matches(':hover')) submenu.classList.remove('open');
-      }, 80);
-    });
+    trigger.addEventListener('mouseenter', () => { clearTimeout(leaveTimer); submenu.classList.add('open'); });
+    trigger.addEventListener('mouseleave', () => { leaveTimer = setTimeout(() => { if (!submenu.matches(':hover')) submenu.classList.remove('open'); }, 80); });
     submenu.addEventListener('mouseenter', () => clearTimeout(leaveTimer));
-    submenu.addEventListener('mouseleave', () => {
-      leaveTimer = setTimeout(() => submenu.classList.remove('open'), 80);
-    });
+    submenu.addEventListener('mouseleave', () => { leaveTimer = setTimeout(() => submenu.classList.remove('open'), 80); });
+
+    function copyVariant(name) {
+      submenu.classList.remove('open');
+      showToast(name + ' copied to clipboard');
+    }
 
     // ── Toast ──
     let toastTimer;
-    function copyVariant(name) {
-      // Close modal if open
-      document.getElementById('modal-overlay').classList.remove('open');
-      // Close submenu
-      submenu.classList.remove('open');
-
-      document.getElementById('toast-text').textContent = `${name} copied to clipboard`;
+    function showToast(msg) {
+      document.getElementById('toast-text').textContent = msg;
       const toast = document.getElementById('toast');
       toast.classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
     }
   </script>
 </body>
