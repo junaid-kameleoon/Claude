@@ -13,6 +13,23 @@
 
 ---
 
+## Fix verification log (updated 2026-06-19)
+
+Retests after the team's fixes. Most of the original findings are now resolved.
+
+| Finding | Status |
+|---|---|
+| Results endpoints crash (logging-library conflict) | ✅ **Fixed & verified** — no crash; results return successfully |
+| Results readiness timeout (`NOT_READY` after ~60s) | ✅ **Fixed & verified** — now returns results promptly |
+| `segment_delete` silently broadened in-use rules | ✅ **Fixed & verified** — now blocks with a clear error and lists the affected experiments; `force=true` opt-in retained |
+| `goal_update_type` wiped tags | ✅ **Fixed & verified** — tags now preserved across a type change |
+| `goal_create` 500 on CLICK-without-url / RATIO_METRICS | 🟡 **Fix prepared, not yet deployed** — still reproduces as of 2026-06-19 |
+| Invalid-enum / structured-output / sort-key items | ⏳ Open — pending |
+
+**New in this round:** an `experiment_create` tool was added and **works** (creates a draft experiment of a chosen type, attaches a goal, auto-adds a default variation). Two gaps noted: there is still no `experiment_delete` (no way to remove a created experiment via MCP), and `experiment_create` auto-creates a default targeting rule, which blocks attaching a custom segment rule afterward.
+
+---
+
 ## Suggested next tasks / fixes (ticket backlog)
 
 Prioritized; each maps to a finding below.
