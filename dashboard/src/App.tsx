@@ -60,6 +60,9 @@ function Dashboard() {
         </nav>
         <span className="spacer" />
         {generatedAt && <span className="meta-note">data · {fmtDate(generatedAt)}</span>}
+        <a className="logout" href="insights.html" target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+          Insights ↗
+        </a>
         <button className="logout" onClick={logout}>
           Lock
         </button>

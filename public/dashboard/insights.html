@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E" />
+<title>AI Features — Insights & Usage Trends</title>
+<style>
+  :root{
+    --bg:#f3f4f6;--panel:#fff;--border:#e5e7eb;--ink:#1f2937;--ink2:#6b7280;--ink3:#9ca3af;
+    --teal:#0f766e;--teal-bg:#ccfbf1;--orange:#ea580c;--orange-bg:#ffedd5;--violet:#6d28d9;--violet-bg:#ede9fe;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13.5px;line-height:1.55}
+  .wrap{max-width:1100px;margin:0 auto;padding:26px 20px 56px}
+  header.top{margin-bottom:18px}
+  header.top h1{margin:0 0 3px;font-size:23px;letter-spacing:-.2px}
+  header.top .sub{color:var(--ink2);font-size:13px}
+  header.top .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--teal);margin-right:7px;vertical-align:middle}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0 6px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:11px 13px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+  .kpi .v{font-size:21px;font-weight:680;line-height:1.1}
+  .kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink2);margin-top:4px}
+  section{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px 16px 6px;margin-top:14px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+  section.taccent{border-left:3px solid var(--teal)}
+  section.oaccent{border-left:3px solid var(--orange)}
+  section.vaccent{border-left:3px solid var(--violet)}
+  section.gaccent{border-left:3px solid #334155}
+  h2{margin:0 0 2px;font-size:15px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  h2 .tag{font-size:11px;font-weight:600;color:var(--ink2);background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:1px 9px}
+  h3{margin:12px 0 4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink2)}
+  ul{margin:4px 0 12px;padding-left:18px}
+  li{margin:3px 0}
+  b{font-weight:660}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+  @media(max-width:680px){.cols{grid-template-columns:1fr}}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:0 7px;border-radius:999px}
+  .pt{background:var(--teal-bg);color:var(--teal)}.po{background:var(--orange-bg);color:var(--orange)}.pv{background:var(--violet-bg);color:var(--violet)}
+  .note{font-size:12px;color:var(--ink3)}
+  footer{margin-top:18px;font-size:11.5px;color:var(--ink3)}
+  .big{color:var(--teal);font-weight:680}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1><span class="dot"></span>Kameleoon AI Features — Insights &amp; Usage Trends</h1>
+    <div class="sub">Langfuse traces · AI Assets (Jun 8–19), AI Goals (Jun 9–19), Kai (rolling 21 days, May 30–Jun 20, 2026) · generated 2026-06-20</div>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">4,402</div><div class="l">AI interactions</div></div>
+    <div class="kpi"><div class="v">~50.2M</div><div class="l">Tokens</div></div>
+    <div class="kpi"><div class="v">$76.90</div><div class="l">Model spend</div></div>
+    <div class="kpi"><div class="v">3</div><div class="l">Features</div></div>
+    <div class="kpi"><div class="v">54 / 61</div><div class="l">AI-Asset users / sites</div></div>
+  </div>
+
+  <section class="taccent">
+    <h2>Executive snapshot <span class="tag">across all three features</span></h2>
+    <div class="cols">
+      <div>
+        <ul>
+          <li><b>Kai dominates everything</b>: 90% of volume (3,973 of 4,402) and <b>86% of spend</b> ($66 of $77).</li>
+          <li>Cost split: Kai <span class="pill pv">86%</span> · Goals <span class="pill po">9%</span> · AI Assets <span class="pill pt">5%</span>.</li>
+          <li>Per-interaction cost is the inverse of volume: <b>Goals $0.114</b> ≫ Kai $0.017 ≈ Assets $0.011 — Goals is the priciest <i>per call</i> (it ingests full page HTML + variation JS).</li>
+          <li>All three features are <b>actively multilingual</b> (English, French, German prompts/answers).</li>
+        </ul>
+      </div>
+      <div>
+        <ul>
+          <li>A lot of traffic comes from <b>*.github.io demo/test pages</b> (akmatoff, ivanpsarew2, artemuch27…) across both Assets and Goals → meaningful share is QA/internal testing, not just live customers.</li>
+          <li><b>Shared power user</b>: account <code>12932</code> is the #1 AI-Assets user (79 traces) <i>and</i> a top Goals user (8) — a clear internal champion / heavy tester.</li>
+          <li>Real brands present: Graham&amp;Brown, Eurowings, X-Bionic, Schmoove, Boulanger, Booking.com, Providence Health.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="oaccent">
+    <h2>Product metrics — PM view <span class="tag">activation · stickiness · retention · funnels</span></h2>
+    <div class="cols">
+      <div>
+        <h3>Reach (distinct actors)</h3>
+        <ul>
+          <li><b>AI Assets</b>: 54 users · 61 sites · 247 sessions.</li>
+          <li><b>AI Goals</b>: 18 customers · 25 experiments · 26 sessions.</li>
+          <li><b>Kai</b>: 3,514 sessions — <i>no user/customer id in the export</i>, so Kai is session-only (can’t do per-user metrics yet).</li>
+        </ul>
+        <h3>Active users &amp; stickiness</h3>
+        <ul>
+          <li><b>AI Assets</b>: avg <b>7.3 DAU</b>, peak 14, 54 period-unique → stickiness (DAU/period) <b>0.13</b>.</li>
+          <li><b>AI Goals</b>: avg <b>3.4 DAU</b>, peak 7, 18 unique → stickiness <b>0.19</b> (highest).</li>
+          <li><b>Kai</b>: avg <b>160 active sessions/day</b>, peak 1,839 → very high throughput, low repeat (0.05).</li>
+        </ul>
+        <h3>Engagement frequency</h3>
+        <ul>
+          <li><b>AI Assets</b>: <b>6.9 traces/user</b> (median 3, p90 13, max 79). Top-3 users = 43%, <b>top-10% (6 users) = 57%</b> of volume.</li>
+          <li><b>AI Goals</b>: 3.2 traces/customer (median 2, max 11); top-3 = 47%.</li>
+          <li>Breadth: AI-Assets users touch <b>~2.3 distinct condition types</b> each (max 11) — most stick to a couple of targeting modes.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Funnels &amp; activation</h3>
+        <ul>
+          <li><b>AI Assets</b>: prompt → asset <b>69%</b> (256/371); 31% clarify. At <i>session</i> level <b>88% eventually produce an asset</b> (clarify-then-succeed) → strong activation.</li>
+          <li><b>AI Goals</b>: session → inspect HTML <b>100%</b> → <b>snippet generated just 24%</b> (14/58). Big drop-off — only 1 in 4 sessions ships code.</li>
+          <li><b>Kai</b>: 16% of conversations invoke a tool (doc lookup); 84% answered from context.</li>
+        </ul>
+        <h3>Session depth</h3>
+        <ul>
+          <li><b>AI Goals</b> most iterative: <b>2.23 turns/session</b>, 46% multi-turn (max 8).</li>
+          <li><b>AI Assets</b>: 1.50 turns/session, 24% multi-turn.</li>
+          <li><b>Kai</b>: 1.13 turns/session, only 5% multi-turn (max 37) — mostly one-shot, consistent with batch summaries.</li>
+        </ul>
+        <h3>Retention / weekly trend</h3>
+        <ul>
+          <li><b>AI Assets</b>: W1 209 traces (25 users) → W2 162 (39 users) — volume dipped but <b>active users grew 25→39</b> (broadening adoption). 37% of users return on a 2nd day.</li>
+          <li><b>AI Goals</b>: W1 37 (14 users) → W2 21 (9) — <b>declining</b>; 44% return on a 2nd day.</li>
+          <li><b>Kai</b> by week: 543 → <b>2,670</b> → 746 → 14 (boundary). W2 carries the Jun-10 batch.</li>
+        </ul>
+        <h3>When they use it (UTC)</h3>
+        <ul>
+          <li><b>AI Assets</b>: <b>88% within 08–18h</b>, peak 10:00, Mon–Thu heavy, near-zero weekends → classic EU business-hours B2B tool.</li>
+          <li><b>AI Goals</b>: 91% business hours, peak 13:00, Tue-heavy.</li>
+          <li><b>Kai</b>: only <b>36% in business hours</b>, peak 00:00, Wednesday spike (2,098) → <b>automated/batch</b>, not human-paced.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="taccent">
+    <h2>AI Assets <span class="pill pt">targeting agent</span><span class="tag">371 traces · 280 assets · $4.14 · Jun 8–19 (11d)</span></h2>
+    <div class="cols">
+      <div>
+        <h3>Output &amp; outcomes</h3>
+        <ul>
+          <li>Produced <b>280 assets</b>: <b>171 segments</b> + <b>109 triggers</b> (≈1.6:1).</li>
+          <li>Outcome mix: segment-only <b>40%</b> (148) · trigger-only <b>24%</b> (88) · both <b>5%</b> (20) · <b>clarification 31%</b> (114) · none &lt;1% (1).</li>
+          <li><b>~1 in 3 prompts ends in a clarifying question</b> rather than an asset — the single biggest friction signal.</li>
+          <li>But when it <i>does</i> build an asset, it almost never needed to clarify first — cluster-level clarification rates are 0–3%. So clarifications are concentrated in “couldn’t act, asked instead” cases.</li>
+          <li>Only <b>22 traces</b> generated more than one asset; most prompts → one asset.</li>
+        </ul>
+        <h3>Condition shape</h3>
+        <ul>
+          <li>Avg <b>2.1 conditions per asset</b>; one outlier asset had <b>104</b> (a giant URL list).</li>
+          <li><b>94% of conditions are “include”</b>, only 6% exclude — users target in, rarely carve out.</li>
+          <li>Match types: <b>CONTAINS ~74%</b> (200) ≫ EXACT (30), GREATER (29), REGEX (18), EQUAL (8).</li>
+          <li><b>27 distinct condition types</b> in use — broad coverage of the targeting surface.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>What people target</h3>
+        <ul>
+          <li>Top condition types: <b>PAGE_URL 241</b>, DEVICE_TYPE 134, GEOLOCATION 81, BROWSER 22, NEW_VISITORS 17, VISITS / LAST_VISIT 11 each.</li>
+          <li>Use-case clusters: <b>Device 112</b> · Geography 78 · URL/page 65 · Visitor lifecycle 62 · Browser/OS/lang 34 · Custom data 20 · Timing/events 12.</li>
+          <li>Prompt shapes: device audience 113 · freeform 96 · short instruction 72 · geography 42 · lifecycle 20.</li>
+          <li>Context split: <b>224 from segment</b> editor vs 142 from trigger editor.</li>
+        </ul>
+        <h3>Who &amp; where</h3>
+        <ul>
+          <li><b>54 users, 61 sites, 20+ domains</b> — a real but concentrated base.</li>
+          <li>Heavy concentration: top user <code>12932</code> = <b>79 traces (21%)</b>; top-3 users = 43%; top site <code>32359</code> = 64.</li>
+          <li><b>74 French prompts</b>, 4 German, 31 with accented characters.</li>
+          <li>Busiest day <b>Jun 9 (62 traces)</b>; active 12 days. Tool/entity lookups in just <b>11%</b> of traces.</li>
+          <li>Efficiency: $0.011/trace but <b>~41k tokens/trace</b> (large system prompt + reasoning).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="oaccent">
+    <h2>AI Goals <span class="pill po">goals / Aria agent</span><span class="tag">58 traces · $6.60 · Jun 9–19 (10d)</span></h2>
+    <div class="cols">
+      <div>
+        <ul>
+          <li><b>24% (14/58) ended in a generated tracking snippet</b>; the rest were answers / page inspection without final code.</li>
+          <li><b>102 HTML inspections</b> via <code>inspect_html_code</code> — avg <b>1.8 per session</b>, up to 5 — the agent looks at the DOM repeatedly before committing.</li>
+          <li>Most expensive feature <i>per call</i>: <b>$0.114/trace</b> (~10× AI Assets) — it processes full page HTML + applied variation JS.</li>
+          <li>4.9M tokens over 58 sessions.</li>
+        </ul>
+      </div>
+      <div>
+        <ul>
+          <li><b>18 distinct customers, 25 experiments, 15 domains.</b> Top domains: <b>booking.com (11)</b>, github.io demos, kameleoon.com, google.com, boulanger.com, schmoove.fr.</li>
+          <li>Top customers: <code>10398</code> (11), <code>10117</code> (8), <code>12932</code> (8 — same power user as Assets).</li>
+          <li>All sessions run under agent <code>goals</code> on <code>electra-2.0.0</code>.</li>
+          <li>Busiest day <b>Jun 9 (14)</b>; active 9 days. <b>Smallest sample</b> of the three — early adoption.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="vaccent">
+    <h2>Kai <span class="pill pv">experiment copilot</span><span class="tag">3,973 traces · $66.16 · rolling 21 days</span></h2>
+    <div class="cols">
+      <div>
+        <h3>Two distinct workloads</h3>
+        <ul>
+          <li><b>Experiment summaries: 3,073 (77%)</b> on <b>gpt-4o-mini</b> — auto-generated Insights/Recommendations.</li>
+          <li><b>Documentation Q&amp;A / chat: 900 (23%)</b> on <b>gpt-4o</b>. Model choice maps exactly to use case.</li>
+          <li><b>Massive spike Jun 10: 1,854 traces (~47% of the 21-day volume) in a single day</b> — looks like a bulk/batch summary run, not organic chat.</li>
+          <li>~189 traces/day average otherwise.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Behavior &amp; cost</h3>
+        <ul>
+          <li>Recommendation tone (approx scan of 3,087 summaries): <b>iterate 875 ≫ abort 454 ≫ ship 175</b> — “ship it” is rarest (~6%); <b>most experiments are not clear wins</b>.</li>
+          <li><b>1,067 doc lookups</b> across 632 traces (16% use tools) — mix of filesystem reads of <code>.mdx</code> docs and semantic queries (“simulate a test”, “custom data”, “différence entre A/B test et personnalisation”).</li>
+          <li>Languages: <b>EN 2,405 · DE 387 · FR 281</b>.</li>
+          <li><b>86% of all AI spend.</b> $0.017/trace, ~7.6k tokens/trace — cheap per call, expensive in aggregate via volume.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="gaccent">
+    <h2>Caveats <span class="tag">read the numbers with these in mind</span></h2>
+    <ul>
+      <li><b>Different windows.</b> Kai is a rolling <b>21-day</b> slice of a 5.3 GB export; AI Assets &amp; Goals are full exports over ~11 / ~10 days. Volume comparisons are window-adjusted, not apples-to-apples.</li>
+      <li><b>Heuristic counts.</b> Recommendation tone, language tallies, and French-prompt counts come from keyword/marker scans — directional, not exact.</li>
+      <li><b>Test traffic mixed in.</b> *.github.io demo domains and the dominance of a couple of internal accounts mean a chunk of “usage” is QA/dogfooding.</li>
+      <li><b>Clarifications excluded from clusters.</b> Clarification-outcome AI-Assets traces produce no asset, so they don’t appear in use-case cluster counts.</li>
+    </ul>
+  </section>
+
+  <footer>Source: AI Trace Explorer datasets (trace-data / kai-data / goals-data). Live dashboard: junaid-kameleoon.github.io/Claude/dashboard/ · Checkpoint <code>dashboard-v1</code>.</footer>
+</div>
+</body>
+</html>
