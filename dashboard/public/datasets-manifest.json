@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T05:04:50.295Z",
+  "generatedAt": "2026-06-20T06:16:08.725Z",
   "datasets": {
     "targeting": {
       "file": "trace-data.json",
@@ -20,18 +20,18 @@
     },
     "kai": {
       "file": "kai-data.json",
-      "traceCount": 143,
+      "traceCount": 3973,
       "summary": {
-        "totalObservations": 1719,
-        "traceCount": 143,
+        "totalObservations": 30645,
+        "traceCount": 3973,
         "dateRange": {
-          "from": "2026-06-19 05:13:22.153000",
+          "from": "2026-05-30 02:00:13.144000",
           "to": "2026-06-20 02:00:21.788000"
         },
-        "modelCost": 4.7234,
-        "modelTokens": 2192796,
-        "toolLookups": 118,
-        "docQueries": 73
+        "modelCost": 66.1637,
+        "modelTokens": 30023049,
+        "toolLookups": 1147,
+        "docQueries": 1067
       }
     },
     "goals": {

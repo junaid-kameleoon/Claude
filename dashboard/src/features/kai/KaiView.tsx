@@ -49,6 +49,8 @@ function Exchange({ data }: { data: KaiData }) {
   }, [data.traces, filter, query]);
 
   const selected = filtered.find((t) => t.id === selectedId) || filtered[0] || null;
+  const CAP = 400;
+  const shown = filtered.slice(0, CAP);
 
   return (
     <div className="exchange-grid">
@@ -68,15 +70,22 @@ function Exchange({ data }: { data: KaiData }) {
             {filtered.length === 0 ? (
               <div className="list-empty">No conversations match.</div>
             ) : (
-              filtered.map((t) => (
-                <button key={t.id} className={"trace-item" + (selected?.id === t.id ? " active" : "")} onClick={() => setSelectedId(t.id)}>
-                  <div className="ti-top">
-                    <span className="badge neutral">{t.useCase === "Documentation Q&A / chat" ? "Docs Q&A" : t.useCase}</span>
-                    <span className="ti-time">{fmtDate(t.timestamp)}</span>
+              <>
+                {shown.map((t) => (
+                  <button key={t.id} className={"trace-item" + (selected?.id === t.id ? " active" : "")} onClick={() => setSelectedId(t.id)}>
+                    <div className="ti-top">
+                      <span className="badge neutral">{t.useCase === "Documentation Q&A / chat" ? "Docs Q&A" : t.useCase}</span>
+                      <span className="ti-time">{fmtDate(t.timestamp)}</span>
+                    </div>
+                    <div className="ti-prompt">{t.prompt || "(no prompt)"}</div>
+                  </button>
+                ))}
+                {filtered.length > CAP && (
+                  <div className="list-empty">
+                    Showing newest {CAP} of {filtered.length.toLocaleString()} — search to narrow.
                   </div>
-                  <div className="ti-prompt">{t.prompt || "(no prompt)"}</div>
-                </button>
-              ))
+                )}
+              </>
             )}
           </div>
         </section>

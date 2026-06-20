@@ -21,6 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
+import { StringDecoder } from "node:string_decoder";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(__dirname, "../public");
@@ -31,7 +32,13 @@ const DOWNLOADS = process.env.EXPORT_DIR || path.join(os.homedir(), "Downloads")
 // in either .json or .csv form, so a weekly re-export just needs to land there.
 const SOURCES = {
   targeting: { id: "cmlf6nfxt02axad07n8sks3lq", env: "TARGETING_EXPORT", out: "trace-data.json" },
-  kai: { id: "cmg94erlg0i1lad07jglb5m59", env: "KAI_EXPORT", out: "kai-data.json" },
+  // Kai's export can be multi-GB; window it to the last few weeks (override with KAI_SINCE_DAYS).
+  kai: {
+    id: "cmg94erlg0i1lad07jglb5m59",
+    env: "KAI_EXPORT",
+    out: "kai-data.json",
+    sinceDays: Number(process.env.KAI_SINCE_DAYS) || 21,
+  },
   goals: { id: "cmok6nd0k07e9ad07wug22mxn", env: "GOALS_EXPORT", out: "goals-data.json" },
 };
 
@@ -194,104 +201,150 @@ function groupByTrace(observations) {
   return groups;
 }
 
-/**
- * RFC-4180 CSV parser operating over a Buffer (byte level), so it handles files
- * larger than V8's max string length. The structural bytes (" , \r \n) are all
- * single-byte ASCII and never collide with UTF-8 continuation bytes, so we slice
- * field byte-ranges and decode each as UTF-8 — correct for the French content.
- */
-function parseCSVBuffer(buf) {
-  const COMMA = 0x2c, QUOTE = 0x22, LF = 0x0a, CR = 0x0d;
-  const rows = [];
-  let row = [];
-  let pieces = [];
-  let inQuotes = false;
-  let i = 0;
-  const n = buf.length;
-  if (n >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) i = 3; // BOM
-  let runStart = i;
-  const pushRun = (end) => {
-    if (end > runStart) pieces.push(buf.toString("utf8", runStart, end));
-  };
-  const endField = () => {
-    const v = pieces.join("");
-    pieces = [];
-    row.push(v);
-  };
-  for (; i < n; i++) {
-    const b = buf[i];
-    if (inQuotes) {
-      if (b === QUOTE) {
-        pushRun(i);
-        if (buf[i + 1] === QUOTE) {
-          pieces.push('"');
-          i++;
-          runStart = i + 1;
-        } else {
-          inQuotes = false;
-          runStart = i + 1;
-        }
-      }
-    } else if (b === QUOTE) {
-      pushRun(i);
-      inQuotes = true;
-      runStart = i + 1;
-    } else if (b === COMMA) {
-      pushRun(i);
-      endField();
-      runStart = i + 1;
-    } else if (b === LF || b === CR) {
-      pushRun(i);
-      endField();
-      if (b === CR && buf[i + 1] === LF) i++;
-      runStart = i + 1;
-      if (row.length > 1 || row[0] !== "") rows.push(row);
-      row = [];
-    }
-  }
-  pushRun(n);
-  if (pieces.length || row.length) {
-    endField();
-    if (row.length > 1 || row[0] !== "") rows.push(row);
-  }
-  return rows;
-}
-
 // CSV cells holding structured data must be JSON-parsed back into objects;
 // numeric columns must be coerced so the extractors behave like the JSON path.
 const OBJECT_FIELDS = ["metadata", "usageDetails", "costDetails", "modelParameters"];
 const NUMBER_FIELDS = ["latencyMs", "timeToFirstTokenMs", "totalCost"];
 
-function csvToObservations(buf) {
-  const rows = parseCSVBuffer(buf);
-  if (rows.length < 2) return [];
-  const header = rows[0];
-  const out = [];
-  for (let r = 1; r < rows.length; r++) {
-    const cells = rows[r];
-    const obj = {};
-    for (let c = 0; c < header.length; c++) {
-      const key = header[c];
-      const val = cells[c] ?? "";
-      if (val === "") {
-        obj[key] = null;
-      } else if (OBJECT_FIELDS.includes(key)) {
-        obj[key] = tryParse(val) ?? {};
-      } else if (NUMBER_FIELDS.includes(key)) {
-        const num = parseFloat(val);
-        obj[key] = Number.isFinite(num) ? num : null;
-      } else {
-        obj[key] = val; // input/output stay strings; messagesOf() tryParses them
-      }
-    }
-    out.push(obj);
+const ROOT_NAMES = new Set(["targeting_agent", "LangGraph", "Streaming"]);
+
+/** Turn a CSV header+row pair into an observation object (with nested JSON parsed). */
+function rowToObs(header, cells, { sinceTime, trim } = {}) {
+  const obj = {};
+  for (let c = 0; c < header.length; c++) {
+    const key = header[c];
+    const val = cells[c] ?? "";
+    if (val === "") obj[key] = null;
+    else if (OBJECT_FIELDS.includes(key)) obj[key] = tryParse(val) ?? {};
+    else if (NUMBER_FIELDS.includes(key)) {
+      const num = parseFloat(val);
+      obj[key] = Number.isFinite(num) ? num : null;
+    } else obj[key] = val;
   }
-  return out;
+  // Date cutoff: startTime is "YYYY-MM-DD ..." so string compare is chronological.
+  if (sinceTime && obj.startTime && obj.startTime < sinceTime) return null;
+  // Memory trim: only roots and tool calls need their (often huge) input/output.
+  if (trim && !(obj.type === "TOOL" || ROOT_NAMES.has(obj.name) || !obj.parentObservationId)) {
+    obj.input = null;
+    obj.output = null;
+  }
+  return obj;
 }
 
-function load(file) {
+/**
+ * Stream a (possibly multi-GB) CSV file, parsing rows incrementally so the whole
+ * file is never resident in memory. StringDecoder handles multi-byte UTF-8 split
+ * across chunk boundaries. Returns only the observations passing the filters.
+ */
+function streamCsvObservations(file, opts = {}) {
+  return new Promise((resolve, reject) => {
+    const decoder = new StringDecoder("utf8");
+    const observations = [];
+    let header = null;
+    let row = [];
+    let pieces = []; // slices of the current field, joined at field end
+    let inQuotes = false;
+    let pendingQuote = false; // a '"' ended a chunk inside quotes; next char decides escape vs close
+    let total = 0;
+
+    const endField = () => {
+      row.push(pieces.length === 1 ? pieces[0] : pieces.join(""));
+      pieces.length = 0;
+    };
+    const endRow = () => {
+      if (row.length > 1 || row[0] !== "") {
+        if (!header) header = row.slice();
+        else {
+          total++;
+          const obj = rowToObs(header, row, opts);
+          if (obj) observations.push(obj);
+        }
+      }
+      row.length = 0;
+    };
+
+    // indexOf-based scan: inside quoted JSON cells we jump straight to the next
+    // quote instead of inspecting every character — the key to speed on GB files.
+    const processChunk = (s) => {
+      const len = s.length;
+      let pos = 0;
+      while (pos < len) {
+        if (pendingQuote) {
+          pendingQuote = false;
+          if (s[pos] === '"') {
+            pieces.push('"');
+            pos++;
+            continue; // escaped quote, still inside quotes
+          }
+          inQuotes = false; // the earlier quote was the closing one
+        }
+        if (inQuotes) {
+          const q = s.indexOf('"', pos);
+          if (q === -1) {
+            pieces.push(s.slice(pos));
+            break;
+          }
+          if (q > pos) pieces.push(s.slice(pos, q));
+          pos = q + 1;
+          if (pos >= len) {
+            pendingQuote = true; // decide escape vs close at next chunk
+          } else if (s[pos] === '"') {
+            pieces.push('"');
+            pos++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          let i = pos;
+          while (i < len) {
+            const c = s[i];
+            if (c === '"' || c === "," || c === "\n" || c === "\r") break;
+            i++;
+          }
+          if (i > pos) pieces.push(s.slice(pos, i));
+          if (i >= len) break;
+          const c = s[i];
+          pos = i + 1;
+          if (c === '"') inQuotes = true;
+          else if (c === ",") endField();
+          else if (c === "\n") {
+            endField();
+            endRow();
+          }
+          // '\r' is skipped
+        }
+      }
+    };
+
+    const stream = fs.createReadStream(file, { highWaterMark: 1 << 20 });
+    stream.on("data", (buf) => processChunk(decoder.write(buf)));
+    stream.on("error", reject);
+    stream.on("end", () => {
+      processChunk(decoder.end());
+      if (pieces.length || row.length) {
+        endField();
+        endRow();
+      }
+      resolve({ observations, total });
+    });
+  });
+}
+
+/** YYYY-MM-DD for `days` ago (used for the date-window cutoff). */
+function cutoffDate(days) {
+  const d = new Date(Date.now() - days * 86400000);
+  return d.toISOString().slice(0, 10);
+}
+
+async function load(file, opts = {}) {
   if (!file || !fs.existsSync(file)) return null;
-  if (/\.csv$/i.test(file)) return csvToObservations(fs.readFileSync(file));
+  if (/\.csv$/i.test(file)) {
+    const { observations, total } = await streamCsvObservations(file, opts);
+    if (opts.sinceTime) {
+      console.log(`  (windowed: kept ${observations.length} of ${total} observations since ${opts.sinceTime})`);
+    }
+    return observations;
+  }
   const data = JSON.parse(fs.readFileSync(file, "utf8"));
   return Array.isArray(data) ? data : data.data || [];
 }
@@ -679,8 +732,10 @@ function buildKai(observations) {
     traces.push({
       id: traceId,
       timestamp: ts,
-      prompt,
-      response,
+      // Kai prompts embed large experiment-stats blocks; cap stored text to keep
+      // the runtime dataset small (full text isn't needed for the dashboard).
+      prompt: compactStr(prompt, 1500),
+      response: compactStr(response, 2500),
       outcome: useCase,
       useCase,
       metadata: {
@@ -844,7 +899,7 @@ function extractExperiment(meta) {
 
 const BUILDERS = { targeting: buildTargeting, kai: buildKai, goals: buildGoals };
 
-function main() {
+async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const manifest = { generatedAt: new Date().toISOString(), datasets: {} };
 
@@ -854,7 +909,12 @@ function main() {
       console.warn(`! ${feature}: no export matching id ${cfg.id} in ${DOWNLOADS} — skipping`);
       continue;
     }
-    const observations = load(file);
+    const opts = {};
+    if (cfg.sinceDays && /\.csv$/i.test(file)) {
+      opts.sinceTime = cutoffDate(cfg.sinceDays);
+      opts.trim = true;
+    }
+    const observations = await load(file, opts);
     if (!observations) {
       console.warn(`! ${feature}: could not read ${file} — skipping`);
       continue;
@@ -863,6 +923,7 @@ function main() {
     const result = BUILDERS[feature](observations);
     result.generatedAt = manifest.generatedAt;
     result.source = path.basename(file);
+    if (opts.sinceTime) result.window = { sinceDays: cfg.sinceDays, since: opts.sinceTime };
     const outPath = path.join(OUT_DIR, cfg.out);
     fs.writeFileSync(outPath, JSON.stringify(result));
     const kb = (fs.statSync(outPath).size / 1024).toFixed(0);
@@ -878,4 +939,7 @@ function main() {
   console.log("✓ wrote datasets-manifest.json");
 }
 
-main();
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
