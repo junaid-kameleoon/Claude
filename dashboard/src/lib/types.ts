@@ -89,6 +89,7 @@ export interface Dataset<T extends BaseTrace> {
   summary: Summary;
   patterns: Record<string, unknown>;
   traces: T[];
+  window?: { sinceDays: number; since: string };
 }
 
 export type TargetingData = Dataset<TargetingTrace> & {

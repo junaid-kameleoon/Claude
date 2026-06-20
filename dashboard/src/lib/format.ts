@@ -51,3 +51,45 @@ export function fmtRange(from: string | null, to: string | null): string {
   if (!from || !to) return "—";
   return fmtDay(from) + " – " + fmtDay(to);
 }
+
+function yearOf(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(String(iso).replace(" ", "T"));
+  return isNaN(d.getTime()) ? "" : String(d.getFullYear());
+}
+
+/** "Jun 8 – Jun 19, 2026" (year appended once). */
+export function fmtRangeYear(from: string | null, to: string | null): string {
+  if (!from || !to) return "—";
+  const y = yearOf(to);
+  return `${fmtDay(from)} – ${fmtDay(to)}${y ? ", " + y : ""}`;
+}
+
+/** Full timestamp like "Jun 20, 2026, 6:05 AM". */
+export function fmtStamp(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(String(iso).replace(" ", "T"));
+  if (isNaN(d.getTime())) return String(iso).slice(0, 16);
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function daysAgo(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(String(iso).replace(" ", "T"));
+  if (isNaN(d.getTime())) return "";
+  const diff = Date.now() - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days <= 0) {
+    const hrs = Math.floor(diff / 3600000);
+    if (hrs <= 0) return "just now";
+    return `${hrs}h ago`;
+  }
+  if (days === 1) return "yesterday";
+  return `${days}d ago`;
+}

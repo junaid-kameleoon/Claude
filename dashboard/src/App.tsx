@@ -4,7 +4,8 @@ import { TargetingView } from "./features/targeting/TargetingView";
 import { KaiView } from "./features/kai/KaiView";
 import { GoalsView } from "./features/goals/GoalsView";
 import { Gate, logout } from "./auth/Gate";
-import { fmtDate } from "./lib/format";
+import { fmtDate, fmtRangeYear, fmtStamp, daysAgo, fmtInt } from "./lib/format";
+import type { BaseTrace, Dataset } from "./lib/types";
 
 type FeatureKey = "targeting" | "goals" | "kai";
 
@@ -65,10 +66,69 @@ function Dashboard() {
       </header>
 
       <main className="main">
-        {tab === "targeting" && <Loader res={targeting} render={(d) => <TargetingView data={d} />} />}
-        {tab === "goals" && <Loader res={goals} render={(d) => <GoalsView data={d} />} />}
-        {tab === "kai" && <Loader res={kai} render={(d) => <KaiView data={d} />} />}
+        {tab === "targeting" && (
+          <Loader
+            res={targeting}
+            render={(d) => (
+              <>
+                <DataSummaryBar data={d} />
+                <TargetingView data={d} />
+              </>
+            )}
+          />
+        )}
+        {tab === "goals" && (
+          <Loader
+            res={goals}
+            render={(d) => (
+              <>
+                <DataSummaryBar data={d} />
+                <GoalsView data={d} />
+              </>
+            )}
+          />
+        )}
+        {tab === "kai" && (
+          <Loader
+            res={kai}
+            render={(d) => (
+              <>
+                <DataSummaryBar data={d} />
+                <KaiView data={d} />
+              </>
+            )}
+          />
+        )}
       </main>
+    </div>
+  );
+}
+
+function DataSummaryBar({ data }: { data: Dataset<BaseTrace> }) {
+  const { from, to } = data.summary.dateRange;
+  return (
+    <div className="data-summary">
+      <div className="ds-item">
+        <span className="ds-label">Data range</span>
+        <span className="ds-value">{fmtRangeYear(from, to)}</span>
+      </div>
+      <div className="ds-item">
+        <span className="ds-label">Records</span>
+        <span className="ds-value">{fmtInt(data.summary.traceCount)} traces</span>
+      </div>
+      {data.window && (
+        <div className="ds-item">
+          <span className="ds-label">Window</span>
+          <span className="ds-value">rolling {data.window.sinceDays} days</span>
+        </div>
+      )}
+      <div className="ds-item ds-import">
+        <span className="ds-label">Last import</span>
+        <span className="ds-value">
+          {fmtStamp(data.generatedAt)}
+          {data.generatedAt && <span className="ds-ago"> · {daysAgo(data.generatedAt)}</span>}
+        </span>
+      </div>
     </div>
   );
 }
