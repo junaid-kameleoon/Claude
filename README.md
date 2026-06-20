@@ -6,6 +6,7 @@ Published via GitHub Pages from the [`public/`](public/) directory (no build ste
 
 ## Live
 
+- **AI Trace Explorer (dashboard, password-protected):** https://junaid-kameleoon.github.io/Claude/dashboard/ — Langfuse traces for AI Asset targeting, AI Goals & Kai. Source in [`dashboard/`](dashboard/), built into [`public/dashboard/`](public/dashboard/).
 - **Landing:** https://junaid-kameleoon.github.io/Claude/
 - **KAI Chat v2.2 (latest):** https://junaid-kameleoon.github.io/Claude/Kai%20v2.2/ — experiment copilot, "Under the hood" live event feed, interactive Architecture diagram
 - **KAI Chat v2.1:** https://junaid-kameleoon.github.io/Claude/Kai%20v2.1/

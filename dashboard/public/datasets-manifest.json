@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-06-20T03:59:48.869Z",
+  "datasets": {
+    "targeting": {
+      "file": "trace-data.json",
+      "traceCount": 366,
+      "summary": {
+        "totalObservations": 2438,
+        "traceCount": 366,
+        "dateRange": {
+          "from": "2026-06-08 06:32:28.219000",
+          "to": "2026-06-19 12:46:46.934000"
+        },
+        "modelCost": 4.0413,
+        "modelTokens": 15068074,
+        "generatedAssets": 275,
+        "clarificationRate": 0.311,
+        "toolLookups": 40
+      }
+    },
+    "kai": {
+      "file": "kai-data.json",
+      "traceCount": 143,
+      "summary": {
+        "totalObservations": 1719,
+        "traceCount": 143,
+        "dateRange": {
+          "from": "2026-06-19 05:13:22.153000",
+          "to": "2026-06-20 02:00:21.788000"
+        },
+        "modelCost": 4.7234,
+        "modelTokens": 2192796,
+        "toolLookups": 118,
+        "docQueries": 73
+      }
+    },
+    "goals": {
+      "file": "goals-data.json",
+      "traceCount": 1,
+      "summary": {
+        "totalObservations": 20,
+        "traceCount": 1,
+        "dateRange": {
+          "from": "2026-06-19 14:18:27.541000",
+          "to": "2026-06-19 14:18:27.541000"
+        },
+        "modelCost": 0.159,
+        "modelTokens": 111359,
+        "toolLookups": 3,
+        "codeGenerated": 1
+      }
+    }
+  }
+}
