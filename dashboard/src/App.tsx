@@ -9,7 +9,7 @@ import { fmtDate } from "./lib/format";
 type FeatureKey = "targeting" | "goals" | "kai";
 
 const TABS: { key: FeatureKey; label: string }[] = [
-  { key: "targeting", label: "AI Asset Trace" },
+  { key: "targeting", label: "AI Assets" },
   { key: "goals", label: "AI Goals" },
   { key: "kai", label: "Kai" },
 ];

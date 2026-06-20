@@ -24,28 +24,31 @@ import os from "node:os";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(__dirname, "../public");
-const DOWNLOADS = path.join(os.homedir(), "Downloads");
+const DOWNLOADS = process.env.EXPORT_DIR || path.join(os.homedir(), "Downloads");
 
+// Each Kameleoon AI feature exports under a stable Langfuse object id (the suffix
+// after "lf-events-export-"). We resolve the newest matching file in DOWNLOADS,
+// in either .json or .csv form, so a weekly re-export just needs to land there.
 const SOURCES = {
-  targeting: {
-    file:
-      process.env.TARGETING_EXPORT ||
-      path.join(DOWNLOADS, "1781873825789-lf-events-export-cmlf6nfxt02axad07n8sks3lq.json"),
-    out: "trace-data.json",
-  },
-  kai: {
-    file:
-      process.env.KAI_EXPORT ||
-      path.join(DOWNLOADS, "1781926279355-lf-events-export-cmg94erlg0i1lad07jglb5m59.json"),
-    out: "kai-data.json",
-  },
-  goals: {
-    file:
-      process.env.GOALS_EXPORT ||
-      path.join(DOWNLOADS, "1781926242098-lf-events-export-cmok6nd0k07e9ad07wug22mxn.json"),
-    out: "goals-data.json",
-  },
+  targeting: { id: "cmlf6nfxt02axad07n8sks3lq", env: "TARGETING_EXPORT", out: "trace-data.json" },
+  kai: { id: "cmg94erlg0i1lad07jglb5m59", env: "KAI_EXPORT", out: "kai-data.json" },
+  goals: { id: "cmok6nd0k07e9ad07wug22mxn", env: "GOALS_EXPORT", out: "goals-data.json" },
 };
+
+/** Newest export file (json|csv) for a feature id, or null if none found. */
+function resolveSource(cfg) {
+  if (process.env[cfg.env]) return process.env[cfg.env];
+  if (!fs.existsSync(DOWNLOADS)) return null;
+  const matches = fs
+    .readdirSync(DOWNLOADS)
+    .filter((f) => f.includes(`lf-events-export-${cfg.id}`) && /\.(json|csv)$/i.test(f))
+    .map((f) => {
+      const full = path.join(DOWNLOADS, f);
+      return { full, mtime: fs.statSync(full).mtimeMs };
+    })
+    .sort((a, b) => b.mtime - a.mtime);
+  return matches.length ? matches[0].full : null;
+}
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -191,10 +194,105 @@ function groupByTrace(observations) {
   return groups;
 }
 
+/**
+ * RFC-4180 CSV parser operating over a Buffer (byte level), so it handles files
+ * larger than V8's max string length. The structural bytes (" , \r \n) are all
+ * single-byte ASCII and never collide with UTF-8 continuation bytes, so we slice
+ * field byte-ranges and decode each as UTF-8 — correct for the French content.
+ */
+function parseCSVBuffer(buf) {
+  const COMMA = 0x2c, QUOTE = 0x22, LF = 0x0a, CR = 0x0d;
+  const rows = [];
+  let row = [];
+  let pieces = [];
+  let inQuotes = false;
+  let i = 0;
+  const n = buf.length;
+  if (n >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) i = 3; // BOM
+  let runStart = i;
+  const pushRun = (end) => {
+    if (end > runStart) pieces.push(buf.toString("utf8", runStart, end));
+  };
+  const endField = () => {
+    const v = pieces.join("");
+    pieces = [];
+    row.push(v);
+  };
+  for (; i < n; i++) {
+    const b = buf[i];
+    if (inQuotes) {
+      if (b === QUOTE) {
+        pushRun(i);
+        if (buf[i + 1] === QUOTE) {
+          pieces.push('"');
+          i++;
+          runStart = i + 1;
+        } else {
+          inQuotes = false;
+          runStart = i + 1;
+        }
+      }
+    } else if (b === QUOTE) {
+      pushRun(i);
+      inQuotes = true;
+      runStart = i + 1;
+    } else if (b === COMMA) {
+      pushRun(i);
+      endField();
+      runStart = i + 1;
+    } else if (b === LF || b === CR) {
+      pushRun(i);
+      endField();
+      if (b === CR && buf[i + 1] === LF) i++;
+      runStart = i + 1;
+      if (row.length > 1 || row[0] !== "") rows.push(row);
+      row = [];
+    }
+  }
+  pushRun(n);
+  if (pieces.length || row.length) {
+    endField();
+    if (row.length > 1 || row[0] !== "") rows.push(row);
+  }
+  return rows;
+}
+
+// CSV cells holding structured data must be JSON-parsed back into objects;
+// numeric columns must be coerced so the extractors behave like the JSON path.
+const OBJECT_FIELDS = ["metadata", "usageDetails", "costDetails", "modelParameters"];
+const NUMBER_FIELDS = ["latencyMs", "timeToFirstTokenMs", "totalCost"];
+
+function csvToObservations(buf) {
+  const rows = parseCSVBuffer(buf);
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  const out = [];
+  for (let r = 1; r < rows.length; r++) {
+    const cells = rows[r];
+    const obj = {};
+    for (let c = 0; c < header.length; c++) {
+      const key = header[c];
+      const val = cells[c] ?? "";
+      if (val === "") {
+        obj[key] = null;
+      } else if (OBJECT_FIELDS.includes(key)) {
+        obj[key] = tryParse(val) ?? {};
+      } else if (NUMBER_FIELDS.includes(key)) {
+        const num = parseFloat(val);
+        obj[key] = Number.isFinite(num) ? num : null;
+      } else {
+        obj[key] = val; // input/output stay strings; messagesOf() tryParses them
+      }
+    }
+    out.push(obj);
+  }
+  return out;
+}
+
 function load(file) {
-  if (!fs.existsSync(file)) return null;
-  const raw = fs.readFileSync(file, "utf8");
-  const data = JSON.parse(raw);
+  if (!file || !fs.existsSync(file)) return null;
+  if (/\.csv$/i.test(file)) return csvToObservations(fs.readFileSync(file));
+  const data = JSON.parse(fs.readFileSync(file, "utf8"));
   return Array.isArray(data) ? data : data.data || [];
 }
 
@@ -751,15 +849,20 @@ function main() {
   const manifest = { generatedAt: new Date().toISOString(), datasets: {} };
 
   for (const [feature, cfg] of Object.entries(SOURCES)) {
-    const observations = load(cfg.file);
-    if (!observations) {
-      console.warn(`! ${feature}: source not found at ${cfg.file} — skipping`);
+    const file = resolveSource(cfg);
+    if (!file) {
+      console.warn(`! ${feature}: no export matching id ${cfg.id} in ${DOWNLOADS} — skipping`);
       continue;
     }
-    console.log(`• ${feature}: ${observations.length} observations from ${path.basename(cfg.file)}`);
+    const observations = load(file);
+    if (!observations) {
+      console.warn(`! ${feature}: could not read ${file} — skipping`);
+      continue;
+    }
+    console.log(`• ${feature}: ${observations.length} observations from ${path.basename(file)}`);
     const result = BUILDERS[feature](observations);
     result.generatedAt = manifest.generatedAt;
-    result.source = path.basename(cfg.file);
+    result.source = path.basename(file);
     const outPath = path.join(OUT_DIR, cfg.out);
     fs.writeFileSync(outPath, JSON.stringify(result));
     const kb = (fs.statSync(outPath).size / 1024).toFixed(0);

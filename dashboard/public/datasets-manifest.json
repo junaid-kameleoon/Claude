@@ -1,20 +1,20 @@
 {
-  "generatedAt": "2026-06-20T03:59:48.869Z",
+  "generatedAt": "2026-06-20T05:04:50.295Z",
   "datasets": {
     "targeting": {
       "file": "trace-data.json",
-      "traceCount": 366,
+      "traceCount": 371,
       "summary": {
-        "totalObservations": 2438,
-        "traceCount": 366,
+        "totalObservations": 2468,
+        "traceCount": 371,
         "dateRange": {
           "from": "2026-06-08 06:32:28.219000",
-          "to": "2026-06-19 12:46:46.934000"
+          "to": "2026-06-19 15:48:05.147000"
         },
-        "modelCost": 4.0413,
-        "modelTokens": 15068074,
-        "generatedAssets": 275,
-        "clarificationRate": 0.311,
+        "modelCost": 4.1365,
+        "modelTokens": 15256473,
+        "generatedAssets": 280,
+        "clarificationRate": 0.307,
         "toolLookups": 40
       }
     },
@@ -36,18 +36,18 @@
     },
     "goals": {
       "file": "goals-data.json",
-      "traceCount": 1,
+      "traceCount": 58,
       "summary": {
-        "totalObservations": 20,
-        "traceCount": 1,
+        "totalObservations": 725,
+        "traceCount": 58,
         "dateRange": {
-          "from": "2026-06-19 14:18:27.541000",
+          "from": "2026-06-09 08:04:30.522000",
           "to": "2026-06-19 14:18:27.541000"
         },
-        "modelCost": 0.159,
-        "modelTokens": 111359,
-        "toolLookups": 3,
-        "codeGenerated": 1
+        "modelCost": 6.5969,
+        "modelTokens": 4883778,
+        "toolLookups": 102,
+        "codeGenerated": 14
       }
     }
   }
