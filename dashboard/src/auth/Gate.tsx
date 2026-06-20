@@ -12,9 +12,9 @@ import { useEffect, useState, type ReactNode } from "react";
  *   node -e 'console.log(require("crypto").createHash("sha256").update("YOUR_PW").digest("hex"))'
  * and paste the result into PASSWORD_HASH below.
  *
- * Default placeholder password: "kameleoon-ai"
+ * Current password: "pbxfinalize"
  */
-const PASSWORD_HASH = "5cab6478ff20296bb016338384110402afc9b70ccb43853757353a07d33d135d";
+const PASSWORD_HASH = "f3089487a4ea7540cd5e1bd93a315347187653ec33f3d762154078daa8d9b0c8";
 const STORAGE_KEY = "ai-trace-explorer-auth";
 
 async function sha256(text: string): Promise<string> {
