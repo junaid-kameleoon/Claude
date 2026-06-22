@@ -57,6 +57,16 @@
 - `goal_create` NPE (CLICK-without-url / RATIO_METRICS) — **fixed**.
 - `segment_delete` in-use guard, `goal_update_type` tag preservation, results-endpoint crash, and results readiness timeout — all remain **fixed**.
 
+## Notes for the dev (implementation observations)
+
+Details from the lifecycle/duplicate responses that may be useful:
+
+- **Delete only works from `DRAFT` or `STOPPED` — not `PAUSED`.** Calling `experiment_lifecycle_update status=deleted` on a *paused* experiment returns a downstream `400: "You can delete experiments only with statuses [DRAFT, STOPPED]"`. This contradicts the tool's own description ("running experiments are blocked until paused **or stopped**"). Suggest aligning the doc/guard (require `STOPPED`/`DRAFT`) and having the MCP return a clean validation error for the paused→delete case instead of passing the raw 400 through. Workaround: stop before deleting.
+- **Idempotency works.** Re-issuing the current status (e.g. `started` on an already-active experiment) returns `alreadyInTargetState: true`, `upstreamAction: null`, no upstream write, with a clear message ("…is already running; no upstream change was made").
+- **`currentStatus` casing is inconsistent.** `started`/`paused`/`stopped` return lowercase (`active`, `paused`, `stopped`), but `deleted` returns uppercase `DELETED`. Minor — may want to normalize.
+- **`upstreamAction` mapping** (per transition): `started→ACTIVATE`, `paused→PAUSE`, `resumed→RESUME`, `stopped→STOP`, `deleted→null` (also `null` on idempotent no-ops).
+- **`experiment_duplicate` copy naming.** The clone is named `"Test (copy of <original name>)"` — the leading `"Test "` looks unintended; worth checking the upstream copy-naming convention.
+
 ## Still open
 - Progressive-rule timezone inconsistency
 - `experiment_get` structured-output validation (null `baseURL`)
