@@ -76,6 +76,11 @@ Both were reported fixed but flagged as possibly still reproducible. Re-ran the 
   - `segment_create` ✅ — unrecognized `DEVICE_TYPE` (`device:"MOBILE"`) returns `…device: invalid value 'MOBILE'. Accepted values: DESKTOP, TABLET, PHONE`.
   - `goal_create` ✅ — after the deploy, invalid `matchType` (`BANANA`) → `matchType: invalid value 'BANANA'. Accepted values: CONTAINS, CORRESPONDS_EXACTLY, REGULAR_EXPRESSION`, and invalid `scrollType` (`INVALID_SCROLL`) → clean message with accepted values. The raw 500/Jackson exception is gone; the fix is general across goal-param enums.
 
+## Not yet tested
+- **Winning-variant-to-code prompt** (`kameleoon_implement_winning_variation` / the docs' "end-to-end automation" system prompt). QA so far has driven the MCP **tools**; this is a prompt-driven, code-generating workflow (get results → get variation code → re-implement as React → gate behind a new flag), so it needs an *interactive* run in a real repo with human review — not agent tool-assertions. **Open QA item.**
+  - **No "declare winner" API exists.** Per the Automation API docs, the winner is *computed* statistically (reliability >95% + positive improvement rate vs the reference on the primary goal); there is no endpoint to set one. So Mode A (`strict_winner_only`, requires `winner.status == "clear_winner"`) can't be staged on preview without real seeded traffic. Closest manual actions are diverting 100% traffic to a variation or stopping the experiment — neither sets a `clear_winner` status.
+  - **Testable via Mode B (`manual_variation_conversion`)** — pass a fallback variation id, which skips the winner requirement. Needs an experiment that actually has variation code / a PBX prompt to transpose (most preview experiments inspected have empty variation code), so we'd seed/find one or test against a demo experiment with real code.
+
 ## Still open
 - Progressive-rule timezone inconsistency
 - `feature_flag_activity_logs_get` `createdAt` sort key
