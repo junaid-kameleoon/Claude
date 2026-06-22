@@ -67,11 +67,22 @@ Details from the lifecycle/duplicate responses that may be useful:
 - **`upstreamAction` mapping** (per transition): `started→ACTIVATE`, `paused→PAUSE`, `resumed→RESUME`, `stopped→STOP`, `deleted→null` (also `null` on idempotent no-ops).
 - **`experiment_duplicate` copy naming.** The clone is named `"Test (copy of <original name>)"` — the leading `"Test "` looks unintended; worth checking the upstream copy-naming convention.
 
+## Re-test — invalid-enum & `experiment_get` schema (2026-06-22)
+
+Both were reported fixed but flagged as possibly still reproducible. Re-ran the exact repros:
+
+- **`experiment_get` null `baseURL` — now PASSES.** `experiment_get` on a draft experiment with `baseURL: null` now returns `status: SUCCESS` with `baseURL: null` in the payload; the earlier `structuredContent does not match tool outputSchema [/experiment/baseURL: null found, string expected]` no longer occurs. Looks fixed on current preview — if it still reproduces, likely a stale deploy or a different nullable field.
+- **Invalid-enum messages — partially fixed:**
+  - `segment_create` ✅ — an unrecognized `DEVICE_TYPE` value (`device:"MOBILE"`) now returns a clean `VALIDATION_ERROR: …device: invalid value 'MOBILE'. Accepted values: DESKTOP, TABLET, PHONE`.
+  - `goal_create` ❌ **still reproducible** — an invalid `matchType` on a URL goal (`matchType:"BANANA"`) still returns `DOWNSTREAM_5XX (500)` with a raw Jackson `InvalidFormatException` (`PageUrlMatchType … not one of [CORRESPONDS_EXACTLY, REGULAR_EXPRESSION, CONTAINS]`). The goal-params enum path isn't going through the same validation layer as the (now-fixed) segment path — that's the case still failing.
+
 ## Still open
 - Progressive-rule timezone inconsistency
-- `experiment_get` structured-output validation (null `baseURL`)
 - `feature_flag_activity_logs_get` `createdAt` sort key
-- Invalid-enum validation messages
+- Invalid-enum messages — **partial**: `segment_create` fixed; `goal_create` `matchType` still returns a raw 500 (see re-test above)
+- `experiment_lifecycle_update` delete-from-paused returns a raw 400 / contradicts the doc (see dev notes)
 - `default_prompt` on the flag results tool (pending core release)
 - `targeting_rule_delete` (pending design — upstream has no DELETE)
 - Minor: `goal_create` cannot create `RATIO_METRICS` goals (tool lacks the ratio-metrics param) — now fails gracefully
+
+*Resolved since first report: `experiment_get` null-`baseURL` schema validation.*
