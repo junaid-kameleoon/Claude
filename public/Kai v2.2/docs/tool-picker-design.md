@@ -98,8 +98,4 @@ Light accents (periwinkle, yellow green, pink, warm gray) use a dark icon (`#1f2
 |---|---|
 | `site_list` | List the sites (projects) you can access. |
 
-## Open questions for the team
 
-- Are the category accent colors final, or should they map to existing product category colors elsewhere in the app?
-- Do we want a "Recent" or "Favorites" group above the categories?
-- Should the inline picker also show descriptions inline on wider viewports, or keep the hover `(i)` to stay compact?
