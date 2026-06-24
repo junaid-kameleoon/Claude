@@ -85,6 +85,14 @@
             'DB-MONGO': { name: 'MongoDB',            bg: '#EEF2F6', fg: '#475569', solid: '#94A3B8' },
         };
 
+        // ── Lucide category icons (one per tool category) ──
+        const FlaskConical = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/></svg>;
+        const Flag = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>;
+        const Target = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+        const Users = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+        const Crosshair = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg>;
+        const FolderTree = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M13 10h7a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M13 21h7a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.88a1 1 0 0 1-.9-.55l-.44-.9a1 1 0 0 0-.9-.55H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M3 3v2a2 2 0 0 0 2 2h7"/><path d="M3 3v13a2 2 0 0 0 2 2h7"/></svg>;
+
         const QuickTooltip = ({ text, children }) => {
             const [show, setShow] = React.useState(false);
             return (
@@ -143,6 +151,79 @@
 
         const RECENT_TOOL_IDS = ['query_experiment_insights', 'audit_and_cleanup_workspace', 'list_experiments'];
         const RECENT_TOOLS = RECENT_TOOL_IDS.map(id => MCP_TOOLS.find(t => t.id === id)).filter(Boolean);
+
+        // ── Categorized tool catalog for the "/" command picker (presentation only — ids stay the MCP contract) ──
+        // accent = brand categorical color (chip background); on = icon color for contrast.
+        const TOOL_CATEGORIES = [
+            { id: 'ab', name: 'A/B Tests', Icon: FlaskConical, accent: '#2A7868', on: '#ffffff', tools: [
+                { id: 'experiment_list', label: 'Find an A/B test', desc: 'Find an A/B test by name or ID.' },
+                { id: 'experiment_get', label: 'A/B test details', desc: "See an A/B test's full setup: variations, goals, traffic split." },
+                { id: 'experiment_code_get', label: 'A/B test code', desc: 'View the JavaScript and CSS running in a variation.' },
+                { id: 'experiment_results_get', label: 'A/B test results', desc: 'Get the statistical results for an A/B test.' },
+                { id: 'experiment_create', label: 'New A/B test', desc: 'Start a new draft A/B test on a site.' },
+                { id: 'experiment_duplicate', label: 'Duplicate A/B test', desc: 'Copy an existing A/B test into a new draft.' },
+                { id: 'experiment_lifecycle_update', label: 'Change A/B test status', desc: 'Start, pause, resume, stop, or delete an A/B test.' },
+            ]},
+            { id: 'flags', name: 'Feature Flags', Icon: Flag, accent: '#B3BEFF', on: '#1f2937', tools: [
+                { id: 'feature_flag_list', label: 'Find a feature flag', desc: 'Find a feature flag by name, key, or ID.' },
+                { id: 'feature_flag_get', label: 'Feature flag details', desc: "See a feature flag's full setup across environments." },
+                { id: 'feature_flag_create', label: 'New feature flag', desc: 'Create a feature flag with default on and off variations.' },
+                { id: 'feature_flag_duplicate', label: 'Duplicate feature flag', desc: 'Copy an existing feature flag into a new one.' },
+                { id: 'feature_flag_delete', label: 'Delete feature flag', desc: 'Delete a feature flag.' },
+                { id: 'feature_flag_enable', label: 'Turn flag on', desc: 'Turn a feature flag on in an environment.' },
+                { id: 'feature_flag_disable', label: 'Turn flag off', desc: 'Turn a feature flag off in an environment.' },
+                { id: 'feature_flag_activity_logs_get', label: 'Feature flag history', desc: 'See who changed a feature flag, and when.' },
+                { id: 'feature_flag_experiment_results_get', label: 'Flag experiment results', desc: 'Get the results of a feature flag experiment.' },
+                { id: 'feature_flag_rule_targeted_create', label: 'Add targeting rule', desc: 'Serve a flag to a chosen audience.' },
+                { id: 'feature_flag_rule_progressive_create', label: 'Add gradual rollout', desc: 'Roll a flag out to a growing share of traffic.' },
+                { id: 'feature_flag_rule_experimentation_create', label: 'Add experiment rule', desc: "A/B test a flag's variations." },
+                { id: 'feature_flag_variation_create', label: 'Add flag variation', desc: 'Add a variation to a feature flag.' },
+                { id: 'feature_flag_variable_create', label: 'Add flag variable', desc: "Add a variable to a feature flag's variations." },
+                { id: 'feature_flag_variation_variable_set', label: 'Set variable value', desc: "Set a variable's value for one variation." },
+            ]},
+            { id: 'goals', name: 'Goals', Icon: Target, accent: '#CEDD70', on: '#1f2937', tools: [
+                { id: 'goal_list', label: 'Browse goals', desc: 'Browse all goals on a site.' },
+                { id: 'goal_get', label: 'Goal details', desc: "See a goal's details and settings." },
+                { id: 'goal_search', label: 'Search goals', desc: 'Search for a goal by name.' },
+                { id: 'goal_create', label: 'New goal', desc: 'Create a goal to measure.' },
+                { id: 'goal_update', label: 'Edit goal', desc: "Edit a goal's name, tags, or settings." },
+                { id: 'goal_update_type', label: 'Change goal type', desc: 'Change what kind of conversion a goal tracks.' },
+                { id: 'goal_delete', label: 'Delete goal', desc: 'Delete a goal.' },
+            ]},
+            { id: 'segments', name: 'Segments', Icon: Users, accent: '#EACEF8', on: '#1f2937', tools: [
+                { id: 'segment_list', label: 'Browse segments', desc: 'Browse all segments on a site.' },
+                { id: 'segment_get', label: 'Segment details', desc: "See a segment's audience conditions." },
+                { id: 'segment_create', label: 'New segment', desc: 'Create an audience segment.' },
+                { id: 'segment_delete', label: 'Delete segment', desc: 'Delete a segment.' },
+            ]},
+            { id: 'targeting', name: 'Targeting', Icon: Crosshair, accent: '#882838', on: '#ffffff', tools: [
+                { id: 'targeting_rule_list', label: 'Browse targeting rules', desc: 'See the targeting rules on an experiment.' },
+                { id: 'targeting_rule_get', label: 'Targeting rule details', desc: 'View a single targeting rule.' },
+                { id: 'targeting_rule_create', label: 'Add targeting rule', desc: 'Bind a segment to an experiment.' },
+            ]},
+            { id: 'sites', name: 'Sites', Icon: FolderTree, accent: '#B8B4A4', on: '#1f2937', tools: [
+                { id: 'site_list', label: 'List sites', desc: 'List the sites (projects) you can access.' },
+            ]},
+        ];
+
+        // Info dot with a styled hover tooltip (description shown here, not inline).
+        const ToolInfoDot = ({ text }) => {
+            const [hover, setHover] = React.useState(false);
+            return (
+                <div className="relative shrink-0" onMouseEnter={(e) => { e.stopPropagation(); setHover(true); }} onMouseLeave={() => setHover(false)}>
+                    <div className="h-4 w-4 rounded-full border border-gray-200 text-gray-400 flex items-center justify-center text-[9px] font-bold leading-none transition-colors hover:border-gray-300 hover:text-gray-600">i</div>
+                    <AnimatePresence>
+                        {hover && (
+                            <motion.div initial={{ opacity: 0, x: 4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}
+                                className="absolute z-[60] right-full top-1/2 -translate-y-1/2 mr-2 w-56 bg-gray-900 text-white text-[10.5px] leading-snug px-2.5 py-2 rounded-lg shadow-xl pointer-events-none">
+                                {text}
+                                <div className="absolute left-full top-1/2 -translate-y-1/2 -ml-1 w-2 h-2 bg-gray-900 rotate-45" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
 
         const SUGGESTIONS = [
             "Query experiment results",
@@ -1343,23 +1424,14 @@ export const checkout: CheckoutProps = {
                 }
             };
 
-            const searchQuery = input.startsWith('/') ? input.slice(1).toLowerCase() : '';
-            const matchesTool = (t) => {
-                const title = t.title.toLowerCase();
-                if (title.startsWith(searchQuery)) return true;
-                if (searchQuery.length >= 3) {
-                    return title.split(/\s+/).some(word => word.startsWith(searchQuery));
-                }
-                return false;
-            };
-            const filteredMainTools = input === '/' ? MAIN_TOOLS : MAIN_TOOLS.filter(matchesTool);
-            const filteredAllTools = ALL_TOOLS.filter(matchesTool);
-            const showRecent = input === '/';
+            const searchQuery = input.startsWith('/') ? input.slice(1).toLowerCase().trim() : '';
+            // Match label, technical id AND description, so "experiment" or "pause" both find rows.
+            const matchesTool = (t) => !searchQuery || (t.id + ' ' + t.label + ' ' + t.desc).toLowerCase().includes(searchQuery);
             const hasSearchResults = input.startsWith('/');
-            const shouldAutoExpandAllTools = searchQuery.length > 0 && filteredAllTools.length > 0;
-            const flatNavTools = showRecent
-                ? [...RECENT_TOOLS, ...filteredMainTools, ...filteredAllTools]
-                : [...filteredMainTools, ...filteredAllTools];
+            const filteredCats = TOOL_CATEGORIES
+                .map(c => ({ ...c, tools: c.tools.filter(matchesTool) }))
+                .filter(c => c.tools.length > 0);
+            const flatNavTools = filteredCats.flatMap(c => c.tools.map(t => ({ ...t, _cat: c })));
             const [selectedToolIdx, setSelectedToolIdx] = useState(0);
             useEffect(() => { setSelectedToolIdx(0); }, [input]);
 
@@ -1570,102 +1642,42 @@ export const checkout: CheckoutProps = {
                                                             <span className="text-[9px] text-gray-300 font-medium">↑↓ navigate · ↵ select</span>
                                                         )}
                                                     </div>
-                                                    <div className="max-h-64 overflow-y-auto">
+                                                    <div className="max-h-72 overflow-y-auto py-1">
                                                         {flatNavTools.length === 0 && (
                                                             <div className="px-4 py-6 text-center">
                                                                 <div className="text-[12px] text-gray-500 font-medium">No tools matching <span className="font-mono text-gray-700">"{searchQuery}"</span></div>
                                                                 <div className="text-[10px] text-gray-400 mt-1">Try a different keyword or just ask in plain language</div>
                                                             </div>
                                                         )}
-                                                        {showRecent && RECENT_TOOLS.length > 0 && (
-                                                            <>
-                                                                <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Recent</span>
+                                                        {(() => { let runIdx = -1; return filteredCats.map((cat) => (
+                                                            <div key={cat.id} className="pb-1">
+                                                                <div className="flex items-center gap-1.5 px-3 pt-2 pb-1 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
+                                                                    <span className="h-4 w-4 rounded flex items-center justify-center shrink-0" style={{ backgroundColor: cat.accent, color: cat.on }}>
+                                                                        <cat.Icon className="h-2.5 w-2.5" />
+                                                                    </span>
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{cat.name}</span>
+                                                                    <span className="text-[9px] text-gray-300 ml-auto">{cat.tools.length}</span>
                                                                 </div>
-                                                                {RECENT_TOOLS.map((tool, i) => {
-                                                                    const idx = i;
-                                                                    const isSel = selectedToolIdx === idx;
+                                                                {cat.tools.map((tool) => {
+                                                                    runIdx++; const myIdx = runIdx; const isSel = selectedToolIdx === myIdx;
                                                                     return (
-                                                                        <div key={`r-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
-                                                                            onMouseEnter={() => setSelectedToolIdx(idx)}
-                                                                            className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
+                                                                        <div key={tool.id} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
+                                                                            onMouseEnter={() => setSelectedToolIdx(myIdx)}
+                                                                            className={cn("flex items-center gap-2.5 px-3 py-1.5 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
                                                                         >
-                                                                            <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
-                                                                                <tool.icon className="h-3 w-3" />
+                                                                            <span className="h-7 w-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: cat.accent, color: cat.on }}>
+                                                                                <cat.Icon className="h-3.5 w-3.5" />
+                                                                            </span>
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <div className="text-[12px] font-medium text-gray-900 truncate">{tool.label}</div>
+                                                                                <div className="text-[10px] text-gray-400 font-mono truncate">{tool.id}</div>
                                                                             </div>
-                                                                            <div>
-                                                                                <div className="text-[12px] font-semibold text-gray-900">{tool.title}</div>
-                                                                                <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
-                                                                            </div>
+                                                                            <ToolInfoDot text={tool.desc} />
                                                                         </div>
                                                                     );
                                                                 })}
-                                                                <div className="h-px bg-gray-100 mx-3 my-1" />
-                                                            </>
-                                                        )}
-                                                        {filteredMainTools.length > 0 && (
-                                                            <>
-                                                                {showRecent && (
-                                                                    <div className="px-3 pt-1 pb-1">
-                                                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Featured</span>
-                                                                    </div>
-                                                                )}
-                                                                {filteredMainTools.map((tool, i) => {
-                                                                    const idx = (showRecent ? RECENT_TOOLS.length : 0) + i;
-                                                                    const isSel = selectedToolIdx === idx;
-                                                                    return (
-                                                                        <div key={`m-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
-                                                                            onMouseEnter={() => setSelectedToolIdx(idx)}
-                                                                            className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
-                                                                        >
-                                                                            <div className="mt-0.5 h-6 w-6 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
-                                                                                <tool.icon className="h-3 w-3" />
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="text-[12px] font-semibold text-gray-900">{tool.title}</div>
-                                                                                <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </>
-                                                        )}
-                                                        {filteredAllTools.length > 0 && (
-                                                            <>
-                                                                {filteredMainTools.length > 0 && <div className="h-px bg-gray-100 mx-3 my-1" />}
-                                                                <button onClick={() => setExpandedAllTools(!expandedAllTools)}
-                                                                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left transition-colors">
-                                                                    <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${expandedAllTools || shouldAutoExpandAllTools ? 'rotate-180' : ''}`} />
-                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">All Tools</span>
-                                                                    <span className="text-[10px] text-gray-300 ml-auto">{filteredAllTools.length}</span>
-                                                                </button>
-                                                                <AnimatePresence>
-                                                                    {(expandedAllTools || shouldAutoExpandAllTools) && (
-                                                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                                                                            {filteredAllTools.map((tool, i) => {
-                                                                                const idx = (showRecent ? RECENT_TOOLS.length : 0) + filteredMainTools.length + i;
-                                                                                const isSel = selectedToolIdx === idx;
-                                                                                return (
-                                                                                    <div key={`a-${i}`} onClick={() => { setInput(`/${tool.id} `); setShowSlashMenu(false); textareaRef.current?.focus(); }}
-                                                                                        onMouseEnter={() => setSelectedToolIdx(idx)}
-                                                                                        className={cn("flex items-start gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}
-                                                                                    >
-                                                                                        <div className="mt-0.5 h-6 w-6 rounded bg-gray-200/50 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0">
-                                                                                            <tool.icon className="h-3 w-3" />
-                                                                                        </div>
-                                                                                        <div>
-                                                                                            <div className="text-[12px] font-semibold text-gray-700">{tool.title}</div>
-                                                                                            <div className="text-[11px] text-gray-400 leading-tight mt-0.5">{tool.desc}</div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                );
-                                                                            })}
-                                                                        </motion.div>
-                                                                    )}
-                                                                </AnimatePresence>
-                                                            </>
-                                                        )}
+                                                            </div>
+                                                        )); })()}
                                                     </div>
                                                 </motion.div>
                                             )}
