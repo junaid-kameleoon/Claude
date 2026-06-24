@@ -155,54 +155,52 @@
         // ── Categorized tool catalog for the "/" command picker (presentation only — ids stay the MCP contract) ──
         // accent = brand categorical color (chip background); on = icon color for contrast.
         const TOOL_CATEGORIES = [
-            { id: 'ab', name: 'A/B Tests', Icon: FlaskConical, accent: '#2A7868', on: '#ffffff', tools: [
-                { id: 'experiment_list', label: 'Find an A/B test', desc: 'Find an A/B test by name or ID.' },
-                { id: 'experiment_get', label: 'A/B test details', desc: "See an A/B test's full setup: variations, goals, traffic split." },
-                { id: 'experiment_code_get', label: 'A/B test code', desc: 'View the JavaScript and CSS running in a variation.' },
-                { id: 'experiment_results_get', label: 'A/B test results', desc: 'Get the statistical results for an A/B test.' },
-                { id: 'experiment_create', label: 'New A/B test', desc: 'Start a new draft A/B test on a site.' },
-                { id: 'experiment_duplicate', label: 'Duplicate A/B test', desc: 'Copy an existing A/B test into a new draft.' },
-                { id: 'experiment_lifecycle_update', label: 'Change A/B test status', desc: 'Start, pause, resume, stop, or delete an A/B test.' },
+            { id: 'experiments', name: 'Experiments', Icon: FlaskConical, accent: '#2A7868', on: '#ffffff', tools: [
+                { id: 'experiment_list', desc: 'Find an experiment by name or ID.' },
+                { id: 'experiment_get', desc: "See an experiment's full setup: variations, goals, traffic split." },
+                { id: 'experiment_code_get', desc: 'View the JavaScript and CSS running in a variation.' },
+                { id: 'experiment_results_get', desc: 'Get the statistical results for an experiment.' },
+                { id: 'experiment_create', desc: 'Start a new draft experiment on a site.' },
+                { id: 'experiment_duplicate', desc: 'Copy an existing experiment into a new draft.' },
+                { id: 'experiment_lifecycle_update', desc: 'Start, pause, resume, stop, or delete an experiment.' },
             ]},
             { id: 'flags', name: 'Feature Flags', Icon: Flag, accent: '#B3BEFF', on: '#1f2937', tools: [
-                { id: 'feature_flag_list', label: 'Find a feature flag', desc: 'Find a feature flag by name, key, or ID.' },
-                { id: 'feature_flag_get', label: 'Feature flag details', desc: "See a feature flag's full setup across environments." },
-                { id: 'feature_flag_create', label: 'New feature flag', desc: 'Create a feature flag with default on and off variations.' },
-                { id: 'feature_flag_duplicate', label: 'Duplicate feature flag', desc: 'Copy an existing feature flag into a new one.' },
-                { id: 'feature_flag_delete', label: 'Delete feature flag', desc: 'Delete a feature flag.' },
-                { id: 'feature_flag_enable', label: 'Turn flag on', desc: 'Turn a feature flag on in an environment.' },
-                { id: 'feature_flag_disable', label: 'Turn flag off', desc: 'Turn a feature flag off in an environment.' },
-                { id: 'feature_flag_activity_logs_get', label: 'Feature flag history', desc: 'See who changed a feature flag, and when.' },
-                { id: 'feature_flag_experiment_results_get', label: 'Flag experiment results', desc: 'Get the results of a feature flag experiment.' },
-                { id: 'feature_flag_rule_targeted_create', label: 'Add targeting rule', desc: 'Serve a flag to a chosen audience.' },
-                { id: 'feature_flag_rule_progressive_create', label: 'Add gradual rollout', desc: 'Roll a flag out to a growing share of traffic.' },
-                { id: 'feature_flag_rule_experimentation_create', label: 'Add experiment rule', desc: "A/B test a flag's variations." },
-                { id: 'feature_flag_variation_create', label: 'Add flag variation', desc: 'Add a variation to a feature flag.' },
-                { id: 'feature_flag_variable_create', label: 'Add flag variable', desc: "Add a variable to a feature flag's variations." },
-                { id: 'feature_flag_variation_variable_set', label: 'Set variable value', desc: "Set a variable's value for one variation." },
+                { id: 'feature_flag_list', desc: 'Find a feature flag by name, key, or ID.' },
+                { id: 'feature_flag_get', desc: "See a feature flag's full setup across environments." },
+                { id: 'feature_flag_create', desc: 'Create a feature flag with default on and off variations.' },
+                { id: 'feature_flag_duplicate', desc: 'Copy an existing feature flag into a new one.' },
+                { id: 'feature_flag_delete', desc: 'Delete a feature flag.' },
+                { id: 'feature_flag_enable', desc: 'Turn a feature flag on in an environment.' },
+                { id: 'feature_flag_disable', desc: 'Turn a feature flag off in an environment.' },
+                { id: 'feature_flag_activity_logs_get', desc: 'See who changed a feature flag, and when.' },
+                { id: 'feature_flag_experiment_results_get', desc: 'Get the results of a feature flag experiment.' },
+                { id: 'feature_flag_rule_targeted_create', desc: 'Serve a flag to a chosen audience.' },
+                { id: 'feature_flag_rule_progressive_create', desc: 'Roll a flag out to a growing share of traffic.' },
+                { id: 'feature_flag_rule_experimentation_create', desc: "Run an experiment on a flag's variations." },
+                { id: 'feature_flag_variation_create', desc: 'Add a variation to a feature flag.' },
+                { id: 'feature_flag_variable_create', desc: "Add a variable to a feature flag's variations." },
+                { id: 'feature_flag_variation_variable_set', desc: "Set a variable's value for one variation." },
+                { id: 'targeting_rule_list', desc: 'See the targeting rules on an experiment.' },
+                { id: 'targeting_rule_get', desc: 'View a single targeting rule.' },
+                { id: 'targeting_rule_create', desc: 'Bind a segment to an experiment.' },
             ]},
             { id: 'goals', name: 'Goals', Icon: Target, accent: '#CEDD70', on: '#1f2937', tools: [
-                { id: 'goal_list', label: 'Browse goals', desc: 'Browse all goals on a site.' },
-                { id: 'goal_get', label: 'Goal details', desc: "See a goal's details and settings." },
-                { id: 'goal_search', label: 'Search goals', desc: 'Search for a goal by name.' },
-                { id: 'goal_create', label: 'New goal', desc: 'Create a goal to measure.' },
-                { id: 'goal_update', label: 'Edit goal', desc: "Edit a goal's name, tags, or settings." },
-                { id: 'goal_update_type', label: 'Change goal type', desc: 'Change what kind of conversion a goal tracks.' },
-                { id: 'goal_delete', label: 'Delete goal', desc: 'Delete a goal.' },
+                { id: 'goal_list', desc: 'Browse all goals on a site.' },
+                { id: 'goal_get', desc: "See a goal's details and settings." },
+                { id: 'goal_search', desc: 'Search for a goal by name.' },
+                { id: 'goal_create', desc: 'Create a goal to measure.' },
+                { id: 'goal_update', desc: "Edit a goal's name, tags, or settings." },
+                { id: 'goal_update_type', desc: 'Change what kind of conversion a goal tracks.' },
+                { id: 'goal_delete', desc: 'Delete a goal.' },
             ]},
             { id: 'segments', name: 'Segments', Icon: Users, accent: '#EACEF8', on: '#1f2937', tools: [
-                { id: 'segment_list', label: 'Browse segments', desc: 'Browse all segments on a site.' },
-                { id: 'segment_get', label: 'Segment details', desc: "See a segment's audience conditions." },
-                { id: 'segment_create', label: 'New segment', desc: 'Create an audience segment.' },
-                { id: 'segment_delete', label: 'Delete segment', desc: 'Delete a segment.' },
-            ]},
-            { id: 'targeting', name: 'Targeting', Icon: Crosshair, accent: '#882838', on: '#ffffff', tools: [
-                { id: 'targeting_rule_list', label: 'Browse targeting rules', desc: 'See the targeting rules on an experiment.' },
-                { id: 'targeting_rule_get', label: 'Targeting rule details', desc: 'View a single targeting rule.' },
-                { id: 'targeting_rule_create', label: 'Add targeting rule', desc: 'Bind a segment to an experiment.' },
+                { id: 'segment_list', desc: 'Browse all segments on a site.' },
+                { id: 'segment_get', desc: "See a segment's audience conditions." },
+                { id: 'segment_create', desc: 'Create an audience segment.' },
+                { id: 'segment_delete', desc: 'Delete a segment.' },
             ]},
             { id: 'sites', name: 'Sites', Icon: FolderTree, accent: '#B8B4A4', on: '#1f2937', tools: [
-                { id: 'site_list', label: 'List sites', desc: 'List the sites (projects) you can access.' },
+                { id: 'site_list', desc: 'List the sites (projects) you can access.' },
             ]},
         ];
 
@@ -1425,8 +1423,8 @@ export const checkout: CheckoutProps = {
             };
 
             const searchQuery = input.startsWith('/') ? input.slice(1).toLowerCase().trim() : '';
-            // Match label, technical id AND description, so "experiment" or "pause" both find rows.
-            const matchesTool = (t) => !searchQuery || (t.id + ' ' + t.label + ' ' + t.desc).toLowerCase().includes(searchQuery);
+            // Match the tool name (id) AND description, so "experiment" or "pause" both find rows.
+            const matchesTool = (t) => !searchQuery || (t.id + ' ' + t.desc).toLowerCase().includes(searchQuery);
             const hasSearchResults = input.startsWith('/');
             const filteredCats = TOOL_CATEGORIES
                 .map(c => ({ ...c, tools: c.tools.filter(matchesTool) }))
@@ -1669,8 +1667,7 @@ export const checkout: CheckoutProps = {
                                                                                 <cat.Icon className="h-3.5 w-3.5" />
                                                                             </span>
                                                                             <div className="min-w-0 flex-1">
-                                                                                <div className="text-[12px] font-medium text-gray-900 truncate">{tool.label}</div>
-                                                                                <div className="text-[10px] text-gray-400 font-mono truncate">{tool.id}</div>
+                                                                                <div className="text-[12px] font-mono text-gray-800 truncate">{tool.id}</div>
                                                                             </div>
                                                                             <ToolInfoDot text={tool.desc} />
                                                                         </div>
@@ -1782,7 +1779,7 @@ export const checkout: CheckoutProps = {
                                             <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">{cat.name}</h3>
                                             <span className="text-[10px] text-gray-300 ml-auto">{cat.tools.length}</span>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-1.5">
+                                        <div className="space-y-1">
                                             {cat.tools.map(tool => (
                                                 <div key={tool.id} onClick={() => { setInput(`/${tool.id} `); setAllToolsOpen(false); textareaRef.current?.focus(); }}
                                                     className="flex items-center gap-2.5 p-2 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all">
@@ -1790,8 +1787,7 @@ export const checkout: CheckoutProps = {
                                                         <cat.Icon className="h-3.5 w-3.5" />
                                                     </span>
                                                     <div className="min-w-0 flex-1">
-                                                        <div className="text-[12px] font-medium text-gray-900 truncate">{tool.label}</div>
-                                                        <div className="text-[10px] text-gray-400 font-mono truncate">{tool.id}</div>
+                                                        <div className="text-[12px] font-mono text-gray-800 truncate">{tool.id}</div>
                                                     </div>
                                                     <ToolInfoDot text={tool.desc} />
                                                 </div>
