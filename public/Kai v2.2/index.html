@@ -1782,14 +1782,14 @@ export const checkout: CheckoutProps = {
                                         <div className="space-y-1">
                                             {cat.tools.map(tool => (
                                                 <div key={tool.id} onClick={() => { setInput(`/${tool.id} `); setAllToolsOpen(false); textareaRef.current?.focus(); }}
-                                                    className="flex items-center gap-2.5 p-2 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all">
-                                                    <span className="h-7 w-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: cat.accent, color: cat.on }}>
+                                                    className="flex items-start gap-2.5 p-2 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all">
+                                                    <span className="mt-0.5 h-7 w-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: cat.accent, color: cat.on }}>
                                                         <cat.Icon className="h-3.5 w-3.5" />
                                                     </span>
                                                     <div className="min-w-0 flex-1">
                                                         <div className="text-[12px] font-mono text-gray-800 truncate">{tool.id}</div>
+                                                        <div className="text-[11px] text-gray-500 leading-snug mt-0.5">{tool.desc}</div>
                                                     </div>
-                                                    <ToolInfoDot text={tool.desc} />
                                                 </div>
                                             ))}
                                         </div>
