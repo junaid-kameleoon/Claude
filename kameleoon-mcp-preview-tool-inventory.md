@@ -13,16 +13,16 @@
 | Tool | Type | Status |
 |---|---|---|
 | `experiment_list` | read | ✅ |
-| `experiment_get` | read | ✅ (open: structured-output validation on null `baseURL`) |
-| `experiment_code_get` | read | ✅ |
+| `experiment_get` | read | ✅ (fixed: null `baseURL` schema validation) |
+| `experiment_code_get` | read | ✅ (fixed: now returns `commonCssCode`) |
 | `experiment_results_get` | read | ✅ (results pipeline fixed) |
 | `experiment_create` | write | ✅ |
 | `experiment_duplicate` | write | ✅ **new — verified** |
-| `experiment_lifecycle_update` | write | ✅ **new — verified** (started/resumed/paused/stopped/deleted) |
+| `experiment_lifecycle_update` | write | ✅ **new — verified** (started/resumed/paused/stopped/deleted; delete-from-paused now returns a clean validation error) |
 
 ### Feature flags — core (9)
 `feature_flag_list` · `get` · `create` · `duplicate` · `delete` · `enable` · `disable` — ✅
-`feature_flag_activity_logs_get` — ✅ (open: `createdAt` sort key rejected)
+`feature_flag_activity_logs_get` — ✅ (fixed: `createdAt` removed from schema; `sortKey` now `timestamp`-only)
 `feature_flag_experiment_results_get` — ✅ (fixed; `default_prompt` pending core release)
 
 ### Feature flags — rules / variations / variables (6)
@@ -61,9 +61,9 @@
 
 Details from the lifecycle/duplicate responses that may be useful:
 
-- **Delete only works from `DRAFT` or `STOPPED` — not `PAUSED`.** Calling `experiment_lifecycle_update status=deleted` on a *paused* experiment returns a downstream `400: "You can delete experiments only with statuses [DRAFT, STOPPED]"`. This contradicts the tool's own description ("running experiments are blocked until paused **or stopped**"). Suggest aligning the doc/guard (require `STOPPED`/`DRAFT`) and having the MCP return a clean validation error for the paused→delete case instead of passing the raw 400 through. Workaround: stop before deleting.
+- **Delete-from-paused — FIXED (re-test 2026-06-24).** `experiment_lifecycle_update status=deleted` on a *paused* experiment now returns a clean `VALIDATION_ERROR` (`"…cannot be deleted from status paused; only DRAFT or STOPPED experiments can be deleted. Stop it before deleting."`) instead of the old raw downstream `400`. The `confirm=true` guard fires first. Workaround unchanged: stop before deleting.
 - **Idempotency works.** Re-issuing the current status (e.g. `started` on an already-active experiment) returns `alreadyInTargetState: true`, `upstreamAction: null`, no upstream write, with a clear message ("…is already running; no upstream change was made").
-- **`currentStatus` casing is inconsistent.** `started`/`paused`/`stopped` return lowercase (`active`, `paused`, `stopped`), but `deleted` returns uppercase `DELETED`. Minor — may want to normalize.
+- **`currentStatus` casing — FIXED (re-test 2026-06-24).** `deleted` now returns lowercase `deleted` (was uppercase `DELETED`); consistent with `active`/`paused`/`stopped`.
 - **`upstreamAction` mapping** (per transition): `started→ACTIVATE`, `paused→PAUSE`, `resumed→RESUME`, `stopped→STOP`, `deleted→null` (also `null` on idempotent no-ops).
 - **`experiment_duplicate` copy naming.** The clone is named `"Test (copy of <original name>)"` — the leading `"Test "` looks unintended; worth checking the upstream copy-naming convention.
 
@@ -81,12 +81,18 @@ Both were reported fixed but flagged as possibly still reproducible. Re-ran the 
   - **No "declare winner" API exists.** Per the Automation API docs, the winner is *computed* statistically (reliability >95% + positive improvement rate vs the reference on the primary goal); there is no endpoint to set one. So Mode A (`strict_winner_only`, requires `winner.status == "clear_winner"`) can't be staged on preview without real seeded traffic. Closest manual actions are diverting 100% traffic to a variation or stopping the experiment — neither sets a `clear_winner` status.
   - **Testable via Mode B (`manual_variation_conversion`)** — pass a fallback variation id, which skips the winner requirement. Needs an experiment that actually has variation code / a PBX prompt to transpose (most preview experiments inspected have empty variation code), so we'd seed/find one or test against a demo experiment with real code.
 
+## Re-test — delete-from-paused, common CSS & sort key (2026-06-24)
+
+Three more fixes landed on preview — all verified:
+
+- **`experiment_lifecycle_update` delete-from-paused — FIXED.** Paused→delete now returns a clean `VALIDATION_ERROR` (was a raw downstream `400`); confirm-gate still fires first; stop→delete succeeds. Bonus: `currentStatus` for `deleted` is now lowercase. (Full lifecycle re-run on a disposable duplicate, deleted afterward — no leftovers.)
+- **`experiment_code_get` common CSS — FIXED.** Both `experiment_code_get` and `experiment_get` now return `commonCssCode` in full; `_meta` reports `hasCommonCssCode: true` + size. Unblocks the winning-variant-to-code prompt for CSS.
+- **`feature_flag_activity_logs_get` `createdAt` sort key — FIXED.** `createdAt` removed from the schema; `sortKey` is now `timestamp`-only, so the rejected value can't be sent. `timestamp` ASC/DESC works.
+
 ## Still open
 - Progressive-rule timezone inconsistency
-- `feature_flag_activity_logs_get` `createdAt` sort key
-- `experiment_lifecycle_update` delete-from-paused returns a raw 400 / contradicts the doc (see dev notes)
 - `default_prompt` on the flag results tool (pending core release)
 - `targeting_rule_delete` (pending design — upstream has no DELETE)
 - Minor: `goal_create` cannot create `RATIO_METRICS` goals (tool lacks the ratio-metrics param) — now fails gracefully
 
-*Resolved since first report: `experiment_get` null-`baseURL` schema validation; invalid-enum validation messages (`segment_create` + `goal_create`).*
+*Resolved since first report: `experiment_get` null-`baseURL` schema validation; invalid-enum validation messages (`segment_create` + `goal_create`); `experiment_lifecycle_update` delete-from-paused + status casing; `experiment_code_get` common CSS; `feature_flag_activity_logs_get` `createdAt` sort key.*
