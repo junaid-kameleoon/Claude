@@ -1771,42 +1771,34 @@ export const checkout: CheckoutProps = {
                             </div>
                         </Modal>
 
-                        <Modal isOpen={allToolsOpen} onClose={() => setAllToolsOpen(false)} title="All Tools" subtitle="Complete MCP tool directory">
-                            <div className="space-y-6">
-                                <div>
-                                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2.5">Featured Tools</h3>
-                                    <div className="space-y-1.5">
-                                        {MAIN_TOOLS.map((tool, i) => (
-                                            <div key={i} onClick={() => { sendMessage(tool.title); setAllToolsOpen(false); }}
-                                                className="flex items-start gap-2.5 p-2.5 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all group">
-                                                <div className="mt-0.5 h-5 w-5 rounded bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary/10">
-                                                    <tool.icon className="h-2.5 w-2.5" />
+                        <Modal isOpen={allToolsOpen} onClose={() => setAllToolsOpen(false)} title="All tools" subtitle="Browse the full tool catalog by category">
+                            <div className="space-y-5">
+                                {TOOL_CATEGORIES.map(cat => (
+                                    <div key={cat.id}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="h-6 w-6 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: cat.accent, color: cat.on }}>
+                                                <cat.Icon className="h-3.5 w-3.5" />
+                                            </span>
+                                            <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">{cat.name}</h3>
+                                            <span className="text-[10px] text-gray-300 ml-auto">{cat.tools.length}</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            {cat.tools.map(tool => (
+                                                <div key={tool.id} onClick={() => { setInput(`/${tool.id} `); setAllToolsOpen(false); textareaRef.current?.focus(); }}
+                                                    className="flex items-center gap-2.5 p-2 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-lg cursor-pointer transition-all">
+                                                    <span className="h-7 w-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: cat.accent, color: cat.on }}>
+                                                        <cat.Icon className="h-3.5 w-3.5" />
+                                                    </span>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="text-[12px] font-medium text-gray-900 truncate">{tool.label}</div>
+                                                        <div className="text-[10px] text-gray-400 font-mono truncate">{tool.id}</div>
+                                                    </div>
+                                                    <ToolInfoDot text={tool.desc} />
                                                 </div>
-                                                <div className="flex-1">
-                                                    <div className="text-[11px] font-semibold text-gray-900">{tool.title}</div>
-                                                    <div className="text-[10px] text-gray-400 leading-tight">{tool.desc}</div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2.5">Lot 1 Tools</h3>
-                                    <div className="space-y-1.5">
-                                        {ALL_TOOLS.map((tool, i) => (
-                                            <div key={i} onClick={() => { sendMessage(tool.title); setAllToolsOpen(false); }}
-                                                className="flex items-start gap-2.5 p-2.5 hover:bg-gray-100 border border-gray-100 hover:border-gray-200 rounded-lg cursor-pointer transition-all group">
-                                                <div className="mt-0.5 h-5 w-5 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0 group-hover:bg-gray-200">
-                                                    <tool.icon className="h-2.5 w-2.5" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="text-[11px] font-semibold text-gray-700">{tool.title}</div>
-                                                    <div className="text-[10px] text-gray-400 leading-tight">{tool.desc}</div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         </Modal>
 
