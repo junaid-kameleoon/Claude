@@ -23,7 +23,7 @@
 ### Feature flags — core (9)
 `feature_flag_list` · `get` · `create` · `duplicate` · `delete` · `enable` · `disable` — ✅
 `feature_flag_activity_logs_get` — ✅ (fixed: `createdAt` removed from schema; `sortKey` now `timestamp`-only)
-`feature_flag_experiment_results_get` — ✅ (fixed; `default_prompt` pending core release)
+`feature_flag_experiment_results_get` — ✅ (fixed; `default_prompt` ask rejected — flag experiments have no prompt field)
 
 ### Feature flags — rules / variations / variables (6)
 `feature_flag_rule_targeted_create` · `experimentation_create` — ✅
@@ -89,10 +89,15 @@ Three more fixes landed on preview — all verified:
 - **`experiment_code_get` common CSS — FIXED.** Both `experiment_code_get` and `experiment_get` now return `commonCssCode` in full; `_meta` reports `hasCommonCssCode: true` + size. Unblocks the winning-variant-to-code prompt for CSS.
 - **`feature_flag_activity_logs_get` `createdAt` sort key — FIXED.** `createdAt` removed from the schema; `sortKey` is now `timestamp`-only, so the rejected value can't be sent. `timestamp` ASC/DESC works.
 
-## Still open
-- Progressive-rule timezone inconsistency
-- `default_prompt` on the flag results tool (pending core release)
-- `targeting_rule_delete` (pending design — upstream has no DELETE)
+## Open (blocking)
+- Progressive-rule timezone inconsistency — re-confirmed 2026-06-26 (one input stored as both `09:00 UTC` and `13:00` in the same response)
+
+## Backlog (non-blocking — P3/P4)
+- `targeting_rule_delete` / pause tool (pending design — upstream has no DELETE)
+- MCP OAuth SSO routing (production client config, not a preview defect)
 - Minor: `goal_create` cannot create `RATIO_METRICS` goals (tool lacks the ratio-metrics param) — now fails gracefully
+
+## Rejected
+- `default_prompt` on the flag results tool — feature-flag experiments have no prompt field, so there is nothing to add. Invalid premise.
 
 *Resolved since first report: `experiment_get` null-`baseURL` schema validation; invalid-enum validation messages (`segment_create` + `goal_create`); `experiment_lifecycle_update` delete-from-paused + status casing; `experiment_code_get` common CSS; `feature_flag_activity_logs_get` `createdAt` sort key.*
