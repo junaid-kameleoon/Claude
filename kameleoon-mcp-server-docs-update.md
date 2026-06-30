@@ -1,17 +1,20 @@
 # Kameleoon MCP server
 
-Connect AI coding assistants directly to your Kameleoon project to automate feature flag management and experiment implementation.
+Connect AI coding assistants directly to your Kameleoon project to automate experiment and feature flag workflows.
 
-The Kameleoon Model Context Protocol (MCP) server connects AI coding assistants directly to your Kameleoon project, enabling agentic workflows for feature flags and experiments. This guide helps you automate the "last mile" of development by instructing your AI tools to search configurations, analyze results, and pull variation code directly into your development environment. Register and authenticate the server to automate your implementation lifecycle, from flag creation to rollout.
+The Kameleoon Model Context Protocol (MCP) server connects AI coding assistants directly to your Kameleoon project, enabling agentic workflows for experiments and feature flags. Beyond reading configurations and pulling variation code, your AI assistant can build and manage experiments, feature flags, goals, segments, and targeting rules, and run the full rollout lifecycle, all from your development environment. Register and authenticate the server to automate your implementation lifecycle, from a winning variation to a gated production rollout.
 
 ## Features
 
-After you connect the server, your AI agent can interact with Kameleoon to perform the following tasks:
+After you connect the server, your AI agent can interact with Kameleoon to:
 
-* Search, retrieve, toggle, and manage feature flag configurations.
-* Analyze experiment winners and retrieve statistical summaries.
-* Pull raw variation code (JavaScript or CSS) directly from experiments.
-* Automate the full implementation lifecycle, from flag creation to rollout.
+* Discover and inspect experiments, feature flags, goals, segments, and targeting rules.
+* Build experiments end to end: create, duplicate, and run the full lifecycle (start, pause, resume, stop, delete).
+* Manage feature flags: create, duplicate, delete, toggle per environment, and review the change history.
+* Configure flag delivery: add targeted and experimentation rules, custom variations, and typed variables.
+* Create and maintain goals and audience segments, and bind segments to experiments.
+* Analyze experiment and feature-flag-experiment results, and pull raw variation code (JavaScript and CSS).
+* Automate the full implementation lifecycle, from a winning variation to a gated production rollout.
 
 ### The primary workflow: Winning experiment to production
 
@@ -26,44 +29,85 @@ The Kameleoon MCP server automates the "last mile" of implementation. Without le
 
 ## Available tools
 
-| Tool                     | Purpose                                   | Example prompt                                      |
-| ------------------------ | ----------------------------------------- | --------------------------------------------------- |
-| `feature_flag_list`      | List all flags for a site.                | "List all feature flags for site `d1alzzxd7k`."     |
-| `feature_flag_get`       | Get detailed flag configuration.          | "Show configuration for flag `snake_game`."         |
-| `feature_flag_enable`    | Toggle a flag ON.                         | "Enable the `new_search` flag in production."       |
-| `feature_flag_create`    | Create a new basic flag.                  | "Create a flag `ui_refresh` for site `d1alzzxd7k`." |
-| `experiment_list`        | List active experiments.                  | "List all active experiments."                      |
-| `experiment_results_get` | Get results and winner data.              | "Show winner summary for experiment `149640`."      |
-| `experiment_code_get`    | Extract JavaScript or CSS variation code. | "Pull variation code for experiment `149640`."      |
-| `feature_flag_duplicate` | Clone an existing flag. | "Duplicate the `new_search` flag." |
-| `feature_flag_delete` | Permanently delete a flag. | "Delete the flag `ui_refresh`." |
-| `feature_flag_disable` | Toggle a flag OFF. | "Disable `new_search` in staging." |
-| `feature_flag_activity_logs_get` | Read the flag change history (audit trail). | "Show recent feature-flag changes." |
-| `feature_flag_experiment_results_get` | Get results for a flag's experimentation rule. | "Get results for the experiment rule on `new_search`." |
-| `feature_flag_rule_targeted_create` | Add a targeted delivery rule (serve one variation to a percentage of traffic). | "Roll `new_search` out to 20% in production." |
-| `feature_flag_rule_experimentation_create` | Add an A/B experimentation rule across variations. | "A/B test `off` vs `on` 50/50 on `new_search`." |
-| `feature_flag_variation_create` | Add a custom variation to a flag. | "Add a `variant_a` variation to `new_search`." |
-| `feature_flag_variable_create` | Add a typed variable (with a default) to a flag. | "Add a STRING variable `label` defaulting to `Search`." |
-| `feature_flag_variation_variable_set` | Override a variable's value for one variation. | "Set `label` to `Find` on `variant_a`." |
-| `experiment_get` | Inspect an experiment's full configuration. | "Show the configuration for experiment `149640`." |
-| `experiment_create` | Create a draft experiment. | "Create a CLASSIC experiment `Homepage hero` on site `d1alzzxd7k`." |
-| `experiment_duplicate` | Clone an experiment into a new draft. | "Duplicate experiment `149640`." |
-| `experiment_lifecycle_update` | Start, pause, resume, stop, or delete an experiment. | "Start experiment `149640`." |
-| `goal_list` | List goals on a site. | "List goals for site `d1alzzxd7k`." |
-| `goal_get` | Inspect a goal's configuration. | "Show goal `271552`." |
-| `goal_search` | Find a goal by name. | "Search goals for `checkout`." |
-| `goal_create` | Create a goal (URL, CLICK, SCROLL, etc.). | "Create a URL goal matching `/thank-you`." |
-| `goal_update` | Edit a goal's name, description, or tags. | "Rename goal `271552` to `Signup complete`." |
-| `goal_update_type` | Switch a goal's type and type configuration. | "Change goal `271552` to a CLICK goal." |
-| `goal_delete` | Delete a goal. | "Delete goal `271552`." |
-| `segment_list` | List segments on a site. | "List segments for site `d1alzzxd7k`." |
-| `segment_get` | Inspect a segment's condition tree. | "Show segment `200604`." |
-| `segment_create` | Create an audience segment. | "Create a segment for desktop visitors." |
-| `segment_delete` | Delete a segment (guarded when in use). | "Delete segment `200604`." |
-| `site_list` | List the sites (projects) you can access. | "List my Kameleoon sites." |
+The server exposes the tools below, grouped by area. Each tool maps to a single, well-scoped action, so you can compose them into larger workflows (for example: read results, pull code, create a flag, add a rule, enable it).
+
+### Experiments
+
+Build, inspect, and run A/B tests (Web Experiments).
+
+| Tool | Description | Example prompt |
+| --- | --- | --- |
+| `experiment_list` | Find experiments by name or ID. Returns paginated summaries (id, name, status, tags). | "List active experiments on site `d1alzzxd7k`." |
+| `experiment_get` | Retrieve an experiment's full configuration: variations, traffic split, goals, and targeting. | "Show the configuration for experiment `149640`." |
+| `experiment_code_get` | Pull a variation's raw JavaScript, CSS, and custom JSON, plus the experiment's shared common JS and CSS. | "Pull the code for variation 1 of experiment `149640`." |
+| `experiment_results_get` | Fetch statistical results: per-variation conversion rates, significance, confidence intervals, and the winner. | "Summarize results for experiment `149640`." |
+| `experiment_create` | Create a draft experiment (type, base URL, goals, optional common code). | "Create a CLASSIC experiment `Homepage hero` on site `d1alzzxd7k`." |
+| `experiment_duplicate` | Clone an experiment into a new draft, copying variations, code, deviations, and targeting. | "Duplicate experiment `149640`." |
+| `experiment_lifecycle_update` | Drive the lifecycle: start, pause, resume, stop, or delete (stop and delete require confirmation). | "Start experiment `149640`." |
+
+### Feature flags
+
+Create and operate feature flags, toggle them per environment, and read their history and results.
+
+| Tool | Description | Example prompt |
+| --- | --- | --- |
+| `feature_flag_list` | Find feature flags by key, name, or ID. | "List all feature flags for site `d1alzzxd7k`." |
+| `feature_flag_get` | Retrieve a flag's full configuration in an environment: variations, variables, primary goal, and rule chain. | "Show configuration for flag `snake_game`." |
+| `feature_flag_create` | Create a flag with default `on` and `off` variations. | "Create a flag `ui_refresh` for site `d1alzzxd7k`." |
+| `feature_flag_duplicate` | Clone an existing flag (the copy starts disabled in every environment). | "Duplicate the `new_search` flag." |
+| `feature_flag_delete` | Permanently delete a flag and all of its configuration. | "Delete the flag `ui_refresh`." |
+| `feature_flag_enable` | Turn the per-environment master switch ON so the SDK evaluates rules. | "Enable `new_search` in production." |
+| `feature_flag_disable` | Turn the per-environment master switch OFF (rules are preserved). | "Disable `new_search` in staging." |
+| `feature_flag_activity_logs_get` | Read the audit trail of flag changes (who changed what, and when). | "Show the recent change history for our feature flags." |
+| `feature_flag_experiment_results_get` | Fetch statistical results for a flag's experimentation rule. | "Get the experiment results for the rule on `new_search`." |
+
+### Flag delivery, variations, and variables
+
+Shape how a flag is delivered, and define the variations and typed variables it serves.
+
+| Tool | Description | Example prompt |
+| --- | --- | --- |
+| `feature_flag_rule_targeted_create` | Add a targeted delivery rule: serve one variation to a percentage of traffic, with optional scheduling. | "Roll `new_search` out to 20% in production." |
+| `feature_flag_rule_experimentation_create` | Add an A/B experimentation rule that splits traffic across variations with statistical tracking. | "A/B test `off` vs `on` 50/50 on `new_search`." |
+| `feature_flag_variation_create` | Add a custom variation (a named state of the feature) to a flag. | "Add a `variant_a` variation to `new_search`." |
+| `feature_flag_variable_create` | Define a typed variable (BOOLEAN, NUMBER, STRING, JSON, JS, CSS, ENUM) with a default value. | "Add a STRING variable `label` defaulting to `Search`." |
+| `feature_flag_variation_variable_set` | Override a variable's value for one specific variation. | "Set `label` to `Find` on `variant_a`." |
+
+### Goals
+
+Create and maintain the conversion goals used by experiments and flags.
+
+| Tool | Description | Example prompt |
+| --- | --- | --- |
+| `goal_list` | Browse goals on a site, with usage counts across experiments, flags, and personalizations. | "List goals for site `d1alzzxd7k`." |
+| `goal_get` | Inspect a goal's type configuration, tags, and usage counts. | "Show goal `271552`." |
+| `goal_search` | Find a goal by a substring of its name. | "Search goals for `checkout`." |
+| `goal_create` | Create a goal of any type (URL, CLICK, SCROLL, PAGE_VIEWS, TIME_SPENT, CUSTOM, and more). | "Create a URL goal that matches `/thank-you`." |
+| `goal_update` | Edit a goal's name, description, tags, tracking tools, or multiple-conversions setting. | "Rename goal `271552` to `Signup complete`." |
+| `goal_update_type` | Switch a goal's type and replace its type-specific configuration (tags are preserved). | "Change goal `271552` to a CLICK goal." |
+| `goal_delete` | Permanently delete a goal. | "Delete goal `271552`." |
+
+### Segments
+
+Define and inspect the audiences you target.
+
+| Tool | Description | Example prompt |
+| --- | --- | --- |
+| `segment_list` | Browse segments on a site, with usage counts. | "List segments for site `d1alzzxd7k`." |
+| `segment_get` | Inspect a segment's condition tree (raw JSON plus a human-readable summary). | "Show segment `200604`." |
+| `segment_create` | Create an audience segment from a condition tree (geolocation, device, browser, custom data, and more). | "Create a segment for desktop visitors in France." |
+| `segment_delete` | Delete a segment. Blocked by default when the segment is in use (override with force). | "Delete segment `200604`." |
+
+### Sites and targeting rules
+
+Discover your projects and bind segments to experiments.
+
+| Tool | Description | Example prompt |
+| --- | --- | --- |
+| `site_list` | List the sites (projects) you can access, with each site's code, name, and tracking status. | "List my Kameleoon sites." |
 | `targeting_rule_list` | List targeting rules on a site. | "List targeting rules for site `d1alzzxd7k`." |
-| `targeting_rule_get` | Inspect a single targeting rule. | "Show targeting rule `118605`." |
-| `targeting_rule_create` | Bind a segment to an experiment. | "Target experiment `149640` to segment `200604`." |
+| `targeting_rule_get` | Inspect a single targeting rule (segment, configuration, trigger, and the experiment it belongs to). | "Show targeting rule `118605`." |
+| `targeting_rule_create` | Bind a segment to an experiment to control who participates. | "Target experiment `149640` to segment `200604`." |
 
 ### Prerequisites
 
@@ -274,7 +318,7 @@ For more advanced workflows, try the following prompts:
 
 ### Advanced workflow: End-to-end automation
 
-To experience the full capability of the MCP server, use a comprehensive system prompt. The following example demonstrates how to transpose winning variation code into React components, which is intended primarily for React applications. It instructs the AI agent to handle the entire implementation lifecycle, from retrieving winning results to generating production-ready native code gated behind a new feature flag.
+To experience the full capability of the MCP server, use a comprehensive system prompt. The following example demonstrates how to transpose winning variation code into React components, which is intended primarily for React applications. It instructs the AI agent to handle the entire implementation lifecycle, from retrieving winning results to generating production-ready native code gated behind a new feature flag, and then rolling it out and validating it, all through the MCP tools.
 
 Paste the following prompt into your AI assistant:
 
@@ -290,67 +334,94 @@ Paste the following prompt into your AI assistant:
 > * Inspect the repo first and follow existing conventions (structure, styling, routing, tests, feature flags).
 > * Do not copy experiment code directly. Re-implement using idiomatic React (components, hooks, state).
 > * Do not keep experiment-specific logic (IDs, Kameleoon APIs) in production code.
-> * Prefer existing feature flag systems for rollout.
+> * Prefer existing feature flag systems for rollout. Use the Kameleoon MCP feature-flag tools to create and gate the flag.
 > * Avoid DOM manipulation (no querySelector, MutationObserver, etc.).
 > * Do not add new dependencies unless necessary.
+> * Do not modify the source experiment's lifecycle (do not stop or delete it) unless explicitly asked.
 > * Be explicit if something is unclear.
 >
 > **Workflow steps**
 >
-> 1. Get experiment results.
+> 1. Get experiment results (`experiment_results_get`).
 > 2. Decide integration:
 >    * Mode A (default: `strict_winner_only`): Proceed only if `winner.status == "clear_winner"`.
 >    * Mode B (manual): Use the fallback variation provided in the context.
-> 3. Get the variation code and the prompt that was used.
+> 3. Get the variation code and the prompt that was used (`experiment_code_get`).
 > 4. Convert the code to React (convert JS code to React components/hooks, and CSS code to the project styling system).
-> 5. Create a feature flag "pbx-winning-experiment-373001" and gate the converted code behind it.
+> 5. Create a feature flag "pbx-winning-experiment-373001" (`feature_flag_create`). If the implementation needs more than a simple on/off, add variations and typed variables (`feature_flag_variation_create`, `feature_flag_variable_create`, `feature_flag_variation_variable_set`), then gate the converted code behind the flag.
+> 6. Roll out and validate: add a delivery rule (`feature_flag_rule_targeted_create` for a staged percentage rollout, or `feature_flag_rule_experimentation_create` to keep measuring), enable the flag in the target environment (`feature_flag_enable`), and confirm the final configuration with `feature_flag_get`.
 
 ## Tool parameters reference
 
-Use the exact tool names and parameter names returned by `tools/list`. The live MCP schema supports the following parameters:
+Use the exact tool names and parameter names returned by `tools/list`. The live MCP schema supports the following parameters.
 
-| Tool                     | Required parameters           | Optional parameters |
-| ------------------------ | ----------------------------- | ------------------- |
-| `feature_flag_list`      | `siteCode`                    | None                |
-| `feature_flag_get`       | `featureKey`, `siteCode`      | `environmentKey`    |
-| `feature_flag_enable`    | `featureKey`, `siteCode`      | `environmentKey`    |
-| `feature_flag_create`    | `featureKey`, `siteCode`      | None                |
-| `experiment_results_get` | `experimentId`                | None                |
-| `experiment_code_get`    | `experimentId`, `variationId` | None                |
-| `feature_flag_get` (all environments) | `featureKey`, `siteCode` | `environmentKey` (`*` for all) |
-| `feature_flag_create` (with name) | `siteCode`, `featureKey`, `name` | `description` |
+### Experiments
+
+| Tool | Required parameters | Optional parameters |
+| --- | --- | --- |
+| `experiment_list` | None | `siteCode`, `filterQuery`, `page`, `perPage`, `sortField`, `sortOrder` |
+| `experiment_get` | `experimentId` | None |
+| `experiment_code_get` | `experimentId`, `variationId` | None |
+| `experiment_results_get` | `experimentId` | None |
+| `experiment_create` | `payload` (`siteCode`, `name`, `type`, `baseURL`) | `payload`: `mainGoalId`, `goals`, `tags`, `description`, `commonJavaScriptCode`, `commonCssCode`, `trafficAllocationMethod`, `collectingDataEnabled`, `multipleTestingCorrection`, `executeCodeForReference` |
+| `experiment_duplicate` | `experimentId` | None |
+| `experiment_lifecycle_update` | `experimentId`, `status` | `confirm` (required for `stopped` and `deleted`), `reason` |
+
+### Feature flags
+
+| Tool | Required parameters | Optional parameters |
+| --- | --- | --- |
+| `feature_flag_list` | None | `siteCode`, `filterQuery`, `page`, `perPage`, `sortField`, `sortOrder` |
+| `feature_flag_get` | `featureKey`, `siteCode` | `environmentKey` (`*` for all environments) |
+| `feature_flag_create` | `siteCode`, `featureKey`, `name` | `description` |
 | `feature_flag_duplicate` | `featureKey`, `siteCode` | None |
 | `feature_flag_delete` | `featureKey`, `siteCode` | None |
+| `feature_flag_enable` | `featureKey`, `siteCode`, `environmentKey` | None |
 | `feature_flag_disable` | `featureKey`, `siteCode`, `environmentKey` | None |
 | `feature_flag_activity_logs_get` | None | `type`, `sortKey` (`timestamp`), `sortOrder`, `page`, `perPage` |
 | `feature_flag_experiment_results_get` | `featureKey`, `siteCode`, `environmentKey`, `experimentId` | None |
+
+### Flag delivery, variations, and variables
+
+| Tool | Required parameters | Optional parameters |
+| --- | --- | --- |
 | `feature_flag_rule_targeted_create` | `siteCode`, `featureKey`, `environmentKey`, `variationKey`, `exposition`, `releaseDateTime`, `timeZone` | `ruleName` |
 | `feature_flag_rule_experimentation_create` | `siteCode`, `featureKey`, `environmentKey`, `controlVariationKey`, `trafficAllocations`, `exposition`, `releaseDateTime`, `timeZone` | `ruleName` |
 | `feature_flag_variation_create` | `siteCode`, `featureKey`, `variationKey`, `variationName` | None |
 | `feature_flag_variable_create` | `siteCode`, `featureKey`, `variableKey`, `variableType`, `defaultValue` | None |
 | `feature_flag_variation_variable_set` | `siteCode`, `featureKey`, `variationKey`, `variableKey`, `value` | None |
-| `experiment_list` | None | `siteCode`, `filterQuery`, `page`, `perPage`, `sortField`, `sortOrder` |
-| `experiment_get` | `experimentId` | None |
-| `experiment_create` | `payload` (`siteCode`, `name`, `type`, `baseURL`) | `payload`: `mainGoalId`, `goals`, `tags`, `description`, `commonJavaScriptCode`, `commonCssCode`, `trafficAllocationMethod` |
-| `experiment_duplicate` | `experimentId` | None |
-| `experiment_lifecycle_update` | `experimentId`, `status` | `confirm` (required for `stopped`/`deleted`), `reason` |
+
+### Goals
+
+| Tool | Required parameters | Optional parameters |
+| --- | --- | --- |
 | `goal_list` | None | `siteCode`, `page`, `perPage` |
 | `goal_get` | `goalId` | None |
 | `goal_search` | `query` | `siteCode`, `page`, `perPage` |
-| `goal_create` | `payload` (`name`, `siteCode`, `type`, `hasMultipleConversions`) | `payload`: type-specific params, `tags`, `description`, `status`, `trackingTools` |
+| `goal_create` | `payload` (`name`, `siteCode`, `type`, `hasMultipleConversions`) | `payload`: type-specific params (`matchString`, `matchType`, `scrollType`, `scrollValue`, `timeSeconds`, `pageViews`, `url`, `jsCode`), `tags`, `description`, `status`, `trackingTools` |
 | `goal_update` | `goalId` | `name`, `description`, `tags`, `trackingTools`, `hasMultipleConversions` |
 | `goal_update_type` | `goalId`, `type` | type-specific params |
 | `goal_delete` | `goalId` | None |
+
+### Segments
+
+| Tool | Required parameters | Optional parameters |
+| --- | --- | --- |
 | `segment_list` | None | `siteCode`, `query`, `page`, `perPage` |
 | `segment_get` | `segmentId` | None |
 | `segment_create` | `name`, `siteCode` | `conditionDataTree`, `description` |
 | `segment_delete` | `segmentId` | `force` |
+
+### Sites and targeting rules
+
+| Tool | Required parameters | Optional parameters |
+| --- | --- | --- |
 | `site_list` | None | None |
 | `targeting_rule_list` | None | `siteCode`, `page`, `perPage` |
 | `targeting_rule_get` | `targetingRuleId` | None |
 | `targeting_rule_create` | `segmentConfiguration`, `siteCode`, `experimentId` | `segmentId`, `triggerConfiguration`, `triggerId`, `targetingConfigurationParam` |
 
-Accepted enum values for the new tools: `experiment_lifecycle_update.status` is `started`, `resumed`, `paused`, `stopped`, or `deleted`; experiment `type` is `AI`, `CLASSIC`, `DEVELOPER`, `MVT`, `PROMPT`, or `SDK_HYBRID`; goal `type` is `CLICK`, `CUSTOM`, `SCROLL`, `PAGE_VIEWS`, `URL`, `TIME_SPENT`, `RETENTION_RATE`, `WAREHOUSE`, or `RATIO_METRICS`; `variableType` is `BOOLEAN`, `NUMBER`, `STRING`, `JSON`, `JS`, `CSS`, or `ENUM`. `trafficAllocations` is a comma-separated `variationKey:percentage` string summing to 100 (for example `off:50,on:50`). `releaseDateTime` is an ISO-8601 local datetime without offset (for example `2026-07-01T09:00:00`) and `timeZone` is an IANA zone (for example `Europe/Paris`, `UTC`).
+**Accepted enum values:** `experiment_lifecycle_update.status` is `started`, `resumed`, `paused`, `stopped`, or `deleted`. Experiment `type` is `AI`, `CLASSIC`, `DEVELOPER`, `MVT`, `PROMPT`, or `SDK_HYBRID`. Goal `type` is `CLICK`, `CUSTOM`, `SCROLL`, `PAGE_VIEWS`, `URL`, `TIME_SPENT`, `RETENTION_RATE`, `WAREHOUSE`, or `RATIO_METRICS`. `variableType` is `BOOLEAN`, `NUMBER`, `STRING`, `JSON`, `JS`, `CSS`, or `ENUM`. `trafficAllocations` is a comma-separated `variationKey:percentage` string that sums to 100 (for example `off:50,on:50`). `releaseDateTime` is an ISO-8601 local datetime without offset (for example `2026-07-01T09:00:00`) and `timeZone` is an IANA zone (for example `Europe/Paris` or `UTC`).
 
 > **Tip:** For environment-specific queries, pass `environmentKey = "production"` or `environmentKey = "staging"` where supported.
 
