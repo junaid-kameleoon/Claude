@@ -1,23 +1,4 @@
-# Kameleoon MCP server — documentation update (draft for the docs team)
-
-> **Purpose:** a refreshed version of the [MCP server docs page](https://docs.kameleoon.com/developer-docs/developer-tools/mcp-server/), updated for the tools now live in production. Structure mirrors the current page so it is easy to diff and adopt. Example site codes / experiment IDs match the ones already used publicly in the live docs.
-
----
-
-## Notes for the docs team (read first)
-
-**What changed.** The published page documents **7 tools** (list/get/toggle/create flags, plus experiment list/results/code). Production now exposes **36 tools** covering the full lifecycle across experiments, feature flags, goals, segments, targeting rules, and sites.
-
-**Two things to hold / phrase carefully:**
-
-1. **Progressive rollout rule** (`feature_flag_rule_progressive_create`) is **not included in this release.** Please do not document it yet. The two other delivery-rule tools (targeted, experimentation) are live.
-2. **`goal_update`** is live, but its tag handling is being refined: when the `tags` field is omitted it currently clears existing tags. Until the refinement ships, either hold this one tool or document that callers should always pass the full `tags` list when updating a goal.
-
-Everything else below is verified working in production and safe to publish.
-
----
-
-## Kameleoon MCP server
+# Kameleoon MCP server
 
 Connect AI coding assistants directly to your Kameleoon project to automate experiment and feature-flag workflows.
 
@@ -369,7 +350,3 @@ Use the exact tool and parameter names returned by `tools/list`.
 | Auth error after a long period. | OAuth token expired. | Re-run the Step 2 command. |
 | Headless / remote agents fail to authenticate. | No browser for the OAuth step. | Use a desktop version of your tool. |
 | `npx` not found. | Node.js not on PATH. | Install Node.js v18+ (includes `npx`). |
-
----
-
-*Draft prepared from a full production verification of the MCP toolset (2026-06-30). Endpoint, port, and OAuth flow match the live `mcp.kameleoon.com` production server.*
