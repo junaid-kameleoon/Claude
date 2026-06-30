@@ -193,7 +193,13 @@ npx -y mcp-remote@0.1.37 https://mcp.kameleoon.com/mcp 35535 --static-oauth-clie
 
 Restart Cursor after editing the file manually.
 
-### Antigravity (`~/.gemini/antigravity/mcp_config.json`)
+### Antigravity
+
+**Quick setup** — paste this self-starter prompt directly into your Antigravity chat to connect automatically:
+
+> "Connect to the Kameleoon MCP production server. The endpoint is `https://mcp.kameleoon.com/mcp`, using mcp-remote@0.1.37 on port 35535 with the openid scope. Authenticate by running the npx mcp-remote command to trigger my browser, then verify the connection."
+
+**Manual configuration** — edit `~/.gemini/antigravity/mcp_config.json` and add the following JSON block:
 
 ```json
 "kameleoon": {
@@ -209,7 +215,13 @@ Restart Cursor after editing the file manually.
 }
 ```
 
-### Codex (`~/.codex/config.toml`)
+### Codex
+
+**Quick setup** — paste this self-starter prompt into your Codex chat:
+
+> "Configure the Kameleoon MCP server at `https://mcp.kameleoon.com/mcp`. Use port 35535 for callback. Once configured, run the login command to trigger my browser and then list my feature flags."
+
+**Manual configuration** — add the following block to `~/.codex/config.toml`. Create the file if it does not exist:
 
 ```toml
 [mcp_servers.kameleoon]
