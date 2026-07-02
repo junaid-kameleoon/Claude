@@ -802,10 +802,18 @@ function buildGoals(observations) {
     if (!root) continue;
 
     const meta = root.metadata || {};
-    const inMsgs = messagesOf(root.input);
     const outMsgs = messagesOf(root.output);
-    const prompt = firstUserText(inMsgs) || textOf((inMsgs[0] || {}).content);
     const response = lastAssistantText(outMsgs);
+
+    // User prompt lives in the ChatOpenAI observation's message history.
+    // First user message is always the JS/CSS code context injected by the system;
+    // the second user message is the actual human goal description.
+    const chatObs = obs.find((o) => o.name === "ChatOpenAI");
+    const chatMsgs = chatObs ? messagesOf(chatObs.input) : [];
+    const userMsgs = chatMsgs.filter(isUser);
+    const CONTEXT_PREFIX = /^here is the current (javascript|css) code/i;
+    const promptMsg = userMsgs.find((m) => !CONTEXT_PREFIX.test(textOf(m.content).trimStart())) || userMsgs[1] || userMsgs[0];
+    const prompt = promptMsg ? textOf(promptMsg.content).trim() : "";
 
     // detect generated goal/tracking code in the conversation
     const allText = outMsgs.map((m) => textOf(m.content)).join("\n");
