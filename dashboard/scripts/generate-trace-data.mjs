@@ -51,9 +51,10 @@ function resolveSource(cfg) {
     .filter((f) => f.includes(`lf-events-export-${cfg.id}`) && /\.(json|csv)$/i.test(f))
     .map((f) => {
       const full = path.join(DOWNLOADS, f);
-      return { full, mtime: fs.statSync(full).mtimeMs };
+      const prefix = parseInt(f.split("-")[0], 10) || 0;
+      return { full, prefix, mtime: fs.statSync(full).mtimeMs };
     })
-    .sort((a, b) => b.mtime - a.mtime);
+    .sort((a, b) => b.prefix - a.prefix || b.mtime - a.mtime);
   return matches.length ? matches[0].full : null;
 }
 

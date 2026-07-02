@@ -1,37 +1,37 @@
 {
-  "generatedAt": "2026-06-20T06:16:08.725Z",
+  "generatedAt": "2026-07-02T11:54:23.124Z",
   "datasets": {
     "targeting": {
       "file": "trace-data.json",
-      "traceCount": 371,
+      "traceCount": 654,
       "summary": {
-        "totalObservations": 2468,
-        "traceCount": 371,
+        "totalObservations": 4383,
+        "traceCount": 654,
         "dateRange": {
-          "from": "2026-06-08 06:32:28.219000",
-          "to": "2026-06-19 15:48:05.147000"
+          "from": "2026-06-02 14:06:05.135000",
+          "to": "2026-07-02 11:31:22.490000"
         },
-        "modelCost": 4.1365,
-        "modelTokens": 15256473,
-        "generatedAssets": 280,
-        "clarificationRate": 0.307,
-        "toolLookups": 40
+        "modelCost": 8.0205,
+        "modelTokens": 26964210,
+        "generatedAssets": 500,
+        "clarificationRate": 0.295,
+        "toolLookups": 76
       }
     },
     "kai": {
       "file": "kai-data.json",
-      "traceCount": 3973,
+      "traceCount": 1003,
       "summary": {
-        "totalObservations": 30645,
-        "traceCount": 3973,
+        "totalObservations": 10060,
+        "traceCount": 1003,
         "dateRange": {
-          "from": "2026-05-30 02:00:13.144000",
+          "from": "2026-06-11 02:00:04.206000",
           "to": "2026-06-20 02:00:21.788000"
         },
-        "modelCost": 66.1637,
-        "modelTokens": 30023049,
-        "toolLookups": 1147,
-        "docQueries": 1067
+        "modelCost": 37.2972,
+        "modelTokens": 17607526,
+        "toolLookups": 566,
+        "docQueries": 513
       }
     },
     "goals": {
