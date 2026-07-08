@@ -99,6 +99,7 @@
         const Crosshair = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg>;
         const FolderTree = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M13 10h7a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M13 21h7a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.88a1 1 0 0 1-.9-.55l-.44-.9a1 1 0 0 0-.9-.55H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M3 3v2a2 2 0 0 0 2 2h7"/><path d="M3 3v13a2 2 0 0 0 2 2h7"/></svg>;
         const Database = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>;
+        const Braces = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></svg>;
 
         // ════════════════════════════════════════════════════════════════
         //  @MENTION — reference experiments / personalizations / segments / triggers
@@ -109,29 +110,41 @@
             personalization: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
             segment: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
             trigger: '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="M5 3v4"/><path d="M9 5H5"/>',
+            goal: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+            customdata: '<path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/>',
         };
         const mkItems = (prefix, arr) => arr.map(([name, status], i) => ({ id: `${prefix}-${1000 + i}`, name, status }));
         const MENTION_ENTITIES = [
-            { type: 'experiment', label: 'Experiment', Icon: FlaskConical, accent: '#2A7868', desc: 'Mention an experiment', total: 45, items: mkItems('EXP', [
+            { type: 'experiment', label: 'Experiment', Icon: FlaskConical, accent: '#2A7868', on: '#2A7868', desc: 'Mention an experiment', total: 45, items: mkItems('EXP', [
                 ['Homepage Hero Banner', 'Running'], ['Checkout Button Color', 'Draft'], ['Pricing Page Layout', 'Paused'], ['Onboarding Flow', 'Completed'],
                 ['Search Results Ranking', 'Running'], ['Mobile Nav Redesign', 'Running'], ['Product Card CTA', 'Draft'], ['Free Trial Length', 'Paused'],
                 ['Cart Recovery Email', 'Completed'], ['Homepage Video Hero', 'Running'], ['Sticky Add to Cart', 'Draft'], ['PDP Reviews Position', 'Running'],
                 ['Signup Form Fields', 'Paused'], ['Loyalty Banner', 'Completed'], ['Category Filter UX', 'Running'], ['Exit Survey Prompt', 'Draft'],
             ]) },
-            { type: 'personalization', label: 'Personalization', Icon: Database, accent: '#6D5AE6', desc: 'Mention a personalization campaign', total: 28, items: mkItems('PERS', [
+            { type: 'personalization', label: 'Personalization', Icon: Database, accent: '#6D5AE6', on: '#6D5AE6', desc: 'Mention a personalization campaign', total: 28, items: mkItems('PERS', [
                 ['Returning Visitor Banner', 'Running'], ['VIP Homepage', 'Running'], ['Cart Abandoner Nudge', 'Paused'], ['Mobile Welcome Mat', 'Draft'],
                 ['Geo Pricing FR', 'Running'], ['First-Purchase Offer', 'Completed'], ['High-Intent Upsell', 'Running'], ['Weather-Based Hero', 'Draft'],
                 ['Loyalty Tier Message', 'Running'], ['Reactivation Banner', 'Paused'],
             ]) },
-            { type: 'segment', label: 'Segment', Icon: Users, accent: '#2AA775', desc: 'Mention an audience segment', total: 34, items: mkItems('SEG', [
+            { type: 'segment', label: 'Segment', Icon: Users, accent: '#2AA775', on: '#2AA775', desc: 'Mention an audience segment', total: 34, items: mkItems('SEG', [
                 ['New York Visitors', 'Live'], ['Mobile Users', 'Live'], ['Returning Customers', 'Live'], ['VIP Tier', 'Live'],
                 ['Cart Abandoners', 'Live'], ['EU Traffic', 'Live'], ['First-Time Buyers', 'Live'], ['High Spenders', 'Live'],
                 ['Newsletter Subscribers', 'Live'], ['Lapsed 30d', 'Live'],
             ]) },
-            { type: 'trigger', label: 'Trigger', Icon: Sparkles, accent: '#E0A100', desc: 'Mention a trigger condition', total: 45, items: mkItems('TRG', [
+            { type: 'trigger', label: 'Trigger', Icon: Sparkles, accent: '#E0A100', on: '#B0790B', desc: 'Mention a trigger condition', total: 45, items: mkItems('TRG', [
                 ['Add to Cart Click', 'Active'], ['Exit Intent', 'Draft'], ['Scroll Depth 50%', 'Disabled'], ['Checkout Page View', 'Active'],
                 ['Time on Page 30s', 'Draft'], ['Rage Click', 'Active'], ['Form Abandon', 'Draft'], ['Add to Wishlist', 'Active'],
                 ['Video 75% Watched', 'Disabled'], ['Coupon Applied', 'Active'],
+            ]) },
+            { type: 'goal', label: 'Goal', Icon: Target, accent: '#CEDD70', on: '#5F6B12', desc: 'Mention a goal', total: 60, items: mkItems('GOAL', [
+                ['Purchase Completed', 'Active'], ['Add to Cart', 'Active'], ['Newsletter Signup', 'Active'], ['Checkout Started', 'Active'],
+                ['Product Page View', 'Active'], ['Video Play', 'Draft'], ['Demo Requested', 'Active'], ['Account Created', 'Active'],
+                ['Wishlist Add', 'Draft'], ['Coupon Redeemed', 'Paused'], ['Support Chat Opened', 'Active'], ['App Download', 'Draft'],
+            ]) },
+            { type: 'customdata', label: 'Custom data', Icon: Braces, accent: '#0891B2', on: '#0891B2', desc: 'Mention a custom data field', total: 40, items: mkItems('CD', [
+                ['user_plan', 'String'], ['cart_value', 'Number'], ['loyalty_tier', 'String'], ['is_logged_in', 'Boolean'],
+                ['last_purchase_date', 'Date'], ['lifetime_value', 'Number'], ['signup_source', 'String'], ['ab_group', 'String'],
+                ['session_count', 'Number'], ['has_subscription', 'Boolean'], ['preferred_category', 'String'], ['days_since_signup', 'Number'],
             ]) },
         ];
         const MENTION_BY_TYPE = MENTION_ENTITIES.reduce((m, e) => { m[e.type] = e; return m; }, {});
@@ -148,7 +161,7 @@
             const Icon = e.Icon;
             return (
                 <span className="mention-chip" style={{ background: e.accent + '1A', border: `1px solid ${e.accent}33`, color: '#1f2937' }}>
-                    <span style={{ color: e.accent, display: 'inline-flex' }}><Icon /></span>
+                    <span style={{ color: e.on, display: 'inline-flex' }}><Icon /></span>
                     <span>{name}</span>
                 </span>
             );
@@ -164,7 +177,7 @@
             chip.style.background = entity.accent + '1A';
             chip.style.border = `1px solid ${entity.accent}33`;
             chip.style.color = '#1f2937';
-            chip.innerHTML = `<svg ${SVG_ATTRS} style="color:${entity.accent}">${ICON_SVG[entity.type]}</svg><span>${item.name}</span>`;
+            chip.innerHTML = `<svg ${SVG_ATTRS} style="color:${entity.on}">${ICON_SVG[entity.type]}</svg><span>${item.name}</span>`;
             return chip;
         };
         // Serialize the composer into { plain, serialized, parts } for sending + rendering.
@@ -1545,12 +1558,15 @@ export const checkout: CheckoutProps = {
                 if (at === -1) { setMention(null); return; }
                 if (at > 0 && !/\s/.test(before[at - 1])) { setMention(null); return; }
                 const frag = before.slice(at);
-                if (/\s/.test(frag)) { setMention(null); return; }
-                const inst = frag.match(/^@([A-Za-z]+)\.(.*)$/);
-                if (inst) {
-                    const ent = MENTION_ENTITIES.find(e => e.label.toLowerCase() === inst[1].toLowerCase());
-                    if (ent) { setMention({ stage: 'instance', entity: ent, query: inst[2], node, start: at, end: caret }); return; }
+                // instance stage: frag begins with "@<label>." for a known entity (labels may contain spaces, so match the known prefix).
+                for (const ent of MENTION_ENTITIES) {
+                    const pfx = '@' + ent.label + '.';
+                    if (frag.startsWith(pfx)) {
+                        setMention({ stage: 'instance', entity: ent, query: frag.slice(pfx.length), node, start: at, end: caret });
+                        return;
+                    }
                 }
+                // type stage: "@" followed by letters only (a space or dot without a known prefix ends it).
                 const typ = frag.match(/^@([A-Za-z]*)$/);
                 if (typ) { setMention({ stage: 'type', entity: null, query: typ[1], node, start: at, end: caret }); return; }
                 setMention(null);
@@ -1859,10 +1875,10 @@ export const checkout: CheckoutProps = {
                                                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mention an entity</span>
                                                         ) : (
                                                             <div className="flex items-center gap-1.5">
-                                                                <span className="h-4 w-4 rounded flex items-center justify-center shrink-0" style={{ backgroundColor: mention.entity.accent + '1A', color: mention.entity.accent }}>
+                                                                <span className="h-4 w-4 rounded flex items-center justify-center shrink-0" style={{ backgroundColor: mention.entity.accent + '1A', color: mention.entity.on }}>
                                                                     <mention.entity.Icon className="h-2.5 w-2.5" />
                                                                 </span>
-                                                                <span className="text-[11px] font-bold" style={{ color: mention.entity.accent }}>{mention.entity.label}</span>
+                                                                <span className="text-[11px] font-bold" style={{ color: mention.entity.on }}>{mention.entity.label}</span>
                                                                 <span className="text-[10px] text-gray-400 font-medium">{mentionItems.length} of {mention.entity.total}</span>
                                                             </div>
                                                         )}
@@ -1877,7 +1893,7 @@ export const checkout: CheckoutProps = {
                                                             return (
                                                                 <div key={e.type} onMouseEnter={() => setMentionIdx(i)} onMouseDown={(ev) => { ev.preventDefault(); selectMentionType(e); }}
                                                                     className={cn("flex items-center gap-3 px-3 py-2 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}>
-                                                                    <span className="h-7 w-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: e.accent + '1A', color: e.accent }}><Ico className="h-3.5 w-3.5" /></span>
+                                                                    <span className="h-7 w-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: e.accent + '1A', color: e.on }}><Ico className="h-3.5 w-3.5" /></span>
                                                                     <div className="min-w-0">
                                                                         <div className="text-[12px] font-semibold text-gray-900">{e.label}</div>
                                                                         <div className="text-[11px] text-gray-400 leading-tight">{e.desc}</div>
@@ -1890,7 +1906,7 @@ export const checkout: CheckoutProps = {
                                                             return (
                                                                 <div key={it.id} onMouseEnter={() => setMentionIdx(i)} onMouseDown={(ev) => { ev.preventDefault(); selectMentionInstance(it); }}
                                                                     className={cn("flex items-center gap-3 px-3 py-1.5 cursor-pointer", isSel ? "bg-primary/5" : "hover:bg-gray-50")}>
-                                                                    <span className="h-7 w-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: mention.entity.accent + '1A', color: mention.entity.accent }}><Ico className="h-3.5 w-3.5" /></span>
+                                                                    <span className="h-7 w-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: mention.entity.accent + '1A', color: mention.entity.on }}><Ico className="h-3.5 w-3.5" /></span>
                                                                     <div className="min-w-0 flex-1">
                                                                         <div className="text-[12px] font-semibold text-gray-900 truncate">{it.name}</div>
                                                                         <div className="text-[10px] text-gray-400 font-mono">{it.id}</div>
