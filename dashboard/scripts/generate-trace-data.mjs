@@ -225,7 +225,9 @@ function rowToObs(header, cells, { sinceTime, trim } = {}) {
   // Date cutoff: startTime is "YYYY-MM-DD ..." so string compare is chronological.
   if (sinceTime && obj.startTime && obj.startTime < sinceTime) return null;
   // Memory trim: only roots and tool calls need their (often huge) input/output.
-  if (trim && !(obj.type === "TOOL" || ROOT_NAMES.has(obj.name) || !obj.parentObservationId)) {
+  // "mcp_tool" is the newer Kai backend's generic wrapper for every MCP tool call — the
+  // actual tool name/args/result live inside ITS input/output, not a dedicated TOOL row.
+  if (trim && !(obj.type === "TOOL" || obj.name === "mcp_tool" || ROOT_NAMES.has(obj.name) || !obj.parentObservationId)) {
     obj.input = null;
     obj.output = null;
   }
@@ -664,6 +666,41 @@ function promptShape(prompt) {
 
 /* ---------------------------------------------------------------------- kai */
 
+/**
+ * The newer Kai backend ("kai-new-era-*") routes every MCP tool call through one
+ * LangGraph node literally named "mcp_tool" (type CHAIN, not TOOL) — the real tool
+ * invoked only appears inside the wrapper's own messages: a `type: "tool"` message
+ * in `output` on success, or a `function_call` part in `input` if it errored first.
+ * Without unwrapping this, MCP tool usage (goal_create, experiment_get, etc.) is
+ * invisible to the dashboard even though doc-search/graphql tools (still emitted as
+ * plain TOOL rows) show up fine.
+ */
+function mcpToolCallOf(obs) {
+  const out = tryParse(obs.output);
+  for (const m of (out && out.messages) || []) {
+    if (m.type === "tool" && m.name) return { name: m.name, input: null, output: textOf(m.content) };
+  }
+  const inp = tryParse(obs.input);
+  for (const m of (inp && inp.messages) || []) {
+    for (const part of Array.isArray(m.content) ? m.content : []) {
+      if (part && part.type === "function_call" && part.name) {
+        return { name: part.name, input: part.arguments || null, output: null };
+      }
+    }
+  }
+  return null;
+}
+
+// Langfuse userId on Kai traces is "<accountId>--<email>". We only ever derive a
+// coarse internal/external/unknown label from it for the shipped dataset — the raw
+// email is never written to a client-facing file.
+function identityOf(userId) {
+  if (!userId) return "unknown";
+  const at = userId.indexOf("--");
+  const email = at >= 0 ? userId.slice(at + 2) : userId;
+  return /@kameleoon\.com$/i.test(email) ? "internal" : "external";
+}
+
 function buildKai(observations) {
   const groups = groupByTrace(observations);
   const traces = [];
@@ -671,6 +708,8 @@ function buildKai(observations) {
   const useCaseCounts = {};
   const models = {};
   const tools = {};
+  const toolsByIdentity = { internal: {}, external: {}, unknown: {} };
+  const identityCounts = { internal: 0, external: 0, unknown: 0 };
   const docQueries = {};
   const languages = {};
   const daily = {};
@@ -702,15 +741,33 @@ function buildKai(observations) {
     const prompt = firstUserText(inMsgs) || textOf((inMsgs[0] || {}).content);
     const response = lastAssistantText(outMsgs);
 
-    // tool calls (doc search, mcp tools)
+    // tool calls: classic TOOL-type rows (doc search, graphql) plus "mcp_tool" wrapper
+    // rows, which need unwrapping to find the real tool that was actually invoked.
+    const identity = identityOf(root.userId);
+    identityCounts[identity] += 1;
     const toolObs = obs.filter((o) => o.type === "TOOL");
-    const toolCalls = toolObs.map((t) => {
+    const mcpToolObs = obs.filter((o) => o.name === "mcp_tool");
+    const toolCalls = [];
+    for (const t of toolObs) {
       const input = tryParse(t.input) || {};
       const query = input.query || input.q || (typeof t.input === "string" ? t.input : "");
       if (t.name && /doc/i.test(t.name) && query) inc(docQueries, String(query).slice(0, 80));
-      return { name: t.name || "tool", input: compactStr(t.input, 240), output: compactStr(t.output, 600) };
-    });
-    toolObs.forEach((t) => inc(tools, t.name || "tool"));
+      const name = t.name || "tool";
+      inc(tools, name);
+      inc(toolsByIdentity[identity], name);
+      toolCalls.push({ name, input: compactStr(t.input, 240), output: compactStr(t.output, 600) });
+    }
+    for (const t of mcpToolObs) {
+      const call = mcpToolCallOf(t);
+      const name = (call && call.name) || "mcp_tool(unresolved)";
+      inc(tools, name);
+      inc(toolsByIdentity[identity], name);
+      toolCalls.push({
+        name,
+        input: compactStr((call && call.input) || t.input, 240),
+        output: compactStr((call && call.output) || t.output, 600),
+      });
+    }
 
     const usage = aggregateUsage(obs);
     totalCost += usage.cost;
@@ -743,6 +800,8 @@ function buildKai(observations) {
         thread_id: meta.thread_id || null,
         model: meta.model || root.providedModelName || root.modelId || null,
         backend_version: meta.backend_version || null,
+        // Coarse label only ("internal" | "external" | "unknown") — never the raw email.
+        identity,
       },
       tokens: usage.tokens,
       cost: usage.cost,
@@ -772,6 +831,15 @@ function buildKai(observations) {
     languages: topEntries(languages, 12),
     promptShapes: topEntries(promptShapes, 10),
     dailyActivity: Object.entries(daily).sort().map(([date, count]) => ({ date, count })),
+    // Coarse @kameleoon.com vs external split. `identityCounts.unknown` traces had no
+    // userId at all on their Langfuse trace (a data-capture gap upstream, not ours) —
+    // treat the internal/external split as a sample of the identified minority, not
+    // the whole population.
+    identityCounts,
+    toolsByIdentity: {
+      internal: topEntries(toolsByIdentity.internal, 15),
+      external: topEntries(toolsByIdentity.external, 15),
+    },
   };
 
   return { feature: "kai", summary, patterns, traces };

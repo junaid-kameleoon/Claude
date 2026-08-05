@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-05T13:09:02.414Z",
+  "generatedAt": "2026-08-05T13:31:06.548Z",
   "datasets": {
     "targeting": {
       "file": "trace-data.json",
@@ -30,7 +30,7 @@
         },
         "modelCost": 40.1942,
         "modelTokens": 24580039,
-        "toolLookups": 252,
+        "toolLookups": 473,
         "docQueries": 169
       }
     },
