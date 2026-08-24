@@ -710,7 +710,7 @@ function WorkflowsDashboard({ onNavigate }) {
         <div style={{ padding: '24px 32px 0', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
             <div>
-              <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 26, color: '#1B1B23', margin: 0 }}>Automation</h1>
+              <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 26, color: '#1B1B23', margin: 0 }}>Automations</h1>
               <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#918F9A', margin: '4px 0 0' }}>Create automated tasks that run on their own.</p>
             </div>
             <button onClick={() => onNavigate('new-workflow')}
@@ -1464,51 +1464,30 @@ function VisualMock({ visual, text }) {
   );
 }
 
-// Replaces the canvas when a task needs the user's input — Chris (24 Aug):
-// "showcasing these issues/assets to review/answer within the PBX chat with
-// the preview pane on the left that replaces the workflow/automation view."
-// The Chat tab (right panel) is what actually resolves it; this pane is the
-// visual context for that conversation.
-function ReviewPreviewPane({ kind, item, onBack }) {
+// A task/asset that needs a human is surfaced as a rich card inside the Kai
+// chat message itself — Junaid (24 Aug): a dedicated pane swapping out the
+// canvas was one view too many; this context belongs in the conversation
+// that resolves it, not next to it. See openReview below and the chatLog
+// rendering in WorkflowDetailView.
+function ReviewCard({ kind, item }) {
   const isBlocking = kind === 'blocked';
   return (
-    <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
-      <div className="fade-up" style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: 24, maxWidth: 520, margin: '0 auto' }}>
-        <button onClick={onBack}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#3838E7', marginBottom: 16 }}>
-          <svg width="10" height="8" viewBox="0 0 6 10.5" fill="none"><path d={P.backArrow} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          Back to workflow
-        </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: isBlocking ? '#E03D3D' : '#00875A', flexShrink: 0 }}/>
-          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#918F9A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            {isBlocking ? 'Blocking this task' : 'Ready for review'}
-          </span>
-        </div>
-        <h3 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 17, color: '#1B1B23', margin: '2px 0 3px' }}>{item.label}</h3>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '0 0 16px' }}>{item.waiting}</p>
-
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', lineHeight: 1.5, margin: '0 0 14px' }}>{item.question}</p>
-
-        {item.visual ? (
-          <VisualMock visual={item.visual} text={item.preview}/>
-        ) : item.type === 'select' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {item.options.map(opt => (
-              <div key={opt} style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>{opt}</div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ background: item.type === 'retry' ? '#FDEAEA' : '#F9F9FB', border: `1px solid ${item.type === 'retry' ? '#F5C2C2' : '#E1DFE7'}`, borderRadius: 8, padding: '12px 14px', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', fontStyle: 'italic', lineHeight: 1.5 }}>
-            {item.preview}
-          </div>
-        )}
-
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '16px 0 0', lineHeight: 1.5 }}>
-          Respond in the Chat tab to resolve this — the canvas will update as soon as you do.
-        </p>
+    <div style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: isBlocking ? '#E03D3D' : '#00875A', flexShrink: 0 }}/>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 10, color: '#918F9A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {isBlocking ? 'Blocking this task' : 'Ready for review'}
+        </span>
       </div>
+      <h4 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', margin: '2px 0 10px' }}>{item.label}</h4>
+
+      {item.visual ? (
+        <VisualMock visual={item.visual} text={item.preview}/>
+      ) : item.type !== 'select' ? (
+        <div style={{ background: item.type === 'retry' ? '#FDEAEA' : '#F9F9FB', border: `1px solid ${item.type === 'retry' ? '#F5C2C2' : '#E1DFE7'}`, borderRadius: 8, padding: '10px 12px', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', fontStyle: 'italic', lineHeight: 1.5 }}>
+          {item.preview}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1530,8 +1509,12 @@ function WorkflowDetailView({ workflow, onNavigate }) {
   const [panelTab, setPanelTab] = useState('tasks');
   const [chatLog, setChatLog] = useState([]);
   const [chatInput, setChatInput] = useState('');
-  // The item currently being resolved via chat — set, the canvas is
-  // replaced by ReviewPreviewPane and the panel jumps to Chat. This is the
+  const chatEndRef = useRef(null);
+  // Every new message (including a ReviewCard just posted by openReview)
+  // should be visible without the user having to scroll for it.
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ block: 'nearest' }); }, [chatLog, panelTab]);
+  // The item currently being resolved via chat — set, the panel jumps to
+  // Chat and a ReviewCard is posted there; the canvas stays put. This is the
   // single resolution path for both blocked tasks and ready-for-review
   // assets, on the canvas and from the dashboard alike (Chris, 24 Aug).
   const [reviewing, setReviewing] = useState(null);
@@ -1619,9 +1602,13 @@ function WorkflowDetailView({ workflow, onNavigate }) {
     setReviewing({ kind, item });
     setPanelTab('chat');
     setSelected(null);
-    setChatLog(log => log.some(m => m.reviewItemId === item.id && m.seed)
+    // Keyed on kind+id, not just id: the same node can surface here twice
+    // with different questions (e.g. blocked, then later ready for review),
+    // and each occasion needs its own card in the log.
+    const seedKey = `${kind}:${item.id}`;
+    setChatLog(log => log.some(m => m.seed === seedKey)
       ? log
-      : [...log, { from: 'kai', seed: true, reviewItemId: item.id, text: item.question || `Let's take a look at "${item.label}".` }]);
+      : [...log, { from: 'kai', seed: seedKey, text: item.question || `Let's take a look at "${item.label}".`, card: { kind, item } }]);
   }
 
   // Resolves whatever's being reviewed. If it maps to a real node, this
@@ -1819,15 +1806,10 @@ function WorkflowDetailView({ workflow, onNavigate }) {
       {/* Canvas + side panel */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Canvas column: scrolling grid, with the legend pinned underneath so
-            it can never overlap the cards. Replaced entirely by the review
-            preview pane while a task/asset is being resolved via chat —
-            Chris (24 Aug): the preview pane "replaces the workflow/
-            automation view" rather than sitting alongside it. */}
+            it can never overlap the cards. Stays visible even while a task/
+            asset is being resolved via chat — the ReviewCard lives in the
+            chat log instead of swapping out this view (Junaid, 24 Aug). */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#FCFCFD', minWidth: 0 }}>
-        {reviewing ? (
-          <ReviewPreviewPane kind={reviewing.kind} item={reviewing.item} onBack={() => setReviewing(null)}/>
-        ) : (
-        <>
         <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
           <div className="canvas-grid" style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: 28, minHeight: '100%', display: 'inline-block' }}>
             {/* Grid stage — sized to the computed layout so the card grid and
@@ -1916,8 +1898,6 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             ))}
           </div>
         </div>
-        </>
-        )}
         </div>
 
         {/* Node insertion dialog */}
@@ -2111,10 +2091,14 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {chatLog.map((m, i) => (
-                      <div key={i} style={{ alignSelf: m.from === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%', background: m.from === 'user' ? '#3838E7' : '#F5F5F7', color: m.from === 'user' ? '#fff' : '#1B1B23', padding: '9px 12px', borderRadius: 10, fontFamily: 'Roboto, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
-                        {m.text}
+                      <div key={i} style={{ alignSelf: m.from === 'user' ? 'flex-end' : 'flex-start', maxWidth: m.card ? '100%' : '85%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ background: m.from === 'user' ? '#3838E7' : '#F5F5F7', color: m.from === 'user' ? '#fff' : '#1B1B23', padding: '9px 12px', borderRadius: 10, fontFamily: 'Roboto, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
+                          {m.text}
+                        </div>
+                        {m.card && <ReviewCard kind={m.card.kind} item={m.card.item}/>}
                       </div>
                     ))}
+                    <div ref={chatEndRef}/>
                   </div>
                 )}
               </div>
