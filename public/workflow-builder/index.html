@@ -548,6 +548,42 @@ function SubtaskChip({ kind, count }) {
   );
 }
 
+// Description + progress line + roll-up chips — shared between the
+// dashboard's side panel and the canvas's Tasks tab so the same automation
+// shows literally the same summary whichever way you opened it (Junaid,
+// 25 Aug: "the tasks tab should follow the exact same design as the
+// sidepanel in the dashboard").
+function AutomationProgressSummary({ description, progressLabel, counts }) {
+  const [descOpen, setDescOpen] = useState(false);
+  const isLong = description && description.length > 120;
+  const shortDesc = isLong && !descOpen ? description.slice(0, 120) + '…' : description;
+  const noSubtasks = counts.blocked === 0 && counts.review === 0 && counts.running === 0;
+  return (
+    <div>
+      <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Short description</div>
+      <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', lineHeight: 1.55, margin: '0 0 4px' }}>{shortDesc}</p>
+      {isLong && (
+        <button onClick={() => setDescOpen(!descOpen)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#3838E7', marginBottom: 16 }}>
+          {descOpen ? 'Show less' : 'Show more'}
+        </button>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, marginBottom: 6 }}>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Automation progress</span>
+        <span title="Derived from the status of every task in this automation" style={{ color: '#C7C5D0', fontSize: 12, cursor: 'help' }}>ⓘ</span>
+      </div>
+      <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', margin: '0 0 14px' }}>{progressLabel}</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
+        {counts.blocked > 0 && <SubtaskChip kind="blocked" count={counts.blocked}/>}
+        {counts.review > 0 && <SubtaskChip kind="review" count={counts.review}/>}
+        {counts.running > 0 && <SubtaskChip kind="running" count={counts.running}/>}
+        {noSubtasks && <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>No subtasks to show yet.</span>}
+      </div>
+    </div>
+  );
+}
+
 // One row in the dashboard list. Selecting it opens the detail panel on the
 // right — resolving blockers happens there, not by opening the automation.
 function AutomationRow({ automation: a, selected, onSelect }) {
@@ -644,9 +680,7 @@ function SubtaskGroup({ kind, title, items, defaultOpen, onAnswer, onOpen }) {
 // user *sees* what needs attention — resolving it happens in the automation
 // itself, via chat, per Chris's feedback (24 Aug).
 function AutomationDetailPanel({ automation: a, onClose, onOpen, onAnswer }) {
-  const [descOpen, setDescOpen] = useState(false);
   const cfg = AUTOMATION_STATUS[a.status] || AUTOMATION_STATUS.draft;
-  const shortDesc = a.description.length > 120 && !descOpen ? a.description.slice(0, 120) + '…' : a.description;
 
   return (
     <div className="fade-up" style={{ width: 400, borderLeft: '1px solid #E1DFE7', background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
@@ -669,29 +703,8 @@ function AutomationDetailPanel({ automation: a, onClose, onOpen, onAnswer }) {
           Created by <span style={{ fontWeight: 500, color: '#52515B' }}>{a.createdBy}</span> · {a.createdAgo}
         </div>
 
-        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Short description</div>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', lineHeight: 1.55, margin: '0 0 4px' }}>{shortDesc}</p>
-        {a.description.length > 120 && (
-          <button onClick={() => setDescOpen(!descOpen)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#3838E7', marginBottom: 16 }}>
-            {descOpen ? 'Show less' : 'Show more'}
-          </button>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, marginBottom: 6 }}>
-          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Automation progress</span>
-          <span title="Derived from the status of every task in this automation" style={{ color: '#C7C5D0', fontSize: 12, cursor: 'help' }}>ⓘ</span>
-        </div>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', margin: '0 0 14px' }}>{a.progressLabel}</p>
-
-        {/* Roll-up summary */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
-          {a.blocked.length > 0 && <SubtaskChip kind="blocked" count={a.blocked.length}/>}
-          {a.readyForReview.length > 0 && <SubtaskChip kind="review" count={a.readyForReview.length}/>}
-          {a.runningTasks.length > 0 && <SubtaskChip kind="running" count={a.runningTasks.length}/>}
-          {a.blocked.length === 0 && a.readyForReview.length === 0 && a.runningTasks.length === 0 && (
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>No subtasks to show yet.</span>
-          )}
-        </div>
+        <AutomationProgressSummary description={a.description} progressLabel={a.progressLabel}
+          counts={{ blocked: a.blocked.length, review: a.readyForReview.length, running: a.runningTasks.length }}/>
       </div>
 
       <div style={{ padding: '0 20px 20px' }}>
@@ -985,6 +998,8 @@ function PlanReviewScreen({ draft, onNavigate }) {
   // phase: generating → questions → ready
   const [phase, setPhase] = useState('generating');
   const [answers, setAnswers] = useState({});
+  const layout = computeLayout(PLANNED_TASKS);
+  const connections = getConnections(PLANNED_TASKS);
 
   useEffect(() => {
     const t = setTimeout(() => setPhase('questions'), 1400);
@@ -1036,22 +1051,24 @@ function PlanReviewScreen({ draft, onNavigate }) {
                 <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>Proposed plan</span>
                 <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>{PLANNED_TASKS.length} tasks · nothing runs until you confirm</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
-                {PLANNED_TASKS.map(t => (
-                  <div key={t.id} style={{ background: TASK_TYPES[t.type].color, border: '1px solid #E1DFE7', borderRadius: 10, padding: '12px 14px' }}>
-                    <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 10, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5 }}>{TASK_TYPES[t.type].label}</div>
-                    <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 3 }}>{t.label}</div>
-                    <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', marginBottom: t.dependsOn.length ? 7 : 0 }}>{t.desc}</div>
-                    {t.dependsOn.length > 0 ? (
-                      <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 10, color: '#52515B', fontStyle: 'italic' }}>
-                        Runs after: {t.dependsOn.map(d => PLANNED_TASKS.find(x => x.id === d)?.label).join(', ')}
-                      </div>
-                    ) : (
-                      <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 10, color: '#00875A' }}>Can start immediately</div>
-                    )}
-                  </div>
-                ))}
+              {/* Same grid + connector graph the canvas uses once the
+                  automation is running — Junaid (25 Aug): tasks stacked in
+                  a column with no arrow between them are independent
+                  siblings; an arrow means the one on the right depends on
+                  the one on the left. Nothing has executed yet, so every
+                  edge reads as "not done" (dashed), same as canvas edges
+                  waiting on an unsatisfied dependency. */}
+              <div className="canvas-grid" style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: 28, display: 'inline-block' }}>
+                <div style={{ position: 'relative', width: layout.width, height: layout.height }}>
+                  <DependencyEdges connections={connections} layout={layout}/>
+                  {PLANNED_TASKS.map(node => layout.pos[node.id] && (
+                    <PlanNodeCard key={node.id} node={node} pos={layout.pos[node.id]}/>
+                  ))}
+                </div>
               </div>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '10px 0 0' }}>
+                Tasks stacked in the same column run in parallel. An arrow means the task depends on the one before it.
+              </p>
             </div>
           )}
         </div>
@@ -1413,6 +1430,49 @@ function elbowPath(a, b) {
   return `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`;
 }
 
+// The dependency-arrow layer, shared by the Plan Review graph (before
+// anything has run, so every edge is "not done" — dashed) and the canvas
+// (where a satisfied dependency turns solid) — Junaid (25 Aug): the same
+// parallel-vs-sequential structure should read the same way in both places.
+function DependencyEdges({ connections, layout, isDone }) {
+  return (
+    <svg style={{ position: 'absolute', inset: 0, width: layout.width, height: layout.height, pointerEvents: 'none', overflow: 'visible' }}>
+      <defs>
+        <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 6 2.5, 0 5" fill="#C7C5D0"/>
+        </marker>
+      </defs>
+      {connections.map(([a, b]) => {
+        const pa = layout.pos[a], pb = layout.pos[b];
+        if (!pa || !pb) return null;
+        const done = isDone ? isDone(a) : false;
+        return (
+          <path key={`${a}-${b}`} d={elbowPath(pa, pb)} fill="none"
+            stroke={done ? '#B9B7C4' : '#D9D7E0'} strokeWidth="1.5"
+            strokeDasharray={done ? undefined : '5,4'}
+            strokeLinejoin="round" markerEnd="url(#arrow)"/>
+        );
+      })}
+    </svg>
+  );
+}
+
+// Read-only task card for the Plan Review graph — no status yet (nothing
+// has run), just what the task is and whether it's blocked on a sibling.
+function PlanNodeCard({ node, pos }) {
+  const hasDeps = (node.dependsOn || []).length > 0;
+  return (
+    <div style={{ position: 'absolute', left: pos.x, top: pos.y, width: NODE_W, height: NODE_H, background: TASK_TYPES[node.type].color, border: '1px solid #E1DFE7', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', animation: 'nodeFadeIn 0.25s ease forwards', animationDelay: `${parseInt(node.id) * 40}ms`, opacity: 0 }}>
+      <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 10, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5 }}>{TASK_TYPES[node.type].label}</div>
+      <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.label}</div>
+      <div style={{ flex: 1, fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', lineHeight: 1.35, overflow: 'hidden' }}>{node.desc}</div>
+      <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 10, color: hasDeps ? '#52515B' : '#00875A', fontStyle: hasDeps ? 'italic' : 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {hasDeps ? `Runs after: ${node.dependsOn.map(d => PLANNED_TASKS.find(x => x.id === d)?.label).join(', ')}` : 'Can start immediately'}
+      </div>
+    </div>
+  );
+}
+
 // Turns a blocked/failed Task into the shape SubtaskGroup and the chat flow
 // both expect. This is what "opens" when a user clicks Answer/Retry — a
 // question to resolve, not a one-click state flip.
@@ -1539,10 +1599,15 @@ function WorkflowDetailView({ workflow, onNavigate }) {
   const [nameValue, setNameValue] = useState(workflow?.name || 'Newsletter Signup Automation');
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleMode, setScheduleMode] = useState('now');
+  // A user-level pause, independent of any task's own status — Junaid
+  // (25 Aug): consolidates the header's status pill and Run button into one
+  // control ("Run automation" → "Running"/"Scheduled", with Pause).
+  const [paused, setPaused] = useState(false);
 
   const selectedNode = nodes.find(n => n.id === selected);
   const connections = getConnections(nodes);
   const layout = computeLayout(nodes);
+  const hasStarted = nodes.some(n => (n.status || 'not_started') !== 'not_started');
 
   // Persists automatically — Junaid (24 Aug): a manual Save button was
   // overkill for something that should just always be saved.
@@ -1757,41 +1822,77 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               </button>
             )}
           </div>
+          {/* Consolidated status + primary action — Junaid (25 Aug): a
+              separate status pill, schedule button, and Run button said
+              overlapping things. Before launch it's just "when" (schedule)
+              + "go" (Run); once running, the schedule question is moot, so
+              the whole area collapses into one status pill with Pause/
+              Resume next to it. */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ background: automationStatusColors.bg, color: automationStatusColors.color, fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{automationStatusLabel}</span>
-            <div style={{ position: 'relative' }}>
-              <button onClick={() => setScheduleOpen(o => !o)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
-                onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
-                onMouseOut={e => e.currentTarget.style.background = '#fff'}>
-                ◷ {scheduleMode === 'now' ? 'Runs immediately' : 'Scheduled'}
-              </button>
-              {scheduleOpen && (
-                <div className="fade-up" style={{ position: 'absolute', top: '110%', right: 0, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: 12, width: 220, boxShadow: '0 8px 20px rgba(0,0,0,0.1)', zIndex: 50 }}>
-                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', marginBottom: 8 }}>When should this run?</div>
-                  {[['now', 'Now'], ['later', 'Later']].map(([m, label]) => (
-                    <button key={m} onClick={() => setScheduleMode(m)}
-                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', marginBottom: 6, borderRadius: 6, border: `1px solid ${scheduleMode === m ? '#3838E7' : '#E1DFE7'}`, background: scheduleMode === m ? '#F5F5FF' : '#fff', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', cursor: 'pointer' }}>
-                      {label}
-                    </button>
-                  ))}
-                  {scheduleMode === 'later' && (
-                    <input type="datetime-local" style={{ width: '100%', padding: '7px 9px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}/>
-                  )}
-                  <button onClick={() => setScheduleOpen(false)}
-                    style={{ width: '100%', padding: '7px', background: '#3838E7', border: 'none', borderRadius: 6, color: '#fff', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
-                    Done
+            {!hasStarted ? (
+              <>
+                <div style={{ position: 'relative' }}>
+                  <button onClick={() => setScheduleOpen(o => !o)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+                    onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+                    ◷ {scheduleMode === 'now' ? 'Runs immediately' : 'Scheduled'}
                   </button>
+                  {scheduleOpen && (
+                    <div className="fade-up" style={{ position: 'absolute', top: '110%', right: 0, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: 12, width: 220, boxShadow: '0 8px 20px rgba(0,0,0,0.1)', zIndex: 50 }}>
+                      <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', marginBottom: 8 }}>When should this run?</div>
+                      {[['now', 'Now'], ['later', 'Later']].map(([m, label]) => (
+                        <button key={m} onClick={() => setScheduleMode(m)}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', marginBottom: 6, borderRadius: 6, border: `1px solid ${scheduleMode === m ? '#3838E7' : '#E1DFE7'}`, background: scheduleMode === m ? '#F5F5FF' : '#fff', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', cursor: 'pointer' }}>
+                          {label}
+                        </button>
+                      ))}
+                      {scheduleMode === 'later' && (
+                        <input type="datetime-local" style={{ width: '100%', padding: '7px 9px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}/>
+                      )}
+                      <button onClick={() => setScheduleOpen(false)}
+                        style={{ width: '100%', padding: '7px', background: '#3838E7', border: 'none', borderRadius: 6, color: '#fff', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
+                        Done
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <button onClick={startExecution}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}
-              onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
-              onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 1.5L11.5 6.5L2.5 11.5V1.5Z" fill="#fff"/></svg>
-              Run automation
-            </button>
+                {scheduleMode === 'later' ? (
+                  <span style={{ background: '#EEF0FF', color: '#3838E7', fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>📅 Scheduled</span>
+                ) : (
+                  <button onClick={startExecution}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
+                    onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 1.5L11.5 6.5L2.5 11.5V1.5Z" fill="#fff"/></svg>
+                    Run automation
+                  </button>
+                )}
+              </>
+            ) : paused ? (
+              <>
+                <span style={{ background: '#F1F0F5', color: '#918F9A', fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>⏸ Paused</span>
+                <button onClick={() => setPaused(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 1.5L11.5 6.5L2.5 11.5V1.5Z" fill="#fff"/></svg>
+                  Resume
+                </button>
+              </>
+            ) : automationStatus === 'completed' ? (
+              <span style={{ background: automationStatusColors.bg, color: automationStatusColors.color, fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>✓ {automationStatusLabel}</span>
+            ) : (
+              <>
+                <span style={{ background: automationStatusColors.bg, color: automationStatusColors.color, fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>
+                  {automationStatus === 'attention' ? '⚠' : '●'} {automationStatusLabel}
+                </span>
+                <button onClick={() => setPaused(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
+                  onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+                  onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+                  ⏸ Pause
+                </button>
+              </>
+            )}
           </div>
         </div>
         {/* Generated info bar — the whole Automation traces back to one prompt */}
@@ -1814,29 +1915,16 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             {/* Grid stage — sized to the computed layout so the card grid and
                 the connector layer share one coordinate space. */}
             <div style={{ position: 'relative', width: layout.width, height: layout.height }}>
+              {/* Right-angle connectors derived from dependsOn — same
+                  component as the Plan Review graph (Junaid, 25 Aug), so a
+                  satisfied dependency turning solid here is the exact same
+                  visual language as "not done yet" was there. A task with
+                  several dependents fans out; a task depending on several
+                  others converges them — no special-cased branch logic. */}
+              <DependencyEdges connections={connections} layout={layout}
+                isDone={id => isSatisfied(nodes.find(n => n.id === id)?.status)}/>
+
               <svg style={{ position: 'absolute', inset: 0, width: layout.width, height: layout.height, pointerEvents: 'none', overflow: 'visible' }}>
-                <defs>
-                  <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
-                    <polygon points="0 0, 6 2.5, 0 5" fill="#C7C5D0"/>
-                  </marker>
-                </defs>
-
-                {/* Right-angle connectors derived from dependsOn. A task with
-                    several dependents fans out; a task depending on several
-                    others converges them — no special-cased branch logic. */}
-                {connections.map(([a, b]) => {
-                  const pa = layout.pos[a], pb = layout.pos[b];
-                  const na = nodes.find(n => n.id === a);
-                  if (!pa || !pb || !na) return null;
-                  const done = isSatisfied(na.status);
-                  return (
-                    <path key={`${a}-${b}`} d={elbowPath(pa, pb)} fill="none"
-                      stroke={done ? '#B9B7C4' : '#D9D7E0'} strokeWidth="1.5"
-                      strokeDasharray={done ? undefined : '5,4'}
-                      strokeLinejoin="round" markerEnd="url(#arrow)"/>
-                  );
-                })}
-
                 {/* (+) insertion affordance, parked on the connector's elbow */}
                 {connections.map(([a, b]) => {
                   const pa = layout.pos[a], pb = layout.pos[b];
@@ -2142,9 +2230,21 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             const waitingItems = nodes.filter(n => (n.status || 'not_started') === 'not_started').map(n => ({ id: n.id, label: n.label, waiting: 'Waiting on dependencies' }));
             const doneItems = nodes.filter(n => (n.status === 'completed' || n.status === 'skipped') && !reviewedIds.has(n.id))
               .map(n => ({ id: n.id, label: n.label, waiting: n.status === 'skipped' ? 'Skipped' : 'Completed' }));
+            const completedCount = nodes.filter(n => n.status === 'completed' || n.status === 'skipped').length;
+            const progressLabel = automationStatus === 'completed'
+              ? 'All tasks completed'
+              : automationStatus === 'attention'
+              ? `${blockedItems.length} task${blockedItems.length === 1 ? '' : 's'} need your input`
+              : automationStatus === 'running'
+              ? `Running (Task ${completedCount}/${nodes.length} complete)`
+              : 'Queued — hasn’t started yet';
 
             return (
               <div>
+                {/* Same description/progress/roll-up summary as the
+                    dashboard's side panel — Junaid (25 Aug). */}
+                <AutomationProgressSummary description={workflow?.description} progressLabel={progressLabel}
+                  counts={{ blocked: blockedItems.length, review: reviewItems.length, running: runningItems.length }}/>
                 <SubtaskGroup kind="blocked" title={`${blockedItems.length} task${blockedItems.length === 1 ? '' : 's'} need your input`}
                   items={blockedItems} defaultOpen
                   onAnswer={(kind, item) => openReview(kind, item)}
