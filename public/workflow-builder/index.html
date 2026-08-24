@@ -76,24 +76,36 @@ const P = {
 };
 
 // ─── WORKFLOW DATA ──────────────────────────────────────────────────────────
-// Automation-level lifecycle. "Pending" is the queued-but-not-yet-executing
-// state Fred described: Prompt → Plan generation → user validates → Pending
-// → Execution. Draft still exists for automations never submitted.
+// Automation-level lifecycle (Junaid, 24 Aug — reworked because "Running"
+// meant two different things depending on whether you were looking at an
+// Automation or a Task, and "Blocked"/"Ready" were really the same situation
+// — the automation can't move without you — for two different reasons).
+// Six mutually exclusive states, each with one job:
+//   Draft      → prompt not yet submitted
+//   Planning   → Planner is generating the plan, not yet reviewed
+//   Scheduled  → plan confirmed, start deferred to a future time
+//   Running    → confirmed and executing; nothing needs the user right now
+//   Needs attention → a task failed/needs input, OR everything's done and
+//                      awaiting final approval — either way, stalled on you
+//   Paused     → the user deliberately stopped it (not a problem, a choice)
+//   Completed  → every task finished (or was skipped) and any required
+//                approval was given
+// Task-level status keeps its own "In progress" label (STATUS_CONFIG below)
+// specifically so it never reads as the same word as this "Running".
 const AUTOMATION_STATUS = {
-  processing: { label: 'Processing', color: '#3838E7', bg: '#EEF0FF', bar: '#3838E7' },
-  running:          { label: 'Running',        color: '#00B37A', bg: '#E6F9F3', bar: '#00B37A' },
-  scheduled:        { label: 'Scheduled',      color: '#3838E7', bg: '#EEF0FF', bar: '#5B5BEF' },
-  blocked:          { label: 'Blocked',        color: '#E03D3D', bg: '#FDEAEA', bar: '#E03D3D' },
-  ready:            { label: 'Ready',          color: '#00B37A', bg: '#E6F9F3', bar: '#00B37A' },
-  paused:           { label: 'Paused',         color: '#B45309', bg: '#FEF3E2', bar: '#E9A23B' },
-  draft:            { label: 'Draft',          color: '#918F9A', bg: '#F1F0F5', bar: '#918F9A' },
-  creating:         { label: 'Creating',       color: '#3838E7', bg: '#EEF0FF', bar: '#3838E7' },
+  draft:      { label: 'Draft',            color: '#918F9A', bg: '#F1F0F5', bar: '#918F9A' },
+  planning:   { label: 'Generating plan',  color: '#3838E7', bg: '#EEF0FF', bar: '#3838E7' },
+  scheduled:  { label: 'Scheduled',        color: '#3838E7', bg: '#EEF0FF', bar: '#5B5BEF' },
+  running:    { label: 'Running',          color: '#3838E7', bg: '#EEF0FF', bar: '#3838E7' },
+  attention:  { label: 'Needs attention',  color: '#B45309', bg: '#FEF3E2', bar: '#E9A23B' },
+  paused:     { label: 'Paused',           color: '#918F9A', bg: '#F1F0F5', bar: '#B9B7C4' },
+  completed:  { label: 'Completed',        color: '#00B37A', bg: '#E6F9F3', bar: '#00B37A' },
 };
 
 const AUTOMATIONS = [
   {
     id: '1', name: 'Automated A/B Test on Redesign', createdBy: 'Paul Tremblay', createdAgo: '2 days ago',
-    status: 'blocked',
+    status: 'attention',
     description: 'Continuously tests redesign hypotheses on the checkout funnel, promoting only variations that beat the original on conversion rate.',
     progressLabel: 'Currently building variations (Task 4/7)',
     blocked: [
@@ -117,14 +129,14 @@ const AUTOMATIONS = [
       { id: 'p2', label: 'Configuring GA4 integration', waiting: 'Started 4 minutes ago' },
     ],
   },
-  { id: '2', name: 'Checkout optimization', createdBy: 'Paul Tremblay', createdAgo: '5 days ago', status: 'processing',
+  { id: '2', name: 'Checkout optimization', createdBy: 'Paul Tremblay', createdAgo: '5 days ago', status: 'planning',
     description: 'Test three new checkout button variants against the current design and promote the best performer.',
     progressLabel: 'Generating the plan', blocked: [], readyForReview: [], runningTasks: [] },
   { id: '3', name: 'Homepage personalization', createdBy: 'Amélie Roux', createdAgo: '1 week ago', status: 'scheduled',
     scheduledAt: 'June 14, 2026 · 09:00',
     description: 'Personalize the homepage hero for returning visitors based on their last viewed category.',
     progressLabel: 'Queued for execution', blocked: [], readyForReview: [], runningTasks: [] },
-  { id: '4', name: 'June Automated Experiments', createdBy: 'Paul Tremblay', createdAgo: '2 weeks ago', status: 'ready',
+  { id: '4', name: 'June Automated Experiments', createdBy: 'Paul Tremblay', createdAgo: '2 weeks ago', status: 'attention',
     description: 'Batch of June experiments, ready to launch once the assets are approved.',
     progressLabel: 'All tasks complete — awaiting final approval',
     blocked: [],
@@ -167,10 +179,12 @@ const TASK_TYPES = {
   finalize:  { label: 'Finalize',              color: '#FFE4D6' },
 };
 
+// Labeled "In progress" rather than "Running" so a Task never reads as the
+// same status as the whole Automation (see AUTOMATION_STATUS above).
 const STATUS_CONFIG = {
   completed:       { label: 'Completed',       color: '#00B37A', bg: '#E6F9F3' },
-  running:         { label: 'Running',         color: '#3838E7', bg: '#EEF0FF' },
-  action_required: { label: 'Action required', color: '#B45309', bg: '#FEF3E2' },
+  in_progress:     { label: 'In progress',     color: '#3838E7', bg: '#EEF0FF' },
+  action_required: { label: 'Needs input',     color: '#B45309', bg: '#FEF3E2' },
   failed:          { label: 'Failed',          color: '#E03D3D', bg: '#FDEAEA' },
   not_started:     { label: 'Waiting',         color: '#918F9A', bg: '#F5F5F7' },
   skipped:         { label: 'Skipped',         color: '#918F9A', bg: '#F5F5F7' },
@@ -524,7 +538,7 @@ function SubtaskChip({ kind, count }) {
   const cfg = {
     blocked: { color: '#E03D3D', bg: '#FDEAEA', label: 'blocked', icon: '⊖' },
     review:  { color: '#00875A', bg: '#E6F9F3', label: 'ready for review', icon: '✓' },
-    running: { color: '#3838E7', bg: '#EEF0FF', label: 'running', icon: '◷' },
+    running: { color: '#3838E7', bg: '#EEF0FF', label: 'in progress', icon: '◷' },
   }[kind];
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: cfg.color, background: cfg.bg, padding: '3px 9px', borderRadius: 6, whiteSpace: 'nowrap' }}>
@@ -683,7 +697,7 @@ function AutomationDetailPanel({ automation: a, onClose, onOpen, onAnswer }) {
       <div style={{ padding: '0 20px 20px' }}>
         <SubtaskGroup kind="blocked" title={`${a.blocked.length} subtask${a.blocked.length === 1 ? '' : 's'} blocked`} items={a.blocked} defaultOpen onAnswer={onAnswer}/>
         <SubtaskGroup kind="review" title="Assets ready for review" items={a.readyForReview} onAnswer={onAnswer}/>
-        <SubtaskGroup kind="running" title="Subtasks currently running" items={a.runningTasks} onAnswer={onAnswer}/>
+        <SubtaskGroup kind="running" title="Subtasks in progress" items={a.runningTasks} onAnswer={onAnswer}/>
       </div>
     </div>
   );
@@ -698,7 +712,7 @@ function WorkflowsDashboard({ onNavigate }) {
 
   const selectedAutomation = automations.find(a => a.id === selectedId) || null;
 
-  const STATUS_ORDER = ['processing', 'running', 'scheduled', 'blocked', 'ready', 'draft'];
+  const STATUS_ORDER = ['running', 'attention', 'scheduled', 'planning', 'paused', 'completed', 'draft'];
   const counts = Object.fromEntries(STATUS_ORDER.map(s => [s, automations.filter(a => a.status === s).length]));
 
   const searched = automations.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
@@ -1205,7 +1219,7 @@ function NodeBox({ node, pos, selected, onClick, allNodes, onResolve, onReview }
           </div>
         )}
 
-        {status === 'running' && (
+        {status === 'in_progress' && (
           <div style={{ marginTop: 6 }} onClick={e => e.stopPropagation()}>
             <button onClick={() => onResolve(node.id, 'completed')} style={{ width: '100%', padding: '5px 8px', background: '#fff', border: '1px solid #3838E7', color: '#3838E7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Mark complete</button>
           </div>
@@ -1494,7 +1508,6 @@ function ReviewCard({ kind, item }) {
 
 function WorkflowDetailView({ workflow, onNavigate }) {
   const [selected, setSelected] = useState(null);
-  const [saved, setSaved] = useState(false);
   // A freshly confirmed plan is queued, not running: every task starts at
   // "not started" until the user kicks execution off.
   const [nodes, setNodes] = useState(
@@ -1531,6 +1544,10 @@ function WorkflowDetailView({ workflow, onNavigate }) {
   const connections = getConnections(nodes);
   const layout = computeLayout(nodes);
 
+  // Persists automatically — Junaid (24 Aug): a manual Save button was
+  // overkill for something that should just always be saved.
+  useEffect(() => { WORKFLOW_NODES = nodes; }, [nodes]);
+
   // Arriving from the dashboard's Answer/Review button: jump straight into
   // the same chat + preview flow, carrying the exact item the user clicked
   // on the dashboard, whether or not it maps to a node in this graph.
@@ -1541,26 +1558,27 @@ function WorkflowDetailView({ workflow, onNavigate }) {
 
   // Automation-level status, derived from every Task's status rather than
   // stored separately — this is the "what does completed/blocked mean for
-  // the whole Automation" question Fred answered on Aug 21.
+  // the whole Automation" question Fred answered on Aug 21. Uses the same
+  // vocabulary as AUTOMATION_STATUS on the dashboard (Junaid, 24 Aug).
   const statuses = nodes.map(n => n.status || 'not_started');
   const automationStatus = statuses.some(s => s === 'failed' || s === 'action_required')
-    ? 'action_required'
-    : statuses.some(s => s === 'running')
+    ? 'attention'
+    : statuses.some(s => s === 'in_progress')
     ? 'running'
     : statuses.every(s => s === 'completed' || s === 'skipped')
     ? 'completed'
-    : 'pending';
+    : 'queued';
   const automationStatusLabel = {
-    action_required: 'Action required',
+    attention: 'Needs attention',
     running: 'Running',
     completed: 'Completed',
-    pending: 'Pending',
+    queued: 'Queued',
   }[automationStatus];
   const automationStatusColors = {
-    action_required: { bg: '#FEF3E2', color: '#B45309' },
+    attention: { bg: '#FEF3E2', color: '#B45309' },
     running: { bg: '#EEF0FF', color: '#3838E7' },
     completed: { bg: '#E6F9F3', color: '#00B37A' },
-    pending: { bg: '#F5F5F7', color: '#918F9A' },
+    queued: { bg: '#F5F5F7', color: '#918F9A' },
   }[automationStatus];
 
   function handleNodePropertyChange(nodeId, propertyName, value) {
@@ -1586,7 +1604,7 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             const dep = next.find(x => x.id === depId);
             return dep && isSatisfied(dep.status);
           });
-          if (ready) { changed = true; return { ...n, status: 'running' }; }
+          if (ready) { changed = true; return { ...n, status: 'in_progress' }; }
           return n;
         });
       }
@@ -1652,15 +1670,8 @@ function WorkflowDetailView({ workflow, onNavigate }) {
         const dep = prev.find(x => x.id === id);
         return dep && isSatisfied(dep.status);
       });
-      return ready ? { ...n, status: 'running' } : n;
+      return ready ? { ...n, status: 'in_progress' } : n;
     }));
-  }
-
-  function handleSave() {
-    // Update the global WORKFLOW_NODES with current state
-    WORKFLOW_NODES = nodes;
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   }
 
   function insertNodeOnEdge(sourceId, targetId, nodeType) {
@@ -1747,7 +1758,6 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             )}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {saved && <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#00B37A' }}>✓ Saved</span>}
             <span style={{ background: automationStatusColors.bg, color: automationStatusColors.color, fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{automationStatusLabel}</span>
             <div style={{ position: 'relative' }}>
               <button onClick={() => setScheduleOpen(o => !o)}
@@ -1775,17 +1785,6 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                 </div>
               )}
             </div>
-            <button onClick={handleSave}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
-              onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
-              onMouseOut={e => e.currentTarget.style.background = '#fff'}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M11.5 13H2.5C1.94772 13 1.5 12.5523 1.5 12V2C1.5 1.44772 1.94772 1 2.5 1H9.5L12.5 4V12C12.5 12.5523 12.0523 13 11.5 13Z" stroke="#52515B" strokeWidth="1.3" strokeLinejoin="round"/>
-                <path d="M9 1V4.5H4V1" stroke="#52515B" strokeWidth="1.3" strokeLinejoin="round"/>
-                <path d="M3.5 8H10.5M3.5 10.5H8" stroke="#52515B" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              Save
-            </button>
             <button onClick={startExecution}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}
               onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
@@ -1985,6 +1984,87 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             ))}
           </div>
 
+          {/* Chat gets its own flex column so the input bar is a fixed
+              footer, not just the last thing in a scrolling page — Junaid
+              (24 Aug): the input was invisible without scrolling all the
+              way down. Tasks/task-detail keep the simple whole-pane scroll
+              since they have no pinned footer to protect. */}
+          {panelTab === 'chat' ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '18px 20px' }}>
+            <div style={{ flex: 1, overflow: 'auto', marginBottom: 12 }}>
+              {chatLog.length === 0 ? (
+                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', lineHeight: 1.6, margin: 0 }}>
+                  Describe a change and Kai will update the plan — e.g. “add a third variant”, or “only target mobile visitors”. The canvas stays visible while you do.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {chatLog.map((m, i) => (
+                    <div key={i} style={{ alignSelf: m.from === 'user' ? 'flex-end' : 'flex-start', maxWidth: m.card ? '100%' : '85%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ background: m.from === 'user' ? '#3838E7' : '#F5F5F7', color: m.from === 'user' ? '#fff' : '#1B1B23', padding: '9px 12px', borderRadius: 10, fontFamily: 'Roboto, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
+                        {m.text}
+                      </div>
+                      {m.card && <ReviewCard kind={m.card.kind} item={m.card.item}/>}
+                    </div>
+                  ))}
+                  <div ref={chatEndRef}/>
+                </div>
+              )}
+            </div>
+
+            {/* Quick actions for whatever's being reviewed — the fastest
+                path is a tap, but typing in the input below works too. */}
+            {reviewing && !requestingChanges && (
+              <div className="fade-up" style={{ marginBottom: 10, flexShrink: 0 }}>
+                {reviewing.item.type === 'select' && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {reviewing.item.options.map(opt => (
+                      <button key={opt} onClick={() => { setChatLog(l => [...l, { from: 'user', text: opt }]); answerReview({ outcome: 'confirmed', value: opt }); }}
+                        style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid #3838E7', background: '#fff', color: '#3838E7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {reviewing.kind === 'blocked' && reviewing.item.type === 'retry' && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Retry' }]); answerReview({ outcome: 'retried' }); }}
+                      style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E03D3D', background: '#fff', color: '#E03D3D', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Retry</button>
+                    <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Skip' }]); answerReview({ outcome: 'skipped' }); }}
+                      style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E1DFE7', background: '#fff', color: '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Skip</button>
+                  </div>
+                )}
+                {reviewing.item.type === 'approve' && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setRequestingChanges(true)}
+                      style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E1DFE7', background: '#fff', color: '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Request changes</button>
+                    <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Approve' }]); answerReview({ outcome: 'approved' }); }}
+                      style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', background: '#3838E7', color: '#fff', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>{reviewing.kind === 'blocked' ? 'Approve & resume' : 'Approve'}</button>
+                  </div>
+                )}
+              </div>
+            )}
+            {reviewing && requestingChanges && (
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '0 0 8px', flexShrink: 0 }}>Type what should change below, then press Enter.</p>
+            )}
+
+            <div style={{ border: '1px solid #E1DFE7', borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
+              <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key !== 'Enter' || !chatInput.trim()) return;
+                  const text = chatInput.trim();
+                  if (reviewing && requestingChanges) {
+                    setChatLog(l => [...l, { from: 'user', text }]);
+                    answerReview({ outcome: 'changes', value: text });
+                  } else {
+                    setChatLog(l => [...l, { from: 'user', text }, { from: 'kai', text: 'Updated the plan. Review the affected tasks on the canvas.' }]);
+                  }
+                  setChatInput('');
+                }}
+                placeholder={reviewing && requestingChanges ? 'What should change? Press Enter to send…' : 'Ask for a change to this automation…'}
+                style={{ flex: 1, border: 'none', outline: 'none', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', background: 'transparent', minWidth: 0 }}/>
+            </div>
+          </div>
+          ) : (
           <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
           {/* ── Task detail (drills in from canvas or Tasks list) ── */}
           {selectedNode ? (
@@ -2053,11 +2133,11 @@ function WorkflowDetailView({ workflow, onNavigate }) {
           /* ── Tasks tab: same grouped list as the dashboard panel, same
                  SubtaskGroup component, same Answer/Review action — Chris
                  (24 Aug): these two views are "supposed to be identical." ── */
-          ) : panelTab === 'tasks' ? (() => {
+          ) : (() => {
             const blockedItems = nodes.filter(n => n.status === 'failed' || n.status === 'action_required').map(nodeToItem);
             const reviewNodes = nodes.filter(n => n.type === 'variant' && n.status === 'completed');
             const reviewItems = reviewNodes.map(variantToReviewItem);
-            const runningItems = nodes.filter(n => n.status === 'running').map(n => ({ id: n.id, label: n.label, waiting: 'Running' }));
+            const runningItems = nodes.filter(n => n.status === 'in_progress').map(n => ({ id: n.id, label: n.label, waiting: 'In progress' }));
             const reviewedIds = new Set(reviewNodes.map(n => n.id));
             const waitingItems = nodes.filter(n => (n.status || 'not_started') === 'not_started').map(n => ({ id: n.id, label: n.label, waiting: 'Waiting on dependencies' }));
             const doneItems = nodes.filter(n => (n.status === 'completed' || n.status === 'skipped') && !reviewedIds.has(n.id))
@@ -2072,92 +2152,14 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                 <SubtaskGroup kind="review" title="Assets ready for review" items={reviewItems}
                   onAnswer={(kind, item) => openReview(kind, item)}
                   onOpen={it => setSelected(it.id)}/>
-                <SubtaskGroup kind="running" title="Running" items={runningItems} onOpen={it => setSelected(it.id)}/>
+                <SubtaskGroup kind="running" title="In progress" items={runningItems} onOpen={it => setSelected(it.id)}/>
                 <SubtaskGroup kind="waiting" title="Waiting on dependencies" items={waitingItems} onOpen={it => setSelected(it.id)}/>
                 <SubtaskGroup kind="done" title="Completed" items={doneItems} onOpen={it => setSelected(it.id)}/>
               </div>
             );
-          })()
-
-          /* ── Chat tab: prompt-based changes, and the only place tasks and
-                 assets get resolved (Chris, 24 Aug) ── */
-          : (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div style={{ flex: 1, marginBottom: 12 }}>
-                {chatLog.length === 0 ? (
-                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', lineHeight: 1.6, margin: 0 }}>
-                    Describe a change and Kai will update the plan — e.g. “add a third variant”, or “only target mobile visitors”. The canvas stays visible while you do.
-                  </p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {chatLog.map((m, i) => (
-                      <div key={i} style={{ alignSelf: m.from === 'user' ? 'flex-end' : 'flex-start', maxWidth: m.card ? '100%' : '85%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div style={{ background: m.from === 'user' ? '#3838E7' : '#F5F5F7', color: m.from === 'user' ? '#fff' : '#1B1B23', padding: '9px 12px', borderRadius: 10, fontFamily: 'Roboto, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
-                          {m.text}
-                        </div>
-                        {m.card && <ReviewCard kind={m.card.kind} item={m.card.item}/>}
-                      </div>
-                    ))}
-                    <div ref={chatEndRef}/>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick actions for whatever's being reviewed — the fastest
-                  path is a tap, but typing in the input below works too. */}
-              {reviewing && !requestingChanges && (
-                <div className="fade-up" style={{ marginBottom: 10 }}>
-                  {reviewing.item.type === 'select' && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {reviewing.item.options.map(opt => (
-                        <button key={opt} onClick={() => { setChatLog(l => [...l, { from: 'user', text: opt }]); answerReview({ outcome: 'confirmed', value: opt }); }}
-                          style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid #3838E7', background: '#fff', color: '#3838E7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {reviewing.kind === 'blocked' && reviewing.item.type === 'retry' && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Retry' }]); answerReview({ outcome: 'retried' }); }}
-                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E03D3D', background: '#fff', color: '#E03D3D', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Retry</button>
-                      <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Skip' }]); answerReview({ outcome: 'skipped' }); }}
-                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E1DFE7', background: '#fff', color: '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Skip</button>
-                    </div>
-                  )}
-                  {reviewing.item.type === 'approve' && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => setRequestingChanges(true)}
-                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E1DFE7', background: '#fff', color: '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Request changes</button>
-                      <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Approve' }]); answerReview({ outcome: 'approved' }); }}
-                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', background: '#3838E7', color: '#fff', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>{reviewing.kind === 'blocked' ? 'Approve & resume' : 'Approve'}</button>
-                    </div>
-                  )}
-                </div>
-              )}
-              {reviewing && requestingChanges && (
-                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '0 0 8px' }}>Type what should change below, then press Enter.</p>
-              )}
-
-              <div style={{ border: '1px solid #E1DFE7', borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
-                <input value={chatInput} onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key !== 'Enter' || !chatInput.trim()) return;
-                    const text = chatInput.trim();
-                    if (reviewing && requestingChanges) {
-                      setChatLog(l => [...l, { from: 'user', text }]);
-                      answerReview({ outcome: 'changes', value: text });
-                    } else {
-                      setChatLog(l => [...l, { from: 'user', text }, { from: 'kai', text: 'Updated the plan. Review the affected tasks on the canvas.' }]);
-                    }
-                    setChatInput('');
-                  }}
-                  placeholder={reviewing && requestingChanges ? 'What should change? Press Enter to send…' : 'Ask for a change to this automation…'}
-                  style={{ flex: 1, border: 'none', outline: 'none', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', background: 'transparent', minWidth: 0 }}/>
-              </div>
-            </div>
-          )}
+          })()}
           </div>
+          )}
         </div>
       </div>
     </div>
