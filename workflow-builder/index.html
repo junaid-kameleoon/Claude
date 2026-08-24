@@ -24,7 +24,6 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     html, body, #root { height: 100%; margin: 0; padding: 0; overflow: hidden; }
@@ -45,8 +44,8 @@
     }
     .fade-up { animation: fadeUp 0.22s ease forwards; }
     @keyframes nodeFadeIn {
-      from { opacity: 0; transform: translateY(6px) translateX(-50%); }
-      to   { opacity: 1; transform: translateY(0)   translateX(-50%); }
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -77,80 +76,146 @@ const P = {
 };
 
 // ─── WORKFLOW DATA ──────────────────────────────────────────────────────────
-const WORKFLOWS = [
-  { id: '1', name: 'Test & Deploy Automation', status: 'live', description: 'A/B test workflow with traffic ramp-up and automatic deployment on conversion winner.', updatedAt: '2 days ago', trigger: 'url' },
-  { id: '2', name: 'Traffic Ramp-Up Strategy', status: 'draft', description: 'Gradually ramp traffic to new variants with safeguard metrics and rollback conditions.', updatedAt: '5 days ago', trigger: 'schedule' },
-  { id: '3', name: 'Mobile Checkout Optimization', status: 'live', description: 'Optimize checkout funnel for mobile users with personalization rules and targeting.', updatedAt: '1 week ago', trigger: 'url' },
-  { id: '4', name: 'Segment-Based Personalization', status: 'archived', description: 'Personalize content based on user segments and behavioral data signals.', updatedAt: '3 months ago', trigger: 'webhook' },
-  { id: '5', name: 'API Feature Flag Rollout', status: 'draft', description: 'Progressive rollout of API feature flags with error rate monitoring and auto-rollback.', updatedAt: 'Yesterday', trigger: 'api' },
-  { id: '6', name: 'Homepage Hero Test', status: 'live', description: 'Multivariate test on hero banner copy, image, and CTA button color.', updatedAt: '3 days ago', trigger: 'url' },
+// Automation-level lifecycle. "Pending" is the queued-but-not-yet-executing
+// state Fred described: Prompt → Plan generation → user validates → Pending
+// → Execution. Draft still exists for automations never submitted.
+const AUTOMATION_STATUS = {
+  'pre-processing': { label: 'Pre-processing', color: '#3838E7', bg: '#EEF0FF', bar: '#3838E7' },
+  running:          { label: 'Running',        color: '#00B37A', bg: '#E6F9F3', bar: '#00B37A' },
+  scheduled:        { label: 'Scheduled',      color: '#3838E7', bg: '#EEF0FF', bar: '#5B5BEF' },
+  blocked:          { label: 'Blocked',        color: '#E03D3D', bg: '#FDEAEA', bar: '#E03D3D' },
+  ready:            { label: 'Ready',          color: '#00B37A', bg: '#E6F9F3', bar: '#00B37A' },
+  paused:           { label: 'Paused',         color: '#B45309', bg: '#FEF3E2', bar: '#E9A23B' },
+  draft:            { label: 'Draft',          color: '#918F9A', bg: '#F1F0F5', bar: '#918F9A' },
+  creating:         { label: 'Creating',       color: '#3838E7', bg: '#EEF0FF', bar: '#3838E7' },
+};
+
+const AUTOMATIONS = [
+  {
+    id: '1', name: 'Automated A/B Test on Redesign', createdBy: 'Paul Tremblay', createdAgo: '2 days ago',
+    status: 'blocked',
+    description: 'Continuously tests redesign hypotheses on the checkout funnel, promoting only variations that beat the original on conversion rate.',
+    progressLabel: 'Currently building variations (Task 4/7)',
+    blocked: [
+      { id: 'b1', label: 'Confirm the primary audience segment', waiting: 'Waiting 2 days' },
+      { id: 'b2', label: 'Approve variation copy for mobile', waiting: 'Waiting 6 hours' },
+    ],
+    readyForReview: [
+      { id: 'r1', label: 'Variation A — hero CTA', waiting: 'Built 3 hours ago' },
+      { id: 'r2', label: 'Variation B — sticky banner', waiting: 'Built 3 hours ago' },
+      { id: 'r3', label: 'Audience segment — returning buyers', waiting: 'Built 1 day ago' },
+    ],
+    runningTasks: [
+      { id: 'p1', label: 'Building variation 4 of 4', waiting: 'Started 12 minutes ago' },
+      { id: 'p2', label: 'Configuring GA4 integration', waiting: 'Started 4 minutes ago' },
+    ],
+  },
+  { id: '2', name: 'Checkout optimization', createdBy: 'Paul Tremblay', createdAgo: '5 days ago', status: 'pre-processing',
+    description: 'Test three new checkout button variants against the current design and promote the best performer.',
+    progressLabel: 'Generating the plan', blocked: [], readyForReview: [], runningTasks: [] },
+  { id: '3', name: 'Homepage personalization', createdBy: 'Amélie Roux', createdAgo: '1 week ago', status: 'scheduled',
+    scheduledAt: 'June 14, 2026 · 09:00',
+    description: 'Personalize the homepage hero for returning visitors based on their last viewed category.',
+    progressLabel: 'Queued for execution', blocked: [], readyForReview: [], runningTasks: [] },
+  { id: '4', name: 'June Automated Experiments', createdBy: 'Paul Tremblay', createdAgo: '2 weeks ago', status: 'ready',
+    description: 'Batch of June experiments, ready to launch once the assets are approved.',
+    progressLabel: 'All tasks complete — awaiting final approval',
+    blocked: [],
+    readyForReview: [
+      { id: 'r1', label: 'Variation A — pricing table', waiting: 'Built 2 days ago' },
+      { id: 'r2', label: 'Variation B — trust badges', waiting: 'Built 2 days ago' },
+      { id: 'r3', label: 'Goal — checkout completion', waiting: 'Built 2 days ago' },
+      { id: 'r4', label: 'Segment — high-intent visitors', waiting: 'Built 2 days ago' },
+    ],
+    runningTasks: [] },
+  { id: '5', name: 'Cart Abandonment Recovery', createdBy: 'Amélie Roux', createdAgo: '3 weeks ago', status: 'paused',
+    description: 'Recover abandoned carts with a targeted exit-intent offer.',
+    progressLabel: 'Paused by Amélie Roux', blocked: [], readyForReview: [], runningTasks: [] },
+  { id: '6', name: 'Product page recommendations', createdBy: 'Léa Fontaine', createdAgo: '3 weeks ago', status: 'running',
+    description: 'Add an AI-driven recommendation block to product pages and measure add-to-cart lift.',
+    progressLabel: 'Running experiment (day 4 of 14)', blocked: [], readyForReview: [],
+    runningTasks: [{ id: 'p1', label: 'Collecting conversion data', waiting: 'Day 4 of 14' }] },
+  { id: '7', name: 'Seasonal Promo Testing', createdBy: 'Léa Fontaine', createdAgo: '1 month ago', status: 'scheduled',
+    scheduledAt: 'Aug 1, 2026 · 06:30', repeats: 'Repeats weekly',
+    description: 'Rotate seasonal promotional banners and keep the highest-converting one.',
+    progressLabel: 'Queued for execution', blocked: [], readyForReview: [], runningTasks: [] },
+  { id: '8', name: 'Conversion Rate Lift', createdBy: 'Paul Tremblay', createdAgo: '1 month ago', status: 'draft',
+    description: 'Draft automation — not yet submitted.',
+    progressLabel: 'Not started', blocked: [], readyForReview: [], runningTasks: [] },
 ];
 
+// ─── TASK TYPE + STATUS CONFIG ─────────────────────────────────────────────
+// Automations are dependency-driven, not strictly sequential or parallel:
+// a Task starts once every Task it depends on has completed. Tasks with no
+// shared dependency can run at the same time. This mirrors Fred's Aug 21
+// model: "The Planner determines dependencies between Tasks. A Task can
+// start as soon as all of its dependencies are completed. Tasks that don't
+// depend on each other can execute in parallel."
+const TASK_TYPES = {
+  variant:   { label: 'Create Variant',        color: '#E8DCF8' },
+  targeting: { label: 'Configure Targeting',   color: '#DCE8FF' },
+  goal:      { label: 'Create Goal',           color: '#DCF8DC' },
+  traffic:   { label: 'Configure Traffic',     color: '#FFF3DC' },
+  validate:  { label: 'Validate Configuration',color: '#F0F0F5' },
+  finalize:  { label: 'Finalize',              color: '#FFE4D6' },
+};
+
+const STATUS_CONFIG = {
+  completed:       { label: 'Completed',       color: '#00B37A', bg: '#E6F9F3' },
+  running:         { label: 'Running',         color: '#3838E7', bg: '#EEF0FF' },
+  action_required: { label: 'Action required', color: '#B45309', bg: '#FEF3E2' },
+  failed:          { label: 'Failed',          color: '#E03D3D', bg: '#FDEAEA' },
+  not_started:     { label: 'Waiting',         color: '#918F9A', bg: '#F5F5F7' },
+  skipped:         { label: 'Skipped',         color: '#918F9A', bg: '#F5F5F7' },
+};
+
+// A dependency counts as satisfied once its Task is done — whether it
+// completed normally or was explicitly skipped by the user.
+function isSatisfied(status) { return status === 'completed' || status === 'skipped'; }
+
+// ─── WORKFLOW DATA ──────────────────────────────────────────────────────────
+// Example automation, taken directly from Fred's Aug 21 message:
+// "Create an experiment on Page X with two newsletter variations (popup and
+// banner), target new homepage visitors. Show the variations when the user
+// scrolls 50% of the page content, track CTA clicks and registrations, split
+// traffic equally, and enable GA4."
+//
+// dependsOn is the single source of truth for the dependency graph — edges,
+// auto-layout, and the (+) insertion logic are all derived from it.
 let WORKFLOW_NODES = [
   {
-    id: '1', type: 'trigger', label: 'URL Trigger', desc: 'This URL', color: '#DCE8FF', x: 10, y: 20,
-    // Trigger properties
-    source: 'webhook', frequency: 'continuous'
+    id: '1', type: 'variant', label: 'Create Variant — Popup', desc: 'Newsletter signup popup, shown at 50% scroll',
+    dependsOn: [], status: 'failed',
+    elementType: 'popup', changeSummary: 'Newsletter signup popup with 20% off CTA'
   },
   {
-    id: '2', type: 'agent', label: 'Propose Test Ideas', desc: 'Generate test variations', color: '#E8DCF8', x: 20, y: 110,
-    // Agent properties
-    service: 'openai', action: 'propose-tests', temperature: 0.7
+    id: '2', type: 'variant', label: 'Create Variant — Banner', desc: 'Newsletter signup banner, shown at 50% scroll',
+    dependsOn: [], status: 'completed',
+    elementType: 'banner', changeSummary: 'Sticky top banner with newsletter signup form'
   },
   {
-    id: '3', type: 'condition', label: 'Score > 8/10?', desc: 'Filter by quality score', color: '#FFF3DC', x: 30, y: 200, branches: true,
-    // Condition properties
-    condition: 'score > 8', branchLabelYes: 'Yes', branchLabelNo: 'No'
+    id: '3', type: 'targeting', label: 'Configure Targeting', desc: 'New homepage visitors, trigger at 50% scroll depth',
+    dependsOn: [], status: 'completed',
+    audience: 'new-visitors', triggerCondition: 'scroll depth >= 50%'
   },
   {
-    id: '4', type: 'agent', label: 'Build Variations', desc: 'Create test variations', color: '#E8DCF8', x: 40, y: 300,
-    // Agent properties
-    service: 'anthropic', action: 'build-tests', temperature: 0.5
+    id: '4', type: 'goal', label: 'Create Goals', desc: 'Track CTA clicks and registrations',
+    dependsOn: [], status: 'completed',
+    goalType: 'click', trackedElement: 'CTA button + registration form submit'
   },
   {
-    id: '5', type: 'action', label: 'Schedule Publish', desc: 'Publish on June 1st', color: '#DCF8DC', x: 50, y: 390,
-    // Action properties
-    schedule: 'scheduled', platform: 'analytics', retries: 3
+    id: '5', type: 'traffic', label: 'Configure Traffic + GA4', desc: 'Split traffic equally, enable GA4 integration',
+    dependsOn: [], status: 'action_required',
+    trafficSplit: 50, integration: 'ga4'
   },
   {
-    id: '6', type: 'action', label: 'Set Traffic 25%', desc: 'Initial traffic allocation', color: '#DCF8DC', x: 60, y: 480,
-    // Action properties
-    schedule: 'immediate', platform: 'analytics', retries: 2
+    id: '6', type: 'validate', label: 'Validate Configuration', desc: 'Check all tasks are complete before finalizing',
+    dependsOn: ['1', '2', '3', '4', '5'], status: 'not_started'
   },
   {
-    id: '7', type: 'wait', label: 'Wait 1 Week', desc: 'Monitor period', color: '#F0F0F5', x: 70, y: 570,
-    // Wait properties
-    duration: '1 week', waitType: 'delay'
-  },
-  {
-    id: '8', type: 'condition', label: 'Conversion Rate > Original?', desc: 'Performance check', color: '#FFF3DC', x: 80, y: 660, branches: true,
-    // Condition properties
-    condition: 'conversion_rate > baseline', branchLabelYes: 'Yes', branchLabelNo: 'No'
-  },
-  {
-    id: '9', type: 'action', label: 'Set Traffic 50%', desc: 'Increase allocation', color: '#DCF8DC', x: 85, y: 760,
-    // Action properties
-    schedule: 'immediate', platform: 'analytics', retries: 3
-  },
-  {
-    id: '10', type: 'action', label: 'Keep Original', desc: 'Revert to original', color: '#DCF8DC', x: 75, y: 760,
-    // Action properties
-    schedule: 'immediate', platform: 'analytics', retries: 1
-  },
-  {
-    id: '11', type: 'wait', label: 'Wait 1 Month', desc: 'Extended monitoring', color: '#F0F0F5', x: 85, y: 860,
-    // Wait properties
-    duration: '1 month', waitType: 'delay'
-  },
-  {
-    id: '12', type: 'condition', label: 'Still Converting Higher?', desc: 'Final check', color: '#FFF3DC', x: 85, y: 960, branches: true,
-    // Condition properties
-    condition: 'final_conversion > baseline', branchLabelYes: 'Yes', branchLabelNo: 'No'
-  },
-  {
-    id: '13', type: 'action', label: 'Ship at 100%', desc: 'Full deployment', color: '#DCF8DC', x: 85, y: 1060,
-    // Action properties
-    schedule: 'immediate', platform: 'production', retries: 5
+    id: '7', type: 'finalize', label: 'Finalize & Launch', desc: 'Launch the experiment',
+    dependsOn: ['6'], status: 'not_started',
+    launchMode: 'immediate'
   },
 ];
 
@@ -248,7 +313,7 @@ function Sidebar({ screen, onNavigate }) {
   const [pinnedOpen, setPinnedOpen] = useState(true);
   const [recentOpen, setRecentOpen] = useState(true);
 
-  const isWorkflows = screen === 'dashboard' || screen === 'new-workflow' || screen === 'workflow-detail';
+  const isAutomate = screen === 'dashboard' || screen === 'new-workflow' || screen === 'workflow-detail' || screen === 'plan-review';
 
   const NavItem = ({ icon, label, active, onClick }) => (
     <button onClick={onClick}
@@ -265,54 +330,54 @@ function Sidebar({ screen, onNavigate }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 0' }}>
         {/* Main actions */}
         <NavItem icon={<SvgIcon d={P.newChat} size={18} vw={16.5} vh={16.5}/>} label="New chat" active={screen === 'home'} onClick={() => onNavigate('home')}/>
-        <NavItem icon={<svg width="18" height="18" viewBox="0 0 16 16.5" fill="none"><path d={P.gear1} stroke={screen !== 'home' && !isWorkflows ? '#3838E7' : '#5E5D67'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d={P.gear2} stroke={screen !== 'home' && !isWorkflows ? '#3838E7' : '#5E5D67'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>} label="AI Settings" active={false} onClick={() => {}}/>
+        <NavItem icon={<svg width="18" height="18" viewBox="0 0 16 16.5" fill="none"><path d={P.gear1} stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d={P.gear2} stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>} label="AI Settings" active={false} onClick={() => {}}/>
 
         {/* Separator */}
         <div style={{ borderBottom: '1px dashed #E1DFE7', margin: '4px 0 8px' }}/>
 
-        {/* Workflows — new item */}
-        <NavItem icon={<WorkflowIcon color={isWorkflows ? '#3838E7' : '#5E5D67'}/>} label="Workflows" active={isWorkflows} onClick={() => onNavigate('dashboard')}/>
+        {/* Automation — top-level entry in the main nav */}
+        <NavItem icon={<WorkflowIcon color={isAutomate ? '#3838E7' : '#5E5D67'}/>} label="Automation" active={isAutomate} onClick={() => onNavigate('dashboard')}/>
+        <NavItem icon={<svg width="18" height="18" viewBox="0 0 9.67 9.67" fill="none"><path d="M0.75 4.83H8.92M4.83 0.75V8.92" stroke="#5E5D67" strokeWidth="1.6" strokeLinecap="round"/></svg>} label="New automation" active={false} onClick={() => onNavigate('new-workflow')}/>
 
         {/* Separator */}
         <div style={{ borderBottom: '1px dashed #E1DFE7', margin: '8px 0' }}/>
 
-        {/* Pinned */}
+        {/* Latest automations */}
         <div style={{ padding: '0 4px 8px' }}>
-          <button onClick={() => setPinnedOpen(!pinnedOpen)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 4 }}>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#918F9A', letterSpacing: '0.25px' }}>Pinned</span>
-            <svg width="9" height="6" viewBox="0 0 9.5 5.5" fill="none" style={{ transform: pinnedOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
-              <path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          {pinnedOpen && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {['how can I update my setting', 'I want to know the segment builde...'].map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 4px', borderRadius: 4, cursor: 'pointer' }}
-                  onMouseOver={e => e.currentTarget.style.background = '#FCFCFD'}
-                  onMouseOut={e => e.currentTarget.style.background = 'none'}>
-                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item}</span>
-                  <SvgIcon d={P.pin} size={14} vw={10.83} vh={14.83}/>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Recent */}
-        <div style={{ padding: '0 4px', borderTop: '1px solid #E1DFE7', paddingTop: 12 }}>
           <button onClick={() => setRecentOpen(!recentOpen)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 4 }}>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#918F9A', letterSpacing: '0.25px' }}>Recent</span>
+            <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#918F9A', letterSpacing: '0.25px' }}>My latest automations</span>
             <svg width="9" height="6" viewBox="0 0 9.5 5.5" fill="none" style={{ transform: recentOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
               <path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
           {recentOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {['I cannot upload my Figma file', 'Personalization is not working for....', 'Personalization is not working for....', 'Segment builder configuration issue', 'Feature flag not triggering on edge...'].map((item, i) => (
-                <div key={i} style={{ padding: '5px 4px', borderRadius: 4, cursor: 'pointer' }}
+              {AUTOMATIONS.slice(0, 4).map((a) => (
+                <div key={a.id} onClick={() => onNavigate('workflow-detail', a)} style={{ padding: '5px 4px', borderRadius: 4, cursor: 'pointer' }}
                   onMouseOver={e => e.currentTarget.style.background = '#FCFCFD'}
                   onMouseOut={e => e.currentTarget.style.background = 'none'}>
-                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{item}</span>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{a.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Pinned automates */}
+        <div style={{ padding: '0 4px' }}>
+          <button onClick={() => setPinnedOpen(!pinnedOpen)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 4 }}>
+            <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#918F9A', letterSpacing: '0.25px' }}>Pinned automations</span>
+            <svg width="9" height="6" viewBox="0 0 9.5 5.5" fill="none" style={{ transform: pinnedOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+              <path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          {pinnedOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {['how can I update my setting', 'I want to know the segment build...'].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 4px', borderRadius: 4, cursor: 'pointer' }}
+                  onMouseOver={e => e.currentTarget.style.background = '#FCFCFD'}
+                  onMouseOut={e => e.currentTarget.style.background = 'none'}>
+                  <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item}</span>
                 </div>
               ))}
             </div>
@@ -412,61 +477,165 @@ function HomeScreen({ onNavigate }) {
 
 // ─── SCREEN 2: WORKFLOWS DASHBOARD ──────────────────────────────────────────
 function StatusBadge({ status }) {
-  const map = { live: ['#00B37A', '#E6F9F3'], draft: ['#918F9A', '#F1F0F5'], archived: ['#C7C5D0', '#F7F7F8'] };
-  const [text, bg] = [status.charAt(0).toUpperCase() + status.slice(1), map[status]?.[1] || '#F1F0F5'];
-  const textColor = map[status]?.[0] || '#918F9A';
+  const cfg = AUTOMATION_STATUS[status] || AUTOMATION_STATUS.draft;
   return (
-    <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: textColor, background: bg, padding: '2px 8px', borderRadius: 20, letterSpacing: '0.2px' }}>{text}</span>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: cfg.color, background: cfg.bg, padding: '3px 10px', borderRadius: 20, letterSpacing: '0.2px', whiteSpace: 'nowrap' }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color }}/>
+      {cfg.label}
+    </span>
   );
 }
 
-function TriggerIcon({ type }) {
-  const icons = { url: '🌐', schedule: '📅', webhook: '🔗', event: '⚡', api: '🔌' };
-  return <span style={{ fontSize: 13 }}>{icons[type] || '⚡'}</span>;
+// Small roll-up chips shown on a dashboard row: "2 subtasks blocked",
+// "3 subtasks ready for review".
+function SubtaskChip({ kind, count }) {
+  const cfg = {
+    blocked: { color: '#E03D3D', bg: '#FDEAEA', label: 'blocked', icon: '⊖' },
+    review:  { color: '#00875A', bg: '#E6F9F3', label: 'ready for review', icon: '✓' },
+    running: { color: '#3838E7', bg: '#EEF0FF', label: 'running', icon: '◷' },
+  }[kind];
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: cfg.color, background: cfg.bg, padding: '3px 9px', borderRadius: 6, whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 11 }}>{cfg.icon}</span>
+      {count} subtask{count === 1 ? '' : 's'} {cfg.label}
+    </span>
+  );
 }
 
-function WorkflowCard({ workflow, onClick }) {
+// One row in the dashboard list. Selecting it opens the detail panel on the
+// right — resolving blockers happens there, not by opening the automation.
+function AutomationRow({ automation: a, selected, onSelect }) {
+  const cfg = AUTOMATION_STATUS[a.status] || AUTOMATION_STATUS.draft;
   const [hover, setHover] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  return (
+    <div onClick={() => onSelect(a)}
+      onMouseOver={() => setHover(true)} onMouseOut={() => setHover(false)}
+      style={{ display: 'flex', alignItems: 'center', gap: 16, background: selected ? '#F5F5FF' : '#fff', border: `1px solid ${selected ? '#3838E7' : (hover ? '#C7C5D0' : '#E1DFE7')}`, borderRadius: 10, padding: '14px 18px 14px 0', cursor: 'pointer', transition: 'border-color .12s, background .12s', overflow: 'hidden' }}>
+      <div style={{ width: 4, alignSelf: 'stretch', background: cfg.bar, flexShrink: 0, borderRadius: '10px 0 0 10px', marginRight: 2 }}/>
+      <div style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23', marginBottom: 3 }}>{a.name}</div>
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>
+          Created by <span style={{ fontWeight: 500, color: '#52515B' }}>{a.createdBy}</span> · {a.createdAgo}
+        </div>
+        {(a.blocked.length > 0 || a.readyForReview.length > 0) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+            {a.blocked.length > 0 && <SubtaskChip kind="blocked" count={a.blocked.length}/>}
+            {a.readyForReview.length > 0 && <SubtaskChip kind="review" count={a.readyForReview.length}/>}
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+        <StatusBadge status={a.status}/>
+        {a.scheduledAt && <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{a.scheduledAt}</span>}
+        {a.repeats && <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>⟳ {a.repeats}</span>}
+      </div>
+    </div>
+  );
+}
+
+// Collapsible group of subtasks in the detail panel. Blocked items carry an
+// "Answer" action so the user can unblock without leaving the dashboard.
+function SubtaskGroup({ kind, title, items, defaultOpen, onAnswer }) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  const cfg = {
+    blocked: { color: '#E03D3D', bg: '#FDEAEA', border: '#F5C2C2', icon: '⊖' },
+    review:  { color: '#00875A', bg: '#fff',    border: '#E1DFE7', icon: '✓' },
+    running: { color: '#3838E7', bg: '#fff',    border: '#E1DFE7', icon: '◷' },
+  }[kind];
+  if (!items.length) return null;
+  return (
+    <div style={{ border: `1px solid ${cfg.border}`, background: cfg.bg, borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
+      <button onClick={() => setOpen(!open)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: cfg.color }}>
+          <span>{cfg.icon}</span>{title}
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ background: cfg.color, color: '#fff', fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 11, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>{items.length}</span>
+          <svg width="9" height="6" viewBox="0 0 9.5 5.5" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+            <path d="M8.75 4.75L4.75 0.75L0.75 4.75" stroke="#5E5D67" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {items.map(it => (
+            <div key={it.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>{it.label}</div>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', marginTop: 2 }}>{it.waiting}</div>
+              </div>
+              {kind !== 'running' && (
+                <button onClick={() => onAnswer(kind, it)}
+                  style={{ flexShrink: 0, padding: '6px 14px', background: kind === 'blocked' ? '#3838E7' : '#fff', color: kind === 'blocked' ? '#fff' : '#3838E7', border: kind === 'blocked' ? 'none' : '1px solid #3838E7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
+                  {kind === 'blocked' ? 'Answer' : 'Review'}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The dashboard-side detail panel. Per Fred, this is the PRIMARY place a
+// user resolves required actions — opening the automation is secondary.
+function AutomationDetailPanel({ automation: a, onClose, onOpen, onAnswer }) {
+  const [descOpen, setDescOpen] = useState(false);
+  const cfg = AUTOMATION_STATUS[a.status] || AUTOMATION_STATUS.draft;
+  const shortDesc = a.description.length > 120 && !descOpen ? a.description.slice(0, 120) + '…' : a.description;
 
   return (
-    <div onClick={onClick} onMouseOver={() => setHover(true)} onMouseOut={() => { setHover(false); setMenuOpen(false); }}
-      style={{ background: '#fff', border: `1px solid ${hover ? '#C7C5D0' : '#E1DFE7'}`, borderRadius: 10, padding: '16px', cursor: 'pointer', transition: 'box-shadow .15s, border-color .15s', boxShadow: hover ? '0 4px 16px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 10, position: 'relative', minHeight: 140 }}>
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23', lineHeight: 1.3, flex: 1 }}>{workflow.name}</span>
-        <StatusBadge status={workflow.status}/>
-      </div>
-
-      {/* Description */}
-      <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B', lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{workflow.description}</p>
-
-      {/* Footer */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>Updated {workflow.updatedAt}</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <TriggerIcon type={workflow.trigger}/>
-          <div style={{ position: 'relative' }}>
-            <button onClick={e => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 4, color: '#918F9A', fontSize: 16, display: 'flex', alignItems: 'center' }}
+    <div className="fade-up" style={{ width: 400, borderLeft: '1px solid #E1DFE7', background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
+      <div style={{ padding: '18px 20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <StatusBadge status={a.status}/>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={onOpen}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#3838E7', cursor: 'pointer' }}
               onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
-              onMouseOut={e => e.currentTarget.style.background = 'none'}>
-              ⋮
+              onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+              ✎ Open Automation
             </button>
-            {menuOpen && (
-              <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', right: 0, bottom: 28, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 10, minWidth: 140, overflow: 'hidden' }}>
-                {['Edit', 'Duplicate', 'Archive', 'Delete'].map((opt, i) => (
-                  <button key={i} onClick={e => { e.stopPropagation(); setMenuOpen(false); }}
-                    style={{ width: '100%', display: 'block', padding: '8px 14px', background: 'none', border: 'none', textAlign: 'left', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: opt === 'Delete' ? '#E03D3D' : '#1B1B23', cursor: 'pointer' }}
-                    onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
-                    onMouseOut={e => e.currentTarget.style.background = 'none'}>
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            )}
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#918F9A', lineHeight: 1, padding: '0 2px' }}>×</button>
           </div>
         </div>
+
+        <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 19, color: '#1B1B23', margin: '0 0 4px' }}>{a.name}</h2>
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', marginBottom: 16 }}>
+          Created by <span style={{ fontWeight: 500, color: '#52515B' }}>{a.createdBy}</span> · {a.createdAgo}
+        </div>
+
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Short description</div>
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', lineHeight: 1.55, margin: '0 0 4px' }}>{shortDesc}</p>
+        {a.description.length > 120 && (
+          <button onClick={() => setDescOpen(!descOpen)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#3838E7', marginBottom: 16 }}>
+            {descOpen ? 'Show less' : 'Show more'}
+          </button>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, marginBottom: 6 }}>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Automation progress</span>
+          <span title="Derived from the status of every task in this automation" style={{ color: '#C7C5D0', fontSize: 12, cursor: 'help' }}>ⓘ</span>
+        </div>
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', margin: '0 0 14px' }}>{a.progressLabel}</p>
+
+        {/* Roll-up summary */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
+          {a.blocked.length > 0 && <SubtaskChip kind="blocked" count={a.blocked.length}/>}
+          {a.readyForReview.length > 0 && <SubtaskChip kind="review" count={a.readyForReview.length}/>}
+          {a.runningTasks.length > 0 && <SubtaskChip kind="running" count={a.runningTasks.length}/>}
+          {a.blocked.length === 0 && a.readyForReview.length === 0 && a.runningTasks.length === 0 && (
+            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>No subtasks to show yet.</span>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: '0 20px 20px' }}>
+        <SubtaskGroup kind="blocked" title={`${a.blocked.length} subtask${a.blocked.length === 1 ? '' : 's'} blocked`} items={a.blocked} defaultOpen onAnswer={onAnswer}/>
+        <SubtaskGroup kind="review" title="Assets ready for review" items={a.readyForReview} onAnswer={onAnswer}/>
+        <SubtaskGroup kind="running" title="Subtasks currently running" items={a.runningTasks} onAnswer={onAnswer}/>
       </div>
     </div>
   );
@@ -474,212 +643,463 @@ function WorkflowCard({ workflow, onClick }) {
 
 function WorkflowsDashboard({ onNavigate }) {
   const [filter, setFilter] = useState('all');
-  const filters = ['all', 'live', 'draft', 'archived'];
-  const filtered = filter === 'all' ? WORKFLOWS : WORKFLOWS.filter(w => w.status === filter);
+  const [view, setView] = useState('list');
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const STATUS_ORDER = ['pre-processing', 'running', 'scheduled', 'blocked', 'ready', 'draft'];
+  const counts = Object.fromEntries(STATUS_ORDER.map(s => [s, AUTOMATIONS.filter(a => a.status === s).length]));
+
+  const searched = AUTOMATIONS.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
+  const filtered = filter === 'all' ? searched : searched.filter(a => a.status === filter);
+
+  function handleAnswer(kind, item) {
+    setToast(kind === 'blocked' ? `Opening “${item.label}” to answer…` : `Opening “${item.label}” for review…`);
+    setTimeout(() => setToast(null), 2600);
+  }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FCFCFD', overflowY: 'auto' }}>
-      {/* Dashboard header */}
-      <div style={{ padding: '24px 32px 0', background: '#FCFCFD', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 22, color: '#1B1B23', margin: 0 }}>Workflows</h1>
-          <button onClick={() => onNavigate('new-workflow')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#3838E7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer', transition: 'background .12s' }}
-            onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
-            onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
-            <svg width="13" height="13" viewBox="0 0 9.67 9.67" fill="none"><path d="M0.75 4.83H8.92M4.83 0.75V8.92" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
-            New Workflow
-          </button>
+    <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#FCFCFD' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', minWidth: 0 }}>
+        <div style={{ padding: '24px 32px 0', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div>
+              <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 26, color: '#1B1B23', margin: 0 }}>Automation</h1>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#918F9A', margin: '4px 0 0' }}>Create automated tasks that run on their own.</p>
+            </div>
+            <button onClick={() => onNavigate('new-workflow')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: '#3838E7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer', transition: 'background .12s', flexShrink: 0 }}
+              onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
+              onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
+              <svg width="13" height="13" viewBox="0 0 9.67 9.67" fill="none"><path d="M0.75 4.83H8.92M4.83 0.75V8.92" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              New
+            </button>
+          </div>
+
+          {/* Search + view switch */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: '9px 14px', minWidth: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}><circle cx="6" cy="6" r="4.75" stroke="#918F9A" strokeWidth="1.4"/><path d="M9.5 9.5L13 13" stroke="#918F9A" strokeWidth="1.4" strokeLinecap="round"/></svg>
+              <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search a task"
+                style={{ flex: 1, border: 'none', outline: 'none', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', background: 'transparent', minWidth: 0 }}/>
+            </div>
+            <div style={{ display: 'flex', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: 3, gap: 2, flexShrink: 0 }}>
+              {[['list', 'List'], ['kanban', 'Kanban']].map(([v, label]) => (
+                <button key={v} onClick={() => setView(v)}
+                  style={{ padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', background: view === v ? '#F5F5FF' : 'transparent', color: view === v ? '#3838E7' : '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13 }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Status filter chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
+            <button onClick={() => setFilter('all')}
+              style={{ padding: '6px 16px', borderRadius: 20, border: filter === 'all' ? 'none' : '1px solid #E1DFE7', background: filter === 'all' ? '#3838E7' : '#fff', color: filter === 'all' ? '#fff' : '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, cursor: 'pointer' }}>
+              All
+            </button>
+            {STATUS_ORDER.map(s => (
+              <button key={s} onClick={() => setFilter(s)}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 14px', borderRadius: 20, border: filter === s ? 'none' : '1px solid #E1DFE7', background: filter === s ? '#3838E7' : '#fff', color: filter === s ? '#fff' : '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, cursor: 'pointer' }}>
+                {AUTOMATION_STATUS[s].label}
+                <span style={{ background: s === 'blocked' && filter !== s ? '#E03D3D' : (filter === s ? 'rgba(255,255,255,0.25)' : '#F1F0F5'), color: s === 'blocked' && filter !== s ? '#fff' : (filter === s ? '#fff' : '#52515B'), fontSize: 11, fontWeight: 600, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>
+                  {counts[s]}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Filters */}
-        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #E1DFE7', paddingBottom: 0 }}>
-          {filters.map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ padding: '8px 16px', background: 'none', border: 'none', borderBottom: filter === f ? '2px solid #3838E7' : '2px solid transparent', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: filter === f ? '#3838E7' : '#918F9A', transition: 'color .12s', marginBottom: -1, textTransform: 'capitalize' }}>
-              {f === 'all' ? `All (${WORKFLOWS.length})` : `${f.charAt(0).toUpperCase() + f.slice(1)} (${WORKFLOWS.filter(w=>w.status===f).length})`}
-            </button>
-          ))}
+        {/* Body */}
+        <div style={{ padding: '0 32px 32px', flex: 1 }}>
+          {filtered.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 320, gap: 12 }}>
+              <WorkflowIcon color="#C7C5D0" size={40}/>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 15, color: '#52515B', margin: 0 }}>No automations here</p>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#918F9A', margin: 0 }}>Try another filter, or create a new one.</p>
+            </div>
+          ) : view === 'list' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {filtered.map(a => (
+                <AutomationRow key={a.id} automation={a} selected={selected?.id === a.id} onSelect={setSelected}/>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8 }}>
+              {STATUS_ORDER.filter(s => s !== 'draft').map(s => {
+                const col = searched.filter(a => a.status === s);
+                return (
+                  <div key={s} style={{ minWidth: 250, flex: '1 0 250px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: AUTOMATION_STATUS[s].color }}/>
+                      <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>{AUTOMATION_STATUS[s].label}</span>
+                      <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>{col.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {col.map(a => (
+                        <div key={a.id} onClick={() => setSelected(a)}
+                          style={{ display: 'flex', gap: 10, background: '#fff', border: `1px solid ${selected?.id === a.id ? '#3838E7' : '#E1DFE7'}`, borderRadius: 10, padding: '12px 14px 12px 0', cursor: 'pointer', overflow: 'hidden' }}>
+                          <div style={{ width: 4, alignSelf: 'stretch', background: AUTOMATION_STATUS[a.status].bar, flexShrink: 0, borderRadius: '10px 0 0 10px' }}/>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 4 }}>{a.name}</div>
+                            <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>Created by {a.createdBy} · {a.createdAgo}</div>
+                            {a.scheduledAt && <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', marginTop: 4 }}>{a.scheduledAt}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Cards grid */}
-      <div style={{ padding: '24px 32px', flex: 1 }}>
-        {filtered.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 320, gap: 12 }}>
-            <WorkflowIcon color="#C7C5D0" size={40}/>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 15, color: '#52515B', margin: 0 }}>No workflows yet</p>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#918F9A', margin: 0, textAlign: 'center' }}>Create your first workflow to automate your testing</p>
-            <button onClick={() => onNavigate('new-workflow')}
-              style={{ marginTop: 8, padding: '10px 20px', background: '#3838E7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}>
-              New Workflow
-            </button>
+      {selected && (
+        <AutomationDetailPanel
+          automation={selected}
+          onClose={() => setSelected(null)}
+          onOpen={() => onNavigate('workflow-detail', selected)}
+          onAnswer={handleAnswer}/>
+      )}
+
+      {toast && (
+        <div className="fade-up" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1B1B23', color: '#fff', padding: '10px 18px', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontSize: 13, zIndex: 2000 }}>
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SCREEN 3a: NEW AUTOMATE — "Create a task" ───────────────────────────────
+// Creation is a single step: "+ New" opens the canvas area with a
+// configuration panel on the right. That panel IS the initial prompt.
+function NewWorkflowScreen({ onNavigate }) {
+  const [name, setName] = useState('');
+  const [start, setStart] = useState('now');
+  const [repeat, setRepeat] = useState(false);
+  const [repeatEvery, setRepeatEvery] = useState('week');
+  const [when, setWhen] = useState('');
+  const [desc, setDesc] = useState('');
+
+  const canNext = desc.trim().length > 0;
+
+  const quickActions = [
+    { label: 'Create an experiment', text: 'Create an experiment on ' },
+    { label: 'Create a workflow', text: 'Create a workflow that ' },
+    { label: 'Create a script', text: 'Create a script that ' },
+  ];
+
+  return (
+    <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#FCFCFD' }}>
+      {/* Left: the automation being created */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 22 }}>
+          <div>
+            <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 26, color: '#1B1B23', margin: 0 }}>Automation</h1>
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#918F9A', margin: '4px 0 0' }}>Create automated tasks that run on their own.</p>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
-            {filtered.map(w => (
-              <div key={w.id} className="fade-up">
-                <WorkflowCard workflow={w} onClick={() => onNavigate('workflow-detail', w)}/>
-              </div>
+          <button onClick={() => onNavigate('dashboard')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: '#3838E7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 9.67 9.67" fill="none"><path d="M0.75 4.83H8.92M4.83 0.75V8.92" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
+            New
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, background: '#fff', border: '2px solid #3838E7', borderRadius: 10, padding: '16px 18px 16px 0', overflow: 'hidden' }}>
+          <div style={{ width: 4, alignSelf: 'stretch', background: '#3838E7', flexShrink: 0, borderRadius: '10px 0 0 10px' }}/>
+          <div style={{ paddingLeft: 12 }}>
+            <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: name ? '#1B1B23' : '#918F9A', marginBottom: 8 }}>
+              {name || 'Untitled task'}
+            </div>
+            <StatusBadge status="creating"/>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: configuration panel — this is the prompt */}
+      <div style={{ width: 460, borderLeft: '1px solid #E1DFE7', background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          <button onClick={() => onNavigate('dashboard')}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#3838E7', marginBottom: 8 }}>
+            New automation
+          </button>
+          <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 22, color: '#1B1B23', margin: '0 0 22px' }}>Create a task</h2>
+
+          <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#52515B', marginBottom: 7 }}>Task name</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Checkout conversion boost"
+            style={{ width: '100%', padding: '11px 14px', border: '1px solid #E1DFE7', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none', marginBottom: 20 }}/>
+
+          <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#52515B', marginBottom: 7 }}>Start the task</label>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+            {[
+              { key: 'now', title: 'Now', sub: "Run as soon as it's ready", icon: '▶' },
+              { key: 'later', title: 'Later', sub: 'Pick a date and time', icon: '📅' },
+            ].map(opt => (
+              <button key={opt.key} onClick={() => setStart(opt.key)}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', textAlign: 'left', borderRadius: 8, cursor: 'pointer', background: start === opt.key ? '#F5F5FF' : '#fff', border: `1px solid ${start === opt.key ? '#3838E7' : '#E1DFE7'}` }}>
+                <span style={{ fontSize: 14, color: start === opt.key ? '#3838E7' : '#918F9A', flexShrink: 0 }}>{opt.icon}</span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>{opt.title}</span>
+                  <span style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{opt.sub}</span>
+                </span>
+              </button>
             ))}
           </div>
-        )}
+
+          {start === 'later' && (
+            <div className="fade-up" style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#52515B', marginBottom: 7 }}>Date and time</label>
+              <input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #E1DFE7', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none' }}/>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: repeat ? 12 : 20 }}>
+            <div>
+              <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>Repeat the task</div>
+              <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>Run it again at a regular interval</div>
+            </div>
+            <button onClick={() => setRepeat(!repeat)}
+              style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: repeat ? '#3838E7' : '#D5D3DC', position: 'relative', transition: 'background .15s', flexShrink: 0 }}>
+              <span style={{ position: 'absolute', top: 2, left: repeat ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left .15s' }}/>
+            </button>
+          </div>
+
+          {repeat && (
+            <div className="fade-up" style={{ marginBottom: 20 }}>
+              <select value={repeatEvery} onChange={e => setRepeatEvery(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #E1DFE7', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}>
+                <option value="day">Every day</option>
+                <option value="week">Every week</option>
+                <option value="month">Every month</option>
+              </select>
+            </div>
+          )}
+
+          <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#52515B', marginBottom: 7 }}>Task description</label>
+          <textarea value={desc} onChange={e => setDesc(e.target.value)}
+            placeholder="Please describe in detail the task you would like to complete."
+            style={{ width: '100%', minHeight: 150, padding: '12px 14px', border: '1px solid #E1DFE7', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none', resize: 'vertical', marginBottom: 14 }}/>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {quickActions.map(qa => (
+              <button key={qa.label} onClick={() => setDesc(d => d ? d : qa.text)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#3838E7', cursor: 'pointer' }}
+                onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+                onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+                <span style={{ fontSize: 13 }}>+</span>{qa.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ borderTop: '1px solid #E1DFE7', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, flexShrink: 0 }}>
+          <button onClick={() => onNavigate('dashboard')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', padding: '9px 4px' }}>
+            Cancel
+          </button>
+          <button disabled={!canNext}
+            onClick={() => onNavigate('plan-review', { name: name || 'Untitled task', description: desc, start, repeat: repeat ? repeatEvery : null })}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 22px', background: canNext ? '#3838E7' : '#F1F0F5', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: canNext ? '#fff' : '#918F9A', cursor: canNext ? 'pointer' : 'not-allowed' }}>
+            Next →
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── SCREEN 3: NEW WORKFLOW ──────────────────────────────────────────────────
-function NewWorkflowScreen({ onNavigate }) {
-  const [name, setName] = useState('');
-  const [desc, setDesc] = useState('');
-  const [trigger, setTrigger] = useState('url');
-  const [prompt, setPrompt] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [showDiscard, setShowDiscard] = useState(false);
+// ─── SCREEN 3b: PLAN REVIEW ──────────────────────────────────────────────────
+// Fred's flow: Prompt → Plan generation → user reviews/validates the plan →
+// Pending (queued) → Execution. The automation does NOT start on submit; the
+// Planner proposes tasks and the user explicitly confirms before anything runs.
+const PLANNED_TASKS = [
+  { id: '1', type: 'variant',   label: 'Create Variant — Popup',  desc: 'Newsletter signup popup, shown at 50% scroll', dependsOn: [] },
+  { id: '2', type: 'variant',   label: 'Create Variant — Banner', desc: 'Newsletter signup banner, shown at 50% scroll', dependsOn: [] },
+  { id: '3', type: 'targeting', label: 'Configure Targeting',     desc: 'New homepage visitors, trigger at 50% scroll depth', dependsOn: [] },
+  { id: '4', type: 'goal',      label: 'Create Goals',            desc: 'Track CTA clicks and registrations', dependsOn: [] },
+  { id: '5', type: 'traffic',   label: 'Configure Traffic + GA4', desc: 'Split traffic equally, enable GA4 integration', dependsOn: [] },
+  { id: '6', type: 'validate',  label: 'Validate Configuration',  desc: 'Check all tasks are complete before finalizing', dependsOn: ['1','2','3','4','5'] },
+  { id: '7', type: 'finalize',  label: 'Finalize & Launch',       desc: 'Launch the experiment', dependsOn: ['6'] },
+];
 
-  const charCount = prompt.length;
-  const canGenerate = name.trim() && prompt.trim();
+function PlanReviewScreen({ draft, onNavigate }) {
+  // phase: generating → questions → ready
+  const [phase, setPhase] = useState('generating');
+  const [answers, setAnswers] = useState({});
 
-  function handleGenerate() {
-    if (!canGenerate) return;
-    setGenerating(true);
-    setTimeout(() => {
-      setGenerating(false);
-      onNavigate('workflow-detail', { id: 'new', name: name.trim(), description: desc });
-    }, 1600);
-  }
+  useEffect(() => {
+    const t = setTimeout(() => setPhase('questions'), 1400);
+    return () => clearTimeout(t);
+  }, []);
 
-  const templates = [
-    { label: 'A/B Test & Deploy', text: 'Run an A/B test on this URL, score the ideas, build variations for high scores, set traffic to 25%, wait 1 week, then ship the winner to 100%.' },
-    { label: 'Traffic Ramp-Up', text: 'Start at 10% traffic, monitor conversion rate for 3 days, ramp to 25% if positive, then 50%, then 100% or rollback.' },
-    { label: 'Rollback on Failure', text: 'Deploy variant at 20% traffic. If error rate exceeds 2% within 24h, automatically rollback and notify the team.' },
+  const questions = [
+    { key: 'audience', q: 'Which audience should this task target?', options: ['All visitors', 'New visitors', 'Returning visitors'] },
+    { key: 'kpi', q: 'What is the primary KPI to optimize?', options: ['Conversion rate', 'Revenue per visitor', 'Click-through rate'] },
   ];
+  const allAnswered = questions.every(q => answers[q.key]);
+
+  function submitAnswers() { setPhase('ready'); }
+
+  const skeleton = phase === 'generating' || phase === 'questions';
 
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#FCFCFD' }}>
-      {/* Canvas area */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {/* Back breadcrumb */}
-        <div style={{ position: 'absolute', top: 16, left: 20, zIndex: 5, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={() => { const dirty = name || prompt; if (dirty) setShowDiscard(true); else onNavigate('dashboard'); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B' }}
-            onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
-            onMouseOut={e => e.currentTarget.style.background = '#fff'}>
-            <svg width="12" height="10" viewBox="0 0 6 10.5" fill="none"><path d={P.backArrow} stroke="#52515B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            Workflows
+      {/* Canvas */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        <div style={{ padding: '18px 28px 14px', flexShrink: 0 }}>
+          <button onClick={() => onNavigate('dashboard')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#52515B', padding: 0 }}>
+            <svg width="11" height="9" viewBox="0 0 6 10.5" fill="none"><path d={P.backArrow} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Back to dashboard
           </button>
         </div>
 
-        {/* Canvas */}
-        <div className="canvas-grid" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-          <div style={{ background: 'rgba(255,255,255,0.8)', border: '1.5px dashed #C7C5D0', borderRadius: 10, padding: '20px 32px', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 14, color: '#918F9A', margin: 0, lineHeight: 1.6 }}>Start adding steps or describe your workflow →</p>
-            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#C7C5D0', margin: '4px 0 0' }}>Canvas will populate after generation</p>
-          </div>
-        </div>
-
-        {/* Discard dialog */}
-        {showDiscard && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(27,27,35,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '24px', width: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-              <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23', margin: '0 0 8px' }}>Discard changes?</h3>
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#52515B', margin: '0 0 20px' }}>Your workflow setup will be lost if you leave now.</p>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowDiscard(false)} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={() => onNavigate('dashboard')} style={{ padding: '8px 16px', background: '#E03D3D', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#fff', cursor: 'pointer' }}>Discard</button>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 28px' }}>
+          {skeleton ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {[0,1,2].map(row => (
+                <div key={row} style={{ display: 'flex', gap: 18 }}>
+                  {[0,1,2,3].map(col => (
+                    <div key={col} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #EFEEF2', borderRadius: 10, padding: '18px 16px' }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 5, background: '#F1F0F5', flexShrink: 0 }}/>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ height: 7, borderRadius: 4, background: '#F1F0F5', marginBottom: 7, width: '80%' }}/>
+                        <div style={{ height: 7, borderRadius: 4, background: '#F5F5F7', width: '55%' }}/>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="fade-up">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>Proposed plan</span>
+                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>{PLANNED_TASKS.length} tasks · nothing runs until you confirm</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12 }}>
+                {PLANNED_TASKS.map(t => (
+                  <div key={t.id} style={{ background: TASK_TYPES[t.type].color, border: '1px solid #E1DFE7', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 10, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 5 }}>{TASK_TYPES[t.type].label}</div>
+                    <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 3 }}>{t.label}</div>
+                    <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', marginBottom: t.dependsOn.length ? 7 : 0 }}>{t.desc}</div>
+                    {t.dependsOn.length > 0 ? (
+                      <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 10, color: '#52515B', fontStyle: 'italic' }}>
+                        Runs after: {t.dependsOn.map(d => PLANNED_TASKS.find(x => x.id === d)?.label).join(', ')}
+                      </div>
+                    ) : (
+                      <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 10, color: '#00875A' }}>Can start immediately</div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Right Drawer */}
-      <div style={{ width: 380, borderLeft: '1px solid #E1DFE7', background: '#fff', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', flexShrink: 0 }}>
-        {/* Workflow Setup section */}
-        <div style={{ background: '#F9F8FB', borderBottom: '1px solid #E1DFE7', padding: '18px 20px', flexShrink: 0 }}>
-          <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 13, color: '#52515B', margin: '0 0 14px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Workflow Setup</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Name */}
-            <div>
-              <label style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', display: 'block', marginBottom: 4 }}>Workflow Name <span style={{ color: '#E03D3D' }}>*</span></label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Checkout A/B Test"
-                style={{ width: '100%', padding: '7px 10px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none', background: '#fff' }}
-                onFocus={e => e.target.style.borderColor = '#3838E7'}
-                onBlur={e => e.target.style.borderColor = '#E1DFE7'}/>
-            </div>
-            {/* Description */}
-            <div>
-              <label style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', display: 'block', marginBottom: 4 }}>Description <span style={{ color: '#C7C5D0' }}>(optional)</span></label>
-              <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Short description of this workflow"
-                style={{ width: '100%', padding: '7px 10px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none', background: '#fff' }}
-                onFocus={e => e.target.style.borderColor = '#3838E7'}
-                onBlur={e => e.target.style.borderColor = '#E1DFE7'}/>
-            </div>
-            {/* Trigger type */}
-            <div>
-              <label style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', display: 'block', marginBottom: 4 }}>Trigger Type</label>
-              <select value={trigger} onChange={e => setTrigger(e.target.value)}
-                style={{ width: '100%', padding: '7px 10px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none', background: '#fff', cursor: 'pointer' }}>
-                <option value="url">🌐 URL</option>
-                <option value="schedule">📅 Schedule</option>
-                <option value="webhook">🔗 Webhook</option>
-                <option value="event">⚡ Event</option>
-                <option value="api">🔌 API</option>
-              </select>
+      {/* Right panel */}
+      <div style={{ width: 440, borderLeft: '1px solid #E1DFE7', background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px' }}>
+          {/* The original prompt */}
+          <div style={{ background: '#F5F5FF', border: '1px solid #E4E4FB', borderRadius: 10, padding: '13px 15px', marginBottom: 16 }}>
+            <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', lineHeight: 1.55 }}>
+              {draft?.description || 'Test three new checkout button variants against the current design and promote the best performer.'}
             </div>
           </div>
-        </div>
 
-        {/* Prompt zone */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '18px 20px', overflow: 'hidden' }}>
-          <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 13, color: '#52515B', margin: '0 0 6px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Describe your workflow</h3>
-          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', margin: '0 0 10px' }}>Describe in plain language what you want Kai to build.</p>
+          {phase === 'generating' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#52515B' }}>
+              <span className="spin" style={{ width: 13, height: 13, border: '2px solid #E1DFE7', borderTopColor: '#3838E7', borderRadius: '50%', display: 'inline-block' }}/>
+              Analyzing your request and generating a plan…
+            </div>
+          )}
 
-          {/* Quick templates */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-            {templates.map((t, i) => (
-              <button key={i} onClick={() => setPrompt(t.text)}
-                style={{ padding: '4px 10px', background: '#F5F5FF', border: '1px solid #E5E7FF', borderRadius: 20, fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#3838E7', cursor: 'pointer', transition: 'background .12s' }}
-                onMouseOver={e => e.currentTarget.style.background = '#EAEAFF'}
-                onMouseOut={e => e.currentTarget.style.background = '#F5F5FF'}>
-                {t.label}
+          {phase === 'questions' && (
+            <div className="fade-up" style={{ border: '1px solid #E1DFE7', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
+                <svg width="13" height="13" viewBox="0 0 14.83 14.83" fill="none"><path d={P.kaiStar} fill="#3838E7"/></svg>
+                <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>A few details to finalize your task</span>
+              </div>
+              {questions.map(q => (
+                <div key={q.key} style={{ marginBottom: 14 }}>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', marginBottom: 8 }}>{q.q}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {q.options.map(opt => {
+                      const on = answers[q.key] === opt;
+                      return (
+                        <button key={opt} onClick={() => setAnswers(a => ({ ...a, [q.key]: opt }))}
+                          style={{ padding: '7px 15px', borderRadius: 8, cursor: 'pointer', background: on ? '#3838E7' : '#fff', color: on ? '#fff' : '#52515B', border: `1px solid ${on ? '#3838E7' : '#E1DFE7'}`, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12 }}>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <button disabled={!allAnswered} onClick={submitAnswers}
+                style={{ width: '100%', marginTop: 4, padding: '10px', borderRadius: 8, border: 'none', background: allAnswered ? '#3838E7' : '#F1F0F5', color: allAnswered ? '#fff' : '#918F9A', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, cursor: allAnswered ? 'pointer' : 'not-allowed' }}>
+                Generate the plan
               </button>
-            ))}
-          </div>
+            </div>
+          )}
 
-          {/* Textarea */}
-          <textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value.slice(0, 2000))}
-            placeholder={'On this URL, propose some test ideas, then for all ideas scored higher than 8/10, build the variation...'}
-            style={{ flex: 1, padding: '10px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', resize: 'none', outline: 'none', lineHeight: 1.5, minHeight: 100 }}
-            onFocus={e => e.target.style.borderColor = '#3838E7'}
-            onBlur={e => e.target.style.borderColor = '#E1DFE7'}
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: charCount > 1800 ? '#E03D3D' : '#C7C5D0' }}>{charCount} / 2000</span>
-          </div>
+          {phase === 'ready' && (
+            <div className="fade-up">
+              <div style={{ border: '1px solid #E1DFE7', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23', marginBottom: 10 }}>Plan ready for your review</div>
+                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B', lineHeight: 1.6, margin: '0 0 12px' }}>
+                  The Planner broke your request into <strong>{PLANNED_TASKS.length} tasks</strong>. Five can start immediately; validation waits for all of them, and launch waits for validation.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {Object.entries(answers).map(([k, v]) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Roboto, sans-serif', fontSize: 12 }}>
+                      <span style={{ color: '#918F9A', textTransform: 'capitalize' }}>{k}</span>
+                      <span style={{ color: '#1B1B23', fontWeight: 500 }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ background: '#FEF3E2', border: '1px solid #F5DDB8', borderRadius: 10, padding: '11px 14px', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#7A4A08', lineHeight: 1.55 }}>
+                Confirming moves this automation to <strong>Pending</strong> (queued). Tasks only begin executing after that.
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Generate button */}
-        <div style={{ padding: '16px 20px', borderTop: '1px solid #E1DFE7', flexShrink: 0 }}>
-          <button onClick={handleGenerate} disabled={!canGenerate || generating}
-            style={{ width: '100%', padding: '11px', background: canGenerate ? '#3838E7' : '#E1DFE7', border: 'none', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: canGenerate ? '#fff' : '#918F9A', cursor: canGenerate ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background .12s' }}>
-            {generating ? (
-              <>
-                <svg className="spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 1.5C3.96 1.5 1.5 3.96 1.5 7" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
-                </svg>
-                Generating workflow...
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 14.83 14.83" fill="none"><path d={P.kaiStar} fill={canGenerate ? '#fff' : '#918F9A'}/></svg>
-                Generate Workflow
-              </>
-            )}
-          </button>
+        {/* Chat input — refinement stays conversational */}
+        <div style={{ borderTop: '1px solid #E1DFE7', padding: '12px 22px 14px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#F5F5FF', borderRadius: 20, padding: '3px 11px', fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 500, color: '#3838E7' }}>
+              <svg width="11" height="11" viewBox="0 0 14.83 14.83" fill="none"><path d={P.kaiStar} fill="#3838E7"/></svg>
+              (6) AI credits left
+            </span>
+          </div>
+          <div style={{ border: '1px solid #E1DFE7', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+            <input placeholder={phase === 'ready' ? 'Ask for a change to the plan…' : 'Answer the questions above to continue'}
+              style={{ width: '100%', border: 'none', outline: 'none', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', background: 'transparent' }}/>
+          </div>
+          {phase === 'ready' && (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setPhase('questions')}
+                style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fff', border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', cursor: 'pointer' }}>
+                Refine
+              </button>
+              <button onClick={() => onNavigate('workflow-detail', { name: draft?.name || 'Untitled task', description: draft?.description, justConfirmed: true })}
+                style={{ flex: 2, padding: '10px', borderRadius: 8, background: '#3838E7', border: 'none', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}>
+                Confirm plan &amp; queue
+              </button>
+            </div>
+          )}
+          <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '10px 0 0' }}>
+            Our AI can do almost anything, except back-end changes. See our guidelines.
+          </p>
         </div>
       </div>
     </div>
@@ -687,34 +1107,75 @@ function NewWorkflowScreen({ onNavigate }) {
 }
 
 // ─── SCREEN 4: WORKFLOW DETAIL ───────────────────────────────────────────────
-function NodeBox({ node, selected, onClick }) {
-  const typeLabel = { trigger: 'Trigger', agent: 'Agent', condition: 'Condition', action: 'Action', wait: 'Wait' };
-
-  // Simple SVG icons for each node type
+function NodeBox({ node, pos, selected, onClick, allNodes, onResolve }) {
+  // Simple SVG icons for each task type
   const typeIcons = {
-    trigger: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1V7M7 7L4 4M7 7L10 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    agent: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="currentColor" strokeWidth="1"/><path d="M3 11C3 9.34315 4.79086 8 7 8C9.20914 8 11 9.34315 11 11" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/></svg>,
-    condition: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L13 5V9L7 13L1 9V5L7 1Z" stroke="currentColor" strokeWidth="1"/></svg>,
-    action: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M8 4L11 7L8 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    wait: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1"/><path d="M7 3V7L9.5 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+    variant:   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3H12V11H2V3Z" stroke="currentColor" strokeWidth="1.1"/><path d="M2 5.5H12" stroke="currentColor" strokeWidth="1.1"/></svg>,
+    targeting: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.1"/><circle cx="7" cy="7" r="1.4" fill="currentColor"/></svg>,
+    goal:      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 8L6 11L11 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    traffic:   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11V6M7 11V3M12 11V8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+    validate:  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L13 4V8C13 10.5 10.5 12.5 7 13C3.5 12.5 1 10.5 1 8V4L7 1Z" stroke="currentColor" strokeWidth="1.1"/></svg>,
+    finalize:  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12L8 2L12 5L6 12L2 12Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/></svg>,
   };
 
+  const status = node.status || 'not_started';
+  const sc = STATUS_CONFIG[status];
+  const waitingOn = status === 'not_started'
+    ? (node.dependsOn || []).filter(id => {
+        const dep = allNodes.find(n => n.id === id);
+        return dep && !isSatisfied(dep.status);
+      })
+    : [];
+
+  // Every card is exactly NODE_W × NODE_H so the grid stays true and the
+  // connectors meet each card at its exact vertical centre.
   return (
-    <div onClick={onClick} style={{ position: 'absolute', left: `${node.x}%`, top: node.y, transform: 'translateX(-50%)', cursor: 'pointer', animation: 'nodeFadeIn 0.25s ease forwards', animationDelay: `${parseInt(node.id) * 40}ms`, opacity: 0 }}>
-      <div style={{ padding: '10px 14px', borderRadius: 8, border: `2px solid ${selected ? '#3838E7' : '#E1DFE7'}`, background: node.color, minWidth: 200, maxWidth: 240, boxShadow: selected ? '0 0 0 3px rgba(56,56,231,0.12)' : 'none', transition: 'border-color .15s, box-shadow .15s' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <div style={{ color: '#52515B', display: 'flex', alignItems: 'center', flexShrink: 0 }}>{typeIcons[node.type]}</div>
-          <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 10, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{typeLabel[node.type]}</div>
+    <div onClick={onClick}
+      style={{ position: 'absolute', left: pos.x, top: pos.y, width: NODE_W, height: NODE_H, cursor: 'pointer', animation: 'nodeFadeIn 0.25s ease forwards', animationDelay: `${parseInt(node.id) * 40}ms`, opacity: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '10px 13px', borderRadius: 10, border: `2px solid ${selected ? '#3838E7' : '#E1DFE7'}`, background: TASK_TYPES[node.type].color, boxShadow: selected ? '0 0 0 3px rgba(56,56,231,0.12)' : 'none', transition: 'border-color .15s, box-shadow .15s', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <div style={{ color: '#52515B', display: 'flex', alignItems: 'center', flexShrink: 0 }}>{typeIcons[node.type]}</div>
+            <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 10, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{TASK_TYPES[node.type].label}</div>
+          </div>
+          <div style={{ background: sc.bg, color: sc.color, fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 9, padding: '2px 7px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {sc.label}
+          </div>
         </div>
-        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 2 }}>{node.label}</div>
-        <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{node.desc}</div>
+
+        <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.label}</div>
+
+        <div style={{ flex: 1, minHeight: 0, fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', lineHeight: 1.35, overflow: 'hidden' }}>
+          {status === 'not_started' && waitingOn.length > 0
+            ? <span style={{ fontStyle: 'italic' }}>Waiting on: {waitingOn.map(id => allNodes.find(n => n.id === id)?.label).join(', ')}</span>
+            : node.desc}
+        </div>
+
+        {status === 'failed' && (
+          <div style={{ display: 'flex', gap: 6, marginTop: 6 }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => onResolve(node.id, 'completed')} style={{ flex: 1, padding: '5px 8px', background: '#fff', border: '1px solid #E03D3D', color: '#E03D3D', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Retry</button>
+            <button onClick={() => onResolve(node.id, 'skipped')} style={{ flex: 1, padding: '5px 8px', background: '#fff', border: '1px solid #E1DFE7', color: '#52515B', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Skip</button>
+          </div>
+        )}
+
+        {status === 'action_required' && (
+          <div style={{ marginTop: 6 }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => onResolve(node.id, 'completed')} style={{ width: '100%', padding: '5px 8px', background: '#B45309', border: 'none', color: '#fff', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Answer</button>
+          </div>
+        )}
+
+        {status === 'running' && (
+          <div style={{ marginTop: 6 }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => onResolve(node.id, 'completed')} style={{ width: '100%', padding: '5px 8px', background: '#fff', border: '1px solid #3838E7', color: '#3838E7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Mark complete</button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── NODE FORM RENDERER ──────────────────────────────────────────────────────
-function renderNodeForm(node, onPropertyChange) {
+function renderNodeForm(node, onPropertyChange, allNodesRef) {
   const fieldStyle = { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 };
   const labelStyle = { fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px' };
   const inputStyle = { fontFamily: 'Roboto, sans-serif', fontSize: 13, padding: '8px 10px', border: '1px solid #E1DFE7', borderRadius: 6, color: '#1B1B23' };
@@ -724,134 +1185,268 @@ function renderNodeForm(node, onPropertyChange) {
     onPropertyChange(node.id, propertyName, value);
   };
 
-  if (node.type === 'trigger') {
+  if (node.type === 'variant') {
     return (
       <>
         <div style={fieldStyle}>
-          <label style={labelStyle}>Source</label>
-          <select value={node.source || 'webhook'} onChange={e => handleChange('source', e.target.value)} style={selectStyle}>
-            <option value="webhook">Webhook</option>
-            <option value="scheduler">Scheduler</option>
-            <option value="email">Email</option>
-            <option value="chat">Chat</option>
+          <label style={labelStyle}>Element Type</label>
+          <select value={node.elementType || 'popup'} onChange={e => handleChange('elementType', e.target.value)} style={selectStyle}>
+            <option value="popup">Popup</option>
+            <option value="banner">Banner</option>
+            <option value="modal">Modal</option>
+            <option value="inline">Inline</option>
           </select>
         </div>
         <div style={fieldStyle}>
-          <label style={labelStyle}>Frequency</label>
-          <select value={node.frequency || 'continuous'} onChange={e => handleChange('frequency', e.target.value)} style={selectStyle}>
-            <option value="continuous">Continuous</option>
-            <option value="one-time">One-time</option>
-            <option value="recurring">Recurring</option>
+          <label style={labelStyle}>Change Summary</label>
+          <input type="text" value={node.changeSummary || ''} onChange={e => handleChange('changeSummary', e.target.value)} placeholder="e.g., Newsletter signup with 20% off" style={inputStyle}/>
+        </div>
+      </>
+    );
+  }
+
+  if (node.type === 'targeting') {
+    return (
+      <>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Audience</label>
+          <select value={node.audience || 'new-visitors'} onChange={e => handleChange('audience', e.target.value)} style={selectStyle}>
+            <option value="new-visitors">New visitors</option>
+            <option value="returning-visitors">Returning visitors</option>
+            <option value="all-visitors">All visitors</option>
+            <option value="custom-segment">Custom segment</option>
+          </select>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Trigger Condition</label>
+          <input type="text" value={node.triggerCondition || ''} onChange={e => handleChange('triggerCondition', e.target.value)} placeholder="e.g., scroll depth >= 50%" style={inputStyle}/>
+        </div>
+      </>
+    );
+  }
+
+  if (node.type === 'goal') {
+    return (
+      <>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Goal Type</label>
+          <select value={node.goalType || 'click'} onChange={e => handleChange('goalType', e.target.value)} style={selectStyle}>
+            <option value="click">Click</option>
+            <option value="pageview">Page view</option>
+            <option value="custom">Custom</option>
+            <option value="registration">Registration</option>
+          </select>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Tracked Element</label>
+          <input type="text" value={node.trackedElement || ''} onChange={e => handleChange('trackedElement', e.target.value)} placeholder="e.g., CTA button click" style={inputStyle}/>
+        </div>
+      </>
+    );
+  }
+
+  if (node.type === 'traffic') {
+    return (
+      <>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Traffic Split ({node.trafficSplit ?? 50}% to variants)</label>
+          <input type="range" min="0" max="100" step="5" value={node.trafficSplit ?? 50} onChange={e => handleChange('trafficSplit', parseInt(e.target.value))} style={{ cursor: 'pointer' }}/>
+        </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>Integration</label>
+          <select value={node.integration || 'ga4'} onChange={e => handleChange('integration', e.target.value)} style={selectStyle}>
+            <option value="ga4">Google Analytics 4</option>
+            <option value="segment">Segment</option>
+            <option value="none">None</option>
           </select>
         </div>
       </>
     );
   }
 
-  if (node.type === 'agent') {
+  if (node.type === 'validate') {
     return (
-      <>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Service</label>
-          <select value={node.service || 'openai'} onChange={e => handleChange('service', e.target.value)} style={selectStyle}>
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-            <option value="google">Google AI</option>
-          </select>
+      <div style={fieldStyle}>
+        <label style={labelStyle}>Dependency Checklist</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {(node.dependsOn || []).map(id => {
+            const dep = allNodesRef.find(n => n.id === id);
+            if (!dep) return null;
+            const sc = STATUS_CONFIG[dep.status || 'not_started'];
+            return (
+              <div key={id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
+                <span>{dep.label}</span>
+                <span style={{ color: sc.color, fontWeight: 600, fontSize: 10, textTransform: 'uppercase' }}>{sc.label}</span>
+              </div>
+            );
+          })}
         </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Action</label>
-          <input type="text" value={node.action || ''} onChange={e => handleChange('action', e.target.value)} placeholder="e.g., propose-tests" style={inputStyle}/>
-        </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Temperature ({(node.temperature || 0.7).toFixed(2)})</label>
-          <input type="range" min="0" max="1" step="0.1" value={node.temperature || 0.7} onChange={e => handleChange('temperature', parseFloat(e.target.value))} style={{ cursor: 'pointer' }}/>
-        </div>
-      </>
+      </div>
     );
   }
 
-  if (node.type === 'condition') {
+  if (node.type === 'finalize') {
     return (
-      <>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Condition</label>
-          <input type="text" value={node.condition || ''} onChange={e => handleChange('condition', e.target.value)} placeholder="e.g., score > 8" style={inputStyle}/>
-        </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>If True Label</label>
-          <input type="text" value={node.branchLabelYes || 'Yes'} onChange={e => handleChange('branchLabelYes', e.target.value)} style={inputStyle}/>
-        </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>If False Label</label>
-          <input type="text" value={node.branchLabelNo || 'No'} onChange={e => handleChange('branchLabelNo', e.target.value)} style={inputStyle}/>
-        </div>
-      </>
-    );
-  }
-
-  if (node.type === 'action') {
-    return (
-      <>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Schedule</label>
-          <select value={node.schedule || 'immediate'} onChange={e => handleChange('schedule', e.target.value)} style={selectStyle}>
-            <option value="immediate">Immediate</option>
-            <option value="delayed">Delayed</option>
-            <option value="scheduled">Scheduled</option>
-          </select>
-        </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Platform</label>
-          <select value={node.platform || 'analytics'} onChange={e => handleChange('platform', e.target.value)} style={selectStyle}>
-            <option value="analytics">Analytics</option>
-            <option value="production">Production</option>
-            <option value="staging">Staging</option>
-          </select>
-        </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Retries</label>
-          <input type="number" min="0" max="10" value={node.retries || 3} onChange={e => handleChange('retries', parseInt(e.target.value))} style={inputStyle}/>
-        </div>
-      </>
-    );
-  }
-
-  if (node.type === 'wait') {
-    return (
-      <>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Duration</label>
-          <input type="text" value={node.duration || ''} onChange={e => handleChange('duration', e.target.value)} placeholder="e.g., 1 week" style={inputStyle}/>
-        </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Wait Type</label>
-          <select value={node.waitType || 'delay'} onChange={e => handleChange('waitType', e.target.value)} style={selectStyle}>
-            <option value="delay">Delay</option>
-            <option value="polling">Polling</option>
-            <option value="event-based">Event-based</option>
-          </select>
-        </div>
-      </>
+      <div style={fieldStyle}>
+        <label style={labelStyle}>Launch Mode</label>
+        <select value={node.launchMode || 'immediate'} onChange={e => handleChange('launchMode', e.target.value)} style={selectStyle}>
+          <option value="immediate">Immediate</option>
+          <option value="scheduled">Scheduled</option>
+        </select>
+      </div>
     );
   }
 
   return null;
 }
 
+// Derives edges [sourceId, targetId] straight from each node's dependsOn.
+// This is the single source of truth for the graph — auto-layout, edge
+// rendering, and the (+) insertion buttons all read from this.
+function getConnections(nodes) {
+  return nodes.flatMap(n => (n.dependsOn || []).map(depId => [depId, n.id]));
+}
+
+// ─── CANVAS GRID LAYOUT ──────────────────────────────────────────────────────
+// Cards are laid out on a strict grid rather than free-positioned. A task's
+// COLUMN is how deep it sits in the dependency chain (no dependencies = first
+// column), and tasks sharing a column stack in ROWS. Positions are derived,
+// never stored — so there is nothing to "auto-arrange".
+const NODE_W = 252, NODE_H = 118, COL_GAP = 84, ROW_GAP = 26, PAD = 8;
+const COL_PITCH = NODE_W + COL_GAP, ROW_PITCH = NODE_H + ROW_GAP;
+
+function computeLayout(nodes) {
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const depth = {};
+  const resolve = (id, seen) => {
+    if (depth[id] !== undefined) return depth[id];
+    if (seen.has(id)) return 0;               // guard against cycles
+    seen.add(id);
+    const deps = (byId[id]?.dependsOn || []).filter(d => byId[d]);
+    const v = deps.length ? Math.max(...deps.map(d => resolve(d, seen))) + 1 : 0;
+    depth[id] = v;
+    return v;
+  };
+  nodes.forEach(n => resolve(n.id, new Set()));
+
+  const columns = {};
+  nodes.forEach(n => {
+    const c = depth[n.id];
+    (columns[c] = columns[c] || []).push(n.id);
+  });
+
+  const pos = {};
+  Object.entries(columns).forEach(([c, ids]) => {
+    ids.forEach((id, row) => {
+      pos[id] = { col: +c, row, x: PAD + +c * COL_PITCH, y: PAD + row * ROW_PITCH };
+    });
+  });
+
+  const colCount = Object.keys(columns).length;
+  const rowCount = Math.max(...Object.values(columns).map(a => a.length));
+  return { pos, width: PAD * 2 + colCount * COL_PITCH - COL_GAP, height: PAD * 2 + rowCount * ROW_PITCH - ROW_GAP };
+}
+
+// Right-angle connector from the right edge of the source card to the left
+// edge of the target — straight across when they share a row, elbowed when
+// they don't. No diagonals.
+function elbowPath(a, b) {
+  const x1 = a.x + NODE_W, y1 = a.y + NODE_H / 2;
+  const x2 = b.x,          y2 = b.y + NODE_H / 2;
+  if (Math.abs(y1 - y2) < 1) return `M ${x1} ${y1} H ${x2}`;
+  const midX = x1 + COL_GAP / 2;
+  return `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`;
+}
+
 function WorkflowDetailView({ workflow, onNavigate }) {
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState(false);
-  const [nodes, setNodes] = useState(WORKFLOW_NODES);
+  // A freshly confirmed plan is queued, not running: every task starts at
+  // "not started" until the user kicks execution off.
+  const [nodes, setNodes] = useState(
+    workflow?.justConfirmed
+      ? WORKFLOW_NODES.map(n => ({ ...n, status: 'not_started' }))
+      : WORKFLOW_NODES
+  );
   const [hoveredEdge, setHoveredEdge] = useState(null);
   const [insertDialogEdge, setInsertDialogEdge] = useState(null);
+  // Right panel is persistent and tabbed so the canvas and the task statuses
+  // are visible at the same time, and prompt-based editing stays available.
+  const [panelTab, setPanelTab] = useState('tasks');
+  const [configEditing, setConfigEditing] = useState(false);
+  const [chatLog, setChatLog] = useState([]);
+  const [chatInput, setChatInput] = useState('');
 
   const selectedNode = nodes.find(n => n.id === selected);
+  const connections = getConnections(nodes);
+  const layout = computeLayout(nodes);
+
+  // Automation-level status, derived from every Task's status rather than
+  // stored separately — this is the "what does completed/blocked mean for
+  // the whole Automation" question Fred answered on Aug 21.
+  const statuses = nodes.map(n => n.status || 'not_started');
+  const automationStatus = statuses.some(s => s === 'failed' || s === 'action_required')
+    ? 'action_required'
+    : statuses.some(s => s === 'running')
+    ? 'running'
+    : statuses.every(s => s === 'completed' || s === 'skipped')
+    ? 'completed'
+    : 'pending';
+  const automationStatusLabel = {
+    action_required: 'Action required',
+    running: 'Running',
+    completed: 'Completed',
+    pending: 'Pending',
+  }[automationStatus];
+  const automationStatusColors = {
+    action_required: { bg: '#FEF3E2', color: '#B45309' },
+    running: { bg: '#EEF0FF', color: '#3838E7' },
+    completed: { bg: '#E6F9F3', color: '#00B37A' },
+    pending: { bg: '#F5F5F7', color: '#918F9A' },
+  }[automationStatus];
 
   function handleNodePropertyChange(nodeId, propertyName, value) {
     setNodes(prevNodes => prevNodes.map(n =>
       n.id === nodeId ? { ...n, [propertyName]: value } : n
     ));
+  }
+
+  // Resolves a blocked/failed Task, then cascades: any Task whose
+  // dependencies are now all satisfied moves from "not started" to
+  // "running" automatically — this is the dependency-driven execution
+  // model, not something the user has to trigger by hand.
+  function resolveNode(nodeId, newStatus) {
+    setNodes(prevNodes => {
+      let next = prevNodes.map(n => n.id === nodeId ? { ...n, status: newStatus } : n);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        next = next.map(n => {
+          if ((n.status || 'not_started') !== 'not_started') return n;
+          const deps = n.dependsOn || [];
+          const ready = deps.every(depId => {
+            const dep = next.find(x => x.id === depId);
+            return dep && isSatisfied(dep.status);
+          });
+          if (ready) { changed = true; return { ...n, status: 'running' }; }
+          return n;
+        });
+      }
+      return next;
+    });
+  }
+
+  // Kicks off a queued automation: every task whose dependencies are already
+  // satisfied starts at once — that's the parallel bit of the model.
+  function startExecution() {
+    setNodes(prev => prev.map(n => {
+      if ((n.status || 'not_started') !== 'not_started') return n;
+      const ready = (n.dependsOn || []).every(id => {
+        const dep = prev.find(x => x.id === id);
+        return dep && isSatisfied(dep.status);
+      });
+      return ready ? { ...n, status: 'running' } : n;
+    }));
   }
 
   function handleSave() {
@@ -861,115 +1456,52 @@ function WorkflowDetailView({ workflow, onNavigate }) {
     setTimeout(() => setSaved(false), 2000);
   }
 
-  function autoLayoutNodes() {
-    // Create a Dagre graph with optimized settings
-    const g = new dagre.graphlib.Graph({ rankdir: 'LR' });
-    g.setGraph({
-      rankdir: 'LR',
-      marginx: 80,
-      marginy: 80,
-      ranksep: 120,      // Vertical spacing between ranks
-      nodesep: 100,      // Horizontal spacing between nodes
-    });
-    g.setDefaultEdgeLabel(() => ({}));
-
-    // Add nodes to graph with realistic dimensions
-    nodes.forEach(node => {
-      g.setNode(node.id, { width: 240, height: 120 });
-    });
-
-    // Add main edges to graph
-    const mainConnections = [['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8'],['9','11'],['11','12'],['12','13']];
-    mainConnections.forEach(([a, b]) => {
-      g.setEdge(a, b);
-    });
-
-    // Add branch edges so Dagre understands the flow structure
-    const branchConnections = [['3','4'],['8','9'],['8','10'],['12','13']];
-    branchConnections.forEach(([a, b]) => {
-      if (!mainConnections.some(([ma, mb]) => ma === a && mb === b)) {
-        g.setEdge(a, b);
-      }
-    });
-
-    // Calculate layout
-    dagre.layout(g);
-
-    // Update node positions from graph layout
-    const canvasWidth = 1200; // Approximate canvas width in pixels
-    const layoutedNodes = nodes.map(node => {
-      const graphNode = g.node(node.id);
-      if (graphNode) {
-        // Convert from Dagre pixel coordinates to percentage
-        const newX = Math.max(10, Math.min(90, (graphNode.x / canvasWidth) * 100));
-        const newY = graphNode.y;
-        return { ...node, x: newX, y: newY };
-      }
-      return node;
-    });
-
-    setNodes(layoutedNodes);
-  }
-
   function insertNodeOnEdge(sourceId, targetId, nodeType) {
     // Find next available ID
     const maxId = Math.max(...nodes.map(n => parseInt(n.id)));
     const newId = String(maxId + 1);
 
-    // Find source and target nodes
-    const sourceNode = nodes.find(n => n.id === sourceId);
-    const targetNode = nodes.find(n => n.id === targetId);
+    if (!nodes.find(n => n.id === sourceId) || !nodes.find(n => n.id === targetId)) return;
 
-    if (!sourceNode || !targetNode) return;
-
-    // Calculate position between source and target
-    const newX = (sourceNode.x + targetNode.x) / 2;
-    const newY = (sourceNode.y + targetNode.y) / 2;
-
-    // Create new node with default properties
+    // Create the new task depending only on the edge's source — the target's
+    // dependency is rewired below to point here instead, so the graph stays
+    // consistent. Position is derived by the grid layout, never stored.
     const newNode = {
       id: newId,
       type: nodeType,
-      label: `New ${nodeType}`,
-      desc: 'Configure this step',
-      color: { trigger: '#DCE8FF', agent: '#E8DCF8', condition: '#FFF3DC', action: '#DCF8DC', wait: '#F0F0F5' }[nodeType] || '#DCF8DC',
-      x: newX,
-      y: newY,
+      label: `New ${TASK_TYPES[nodeType].label}`,
+      desc: 'Configure this task',
+      dependsOn: [sourceId],
+      status: 'not_started',
     };
 
     // Add default properties based on type
-    if (nodeType === 'trigger') {
-      newNode.source = 'webhook';
-      newNode.frequency = 'continuous';
-    } else if (nodeType === 'agent') {
-      newNode.service = 'openai';
-      newNode.action = 'new-action';
-      newNode.temperature = 0.7;
-    } else if (nodeType === 'condition') {
-      newNode.condition = 'condition';
-      newNode.branchLabelYes = 'Yes';
-      newNode.branchLabelNo = 'No';
-      newNode.branches = true;
-    } else if (nodeType === 'action') {
-      newNode.schedule = 'immediate';
-      newNode.platform = 'analytics';
-      newNode.retries = 3;
-    } else if (nodeType === 'wait') {
-      newNode.duration = '1 day';
-      newNode.waitType = 'delay';
+    if (nodeType === 'variant') {
+      newNode.elementType = 'popup';
+      newNode.changeSummary = '';
+    } else if (nodeType === 'targeting') {
+      newNode.audience = 'new-visitors';
+      newNode.triggerCondition = '';
+    } else if (nodeType === 'goal') {
+      newNode.goalType = 'click';
+      newNode.trackedElement = '';
+    } else if (nodeType === 'traffic') {
+      newNode.trafficSplit = 50;
+      newNode.integration = 'ga4';
+    } else if (nodeType === 'finalize') {
+      newNode.launchMode = 'immediate';
     }
 
-    // Adjust downstream y-coordinates to prevent overlap
-    const adjustedNodes = nodes.map(n => {
-      if (n.y >= newY) {
-        return { ...n, y: n.y + 90 };
-      }
-      return n;
-    });
+    // Rewire the target so it now depends on the new node instead of the
+    // original source — this keeps dependsOn as the single source of truth
+    // for the graph rather than just repositioning boxes on screen.
+    const rewiredNodes = nodes.map(n =>
+      n.id === targetId
+        ? { ...n, dependsOn: (n.dependsOn || []).map(d => d === sourceId ? newId : d) }
+        : n
+    );
 
-    // Add new node to the list
-    const updatedNodes = [...adjustedNodes, newNode];
-    setNodes(updatedNodes);
+    setNodes([...rewiredNodes, newNode]);
     setInsertDialogEdge(null);
     setSelected(newId);
   }
@@ -990,21 +1522,12 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             </button>
             <span style={{ color: '#C7C5D0', fontFamily: 'Roboto, sans-serif', fontSize: 13 }}>/</span>
             <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23' }}>
-              {workflow?.name || 'Test & Deploy Automation'}
+              {workflow?.name || 'Newsletter Signup Automation'}
             </span>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {saved && <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#00B37A' }}>✓ Saved</span>}
-            <button onClick={autoLayoutNodes}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
-              onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
-              onMouseOut={e => e.currentTarget.style.background = '#fff'}
-              title="Auto-arrange nodes in optimal layout">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M1.5 2.5H4.5M1.5 5H3.5M1.5 7.5H5.5M9.5 2.5H12.5M10.5 5H12.5M9.5 7.5H12.5M4 10.5H10" stroke="#52515B" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              Auto-arrange
-            </button>
+            <span style={{ background: automationStatusColors.bg, color: automationStatusColors.color, fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{automationStatusLabel}</span>
             <button onClick={handleSave}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
               onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
@@ -1016,157 +1539,126 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               </svg>
               Save
             </button>
-            <button
+            <button onClick={startExecution}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}
               onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
               onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 1.5L11.5 6.5L2.5 11.5V1.5Z" fill="#fff"/></svg>
-              Run Workflow
+              Run automation
             </button>
           </div>
         </div>
-        {/* Generated info bar */}
-        <div style={{ paddingBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>
-            {workflow?.description || 'Generated from your prompt · Ready to execute'}
+        {/* Generated info bar — the whole Automation traces back to one prompt */}
+        <div style={{ paddingBottom: 12 }}>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', fontStyle: 'italic' }}>
+            "{workflow?.description || 'Create an experiment on Page X with two newsletter variations (popup and banner), target new homepage visitors. Show the variations when the user scrolls 50% of the page content, track CTA clicks and registrations, split traffic equally, and enable GA4.'}"
           </span>
-          <span style={{ background: '#E6F9F3', color: '#00B37A', fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20 }}>Live</span>
         </div>
       </div>
 
       {/* Canvas + side panel */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Canvas */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 24, background: '#FCFCFD' }}>
-          <div style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: '32px 24px', minHeight: 1200, position: 'relative' }}>
-            {/* SVG connections */}
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-              <defs>
-                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="2.5" orient="auto">
-                  <polygon points="0 0, 7 2.5, 0 5" fill="#C7C5D0"/>
-                </marker>
-              </defs>
-              {/* Main vertical connections (1→2, 2→3, 3→4, 4→5, 5→6, 6→7, 7→8) */}
-              {[['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8']].map(([a,b]) => {
-                const na = nodes.find(n => n.id === a);
-                const nb = nodes.find(n => n.id === b);
-                if (!na || !nb) return null;
-                return <line key={`${a}-${b}`} x1={`${na.x}%`} y1={na.y + 68} x2={`${nb.x}%`} y2={nb.y + 10} stroke="#C7C5D0" strokeWidth="1.5" markerEnd="url(#arrow)"/>;
-              })}
-              {/* Branch from condition 8 → 9 (right) and 10 (left) */}
-              <line x1="50%" y1="728" x2="73%" y2="760" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3" markerEnd="url(#arrow)"/>
-              <line x1="50%" y1="728" x2="27%" y2="760" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3" markerEnd="url(#arrow)"/>
-              {/* Branch labels */}
-              <text x="62%" y="745" fontFamily="Roboto, sans-serif" fontSize="10" fill="#00B37A" textAnchor="middle">Yes</text>
-              <text x="38%" y="745" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No</text>
-              {/* 9→11, 11→12, 12→13 */}
-              {[['9','11'],['11','12'],['12','13']].map(([a,b]) => {
-                const na = nodes.find(n => n.id === a);
-                const nb = nodes.find(n => n.id === b);
-                if (!na || !nb) return null;
-                return <line key={`${a}-${b}`} x1={`${na.x}%`} y1={na.y + 68} x2={`${nb.x}%`} y2={nb.y + 10} stroke="#C7C5D0" strokeWidth="1.5" markerEnd="url(#arrow)"/>;
-              })}
-              {/* Branch from condition 3 – "No" end */}
-              <line x1="50%" y1="268" x2="75%" y2="295" stroke="#C7C5D0" strokeWidth="1.5" strokeDasharray="5,3"/>
-              <text x="64%" y="282" fontFamily="Roboto, sans-serif" fontSize="10" fill="#E03D3D" textAnchor="middle">No → End</text>
+        {/* Canvas column: scrolling grid, with the legend pinned underneath so
+            it can never overlap the cards. */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#FCFCFD', minWidth: 0 }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+          <div className="canvas-grid" style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: 28, minHeight: '100%', display: 'inline-block' }}>
+            {/* Grid stage — sized to the computed layout so the card grid and
+                the connector layer share one coordinate space. */}
+            <div style={{ position: 'relative', width: layout.width, height: layout.height }}>
+              <svg style={{ position: 'absolute', inset: 0, width: layout.width, height: layout.height, pointerEvents: 'none', overflow: 'visible' }}>
+                <defs>
+                  <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+                    <polygon points="0 0, 6 2.5, 0 5" fill="#C7C5D0"/>
+                  </marker>
+                </defs>
 
-              {/* (+) buttons on edges for node insertion - only visible on hover */}
-              {[['1','2'],['2','3'],['3','4'],['4','5'],['5','6'],['6','7'],['7','8'],['9','11'],['11','12'],['12','13']].map(([a,b]) => {
-                const na = nodes.find(n => n.id === a);
-                const nb = nodes.find(n => n.id === b);
-                if (!na || !nb) return null;
+                {/* Right-angle connectors derived from dependsOn. A task with
+                    several dependents fans out; a task depending on several
+                    others converges them — no special-cased branch logic. */}
+                {connections.map(([a, b]) => {
+                  const pa = layout.pos[a], pb = layout.pos[b];
+                  const na = nodes.find(n => n.id === a);
+                  if (!pa || !pb || !na) return null;
+                  const done = isSatisfied(na.status);
+                  return (
+                    <path key={`${a}-${b}`} d={elbowPath(pa, pb)} fill="none"
+                      stroke={done ? '#B9B7C4' : '#D9D7E0'} strokeWidth="1.5"
+                      strokeDasharray={done ? undefined : '5,4'}
+                      strokeLinejoin="round" markerEnd="url(#arrow)"/>
+                  );
+                })}
 
-                const x1Pct = na.x;
-                const y1 = na.y + 68;
-                const x2Pct = nb.x;
-                const y2 = nb.y + 10;
+                {/* (+) insertion affordance, parked on the connector's elbow */}
+                {connections.map(([a, b]) => {
+                  const pa = layout.pos[a], pb = layout.pos[b];
+                  if (!pa || !pb) return null;
+                  const cx = pa.x + NODE_W + COL_GAP / 2;
+                  const cy = (pa.y + pb.y) / 2 + NODE_H / 2;
+                  const key = `${a}-${b}`;
+                  const on = hoveredEdge === key;
+                  return (
+                    <g key={`edge-${key}`} style={{ pointerEvents: 'all', cursor: 'pointer' }}
+                       onMouseEnter={() => setHoveredEdge(key)}
+                       onMouseLeave={() => setHoveredEdge(null)}
+                       onClick={() => setInsertDialogEdge([a, b])}>
+                      <circle cx={cx} cy={cy} r={16} fill="transparent"/>
+                      {on && (
+                        <>
+                          <circle cx={cx} cy={cy} r={13} fill="#3838E7"/>
+                          <path d={`M ${cx - 5} ${cy} H ${cx + 5} M ${cx} ${cy - 5} V ${cy + 5}`}
+                            stroke="#fff" strokeWidth="1.8" strokeLinecap="round" pointerEvents="none"/>
+                        </>
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
 
-                const midXPct = (x1Pct + x2Pct) / 2;
-                const midY = (y1 + y2) / 2;
-                const edgeKey = `${a}-${b}`;
-
-                return (
-                  <g key={`edge-${edgeKey}`}
-                     onMouseEnter={() => setHoveredEdge(edgeKey)}
-                     onMouseLeave={() => setHoveredEdge(null)}
-                     style={{ cursor: 'pointer' }}>
-                    {/* Invisible interactive zone */}
-                    <circle
-                      cx={`${midXPct}%`}
-                      cy={midY}
-                      r={20}
-                      fill="transparent"
-                      style={{ cursor: 'pointer' }}
-                    />
-                    {/* Visible button - only appears on hover */}
-                    {hoveredEdge === edgeKey && (
-                      <g>
-                        <circle
-                          cx={`${midXPct}%`}
-                          cy={midY}
-                          r={18}
-                          fill="#3838E7"
-                          style={{ transition: 'all 0.15s ease' }}
-                        />
-                        <text
-                          x={`${midXPct}%`}
-                          y={midY + 6}
-                          fontFamily="Roboto, sans-serif"
-                          fontSize="18"
-                          fontWeight="bold"
-                          fill="#fff"
-                          textAnchor="middle"
-                          pointerEvents="none"
-                          style={{ userSelect: 'none' }}>
-                          +
-                        </text>
-                      </g>
-                    )}
-                    {/* Clickable area */}
-                    <circle
-                      cx={`${midXPct}%`}
-                      cy={midY}
-                      r={20}
-                      fill="transparent"
-                      style={{ cursor: hoveredEdge === edgeKey ? 'pointer' : 'default' }}
-                      onClick={() => setInsertDialogEdge([a, b])}
-                    />
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Nodes */}
-            <div style={{ position: 'relative', zIndex: 1 }}>
+              {/* Cards */}
               {nodes.map(node => (
-                <NodeBox key={node.id} node={node} selected={selected === node.id} onClick={() => setSelected(selected === node.id ? null : node.id)}/>
+                layout.pos[node.id] && (
+                  <NodeBox key={node.id} node={node} pos={layout.pos[node.id]} selected={selected === node.id}
+                    onClick={() => { setSelected(selected === node.id ? null : node.id); setPanelTab('tasks'); }}
+                    allNodes={nodes} onResolve={resolveNode}/>
+                )
               ))}
             </div>
 
-            {/* Legend */}
-            <div style={{ position: 'absolute', bottom: 24, left: 24, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: '10px 14px' }}>
-              <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', marginBottom: 8 }}>Node Types</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                {[['#DCE8FF', 'Trigger'], ['#E8DCF8', 'Agent'], ['#FFF3DC', 'Condition'], ['#DCF8DC', 'Action'], ['#F0F0F5', 'Wait']].map(([color, label]) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 3, background: color, border: '1px solid #E1DFE7' }}/>
-                    <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
+        </div>
+
+        {/* Legend strip — outside the scroll area so it never covers a card */}
+        <div style={{ borderTop: '1px solid #E1DFE7', background: '#fff', padding: '9px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            {Object.entries(TASK_TYPES).map(([type, cfg]) => (
+              <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 9, height: 9, borderRadius: 3, background: cfg.color, border: '1px solid #E1DFE7' }}/>
+                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{cfg.label}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ width: 1, height: 14, background: '#E1DFE7' }}/>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            {Object.entries(STATUS_CONFIG).filter(([s]) => s !== 'skipped').map(([status, cfg]) => (
+              <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 9, height: 9, borderRadius: '50%', background: cfg.color }}/>
+                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{cfg.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
         </div>
 
         {/* Node insertion dialog */}
         {insertDialogEdge && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div className="fade-up" style={{ background: '#fff', borderRadius: 12, padding: 24, minWidth: 320, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-              <h3 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23', marginBottom: 4 }}>Insert Node</h3>
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', marginBottom: 18 }}>Select the type of node to insert between the connected steps</p>
+              <h3 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23', marginBottom: 4 }}>Insert Task</h3>
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', marginBottom: 18 }}>The new task will depend on the step before it — dependents get rewired automatically</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
-                {['trigger', 'agent', 'condition', 'action', 'wait'].map(type => (
+                {Object.keys(TASK_TYPES).filter(t => t !== 'validate').map(type => (
                   <button
                     key={type}
                     onClick={() => insertNodeOnEdge(insertDialogEdge[0], insertDialogEdge[1], type)}
@@ -1180,7 +1672,6 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                       fontSize: 13,
                       color: '#1B1B23',
                       fontWeight: 500,
-                      textTransform: 'capitalize',
                       transition: 'all 0.15s',
                       display: 'flex',
                       alignItems: 'center',
@@ -1194,8 +1685,8 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                       e.currentTarget.style.background = '#fff';
                       e.currentTarget.style.borderColor = '#E1DFE7';
                     }}>
-                    <span style={{ width: 12, height: 12, borderRadius: 2, background: { trigger: '#DCE8FF', agent: '#E8DCF8', condition: '#FFF3DC', action: '#DCF8DC', wait: '#F0F0F5' }[type] }}/>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                    <span style={{ width: 12, height: 12, borderRadius: 2, background: TASK_TYPES[type].color }}/>
+                    {TASK_TYPES[type].label}
                   </button>
                 ))}
               </div>
@@ -1229,18 +1720,40 @@ function WorkflowDetailView({ workflow, onNavigate }) {
           </div>
         )}
 
-        {/* Right panel */}
-        {selectedNode && (
-          <div className="fade-up" style={{ width: 340, borderLeft: '1px solid #E1DFE7', background: '#fff', padding: '20px', overflowY: 'auto', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>Node Details</span>
-              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#918F9A', lineHeight: 1, padding: '0 2px' }}>×</button>
-            </div>
+        {/* Right panel — persistent + tabbed. Canvas and status stay visible
+            together, and Chat keeps prompt-based editing available alongside
+            the configuration panel. */}
+        <div style={{ width: 380, borderLeft: '1px solid #E1DFE7', background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
+          {/* Tab bar */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #E1DFE7', flexShrink: 0 }}>
+            {[['tasks', 'Tasks'], ['config', 'Configuration'], ['chat', 'Chat']].map(([key, label]) => (
+              <button key={key} onClick={() => { setPanelTab(key); setSelected(null); }}
+                style={{ flex: 1, padding: '13px 0', background: 'none', border: 'none', borderBottom: panelTab === key ? '2px solid #3838E7' : '2px solid transparent', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: panelTab === key ? '#3838E7' : '#918F9A', marginBottom: -1 }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
+          {/* ── Task detail (drills in from canvas or Tasks list) ── */}
+          {selectedNode ? (
+          <div className="fade-up">
+            <button onClick={() => setSelected(null)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#3838E7', marginBottom: 14 }}>
+              <svg width="10" height="8" viewBox="0 0 6 10.5" fill="none"><path d={P.backArrow} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              All tasks
+            </button>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Node Type</div>
-                <div style={{ display: 'inline-block', background: selectedNode.color, padding: '4px 10px', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', textTransform: 'capitalize' }}>{selectedNode.type}</div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Task Type</div>
+                  <div style={{ display: 'inline-block', background: TASK_TYPES[selectedNode.type].color, padding: '4px 10px', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>{TASK_TYPES[selectedNode.type].label}</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Status</div>
+                  <div style={{ display: 'inline-block', background: STATUS_CONFIG[selectedNode.status || 'not_started'].bg, color: STATUS_CONFIG[selectedNode.status || 'not_started'].color, padding: '4px 10px', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 12 }}>{STATUS_CONFIG[selectedNode.status || 'not_started'].label}</div>
+                </div>
               </div>
               <div>
                 <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Label</div>
@@ -1254,32 +1767,145 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               {/* Type-specific form fields */}
               <div style={{ borderTop: '1px solid #E1DFE7', paddingTop: 14 }}>
                 <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 12 }}>Configuration</div>
-                {renderNodeForm(selectedNode, handleNodePropertyChange)}
+                {renderNodeForm(selectedNode, handleNodePropertyChange, nodes)}
               </div>
 
-              {selectedNode.branches && (
-                <div>
-                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Branch Behavior</div>
+              {(selectedNode.dependsOn || []).length > 0 && (
+                <div style={{ borderTop: '1px solid #E1DFE7', paddingTop: 14 }}>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Depends On</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00B37A', flexShrink: 0 }}/>
-                      {selectedNode.branchLabelYes || 'Yes'} → Continue to next step
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#E03D3D', flexShrink: 0 }}/>
-                      {selectedNode.branchLabelNo || 'No'} → End workflow / rollback
-                    </div>
+                    {selectedNode.dependsOn.map(depId => {
+                      const dep = nodes.find(n => n.id === depId);
+                      if (!dep) return null;
+                      const sc = STATUS_CONFIG[dep.status || 'not_started'];
+                      return (
+                        <div key={depId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.color, flexShrink: 0 }}/>
+                            {dep.label}
+                          </span>
+                          <span style={{ color: sc.color, fontWeight: 600, fontSize: 10, textTransform: 'uppercase' }}>{sc.label}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
               <button style={{ width: '100%', padding: '9px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer', marginTop: 4 }}
                 onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
                 onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
-                Edit Node
+                Edit Task
               </button>
             </div>
           </div>
-        )}
+
+          /* ── Tasks tab: every task grouped by state, beside the canvas ── */
+          ) : panelTab === 'tasks' ? (
+            <div>
+              {[
+                { key: 'action_required', title: 'Action required' },
+                { key: 'failed',          title: 'Failed' },
+                { key: 'running',         title: 'Running' },
+                { key: 'not_started',     title: 'Waiting on dependencies' },
+                { key: 'completed',       title: 'Completed' },
+                { key: 'skipped',         title: 'Skipped' },
+              ].map(group => {
+                const items = nodes.filter(n => (n.status || 'not_started') === group.key);
+                if (!items.length) return null;
+                const sc = STATUS_CONFIG[group.key];
+                return (
+                  <div key={group.key} style={{ marginBottom: 18 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: sc.color }}/>
+                      <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B' }}>{group.title}</span>
+                      <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>{items.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {items.map(n => (
+                        <div key={n.id} onClick={() => setSelected(n.id)}
+                          style={{ border: '1px solid #E1DFE7', borderRadius: 8, padding: '10px 12px', cursor: 'pointer', background: '#fff' }}
+                          onMouseOver={e => e.currentTarget.style.background = '#FCFCFD'}
+                          onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+                          <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>{n.label}</div>
+                          <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', marginTop: 2 }}>{TASK_TYPES[n.type].label}</div>
+                          {(n.status === 'failed' || n.status === 'action_required') && (
+                            <button onClick={e => { e.stopPropagation(); resolveNode(n.id, 'completed'); }}
+                              style={{ marginTop: 8, padding: '5px 12px', background: '#3838E7', border: 'none', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#fff', cursor: 'pointer' }}>
+                              {n.status === 'failed' ? 'Retry' : 'Answer'}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+          /* ── Configuration tab: read-only until explicitly edited ── */
+          ) : panelTab === 'config' ? (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>Configuration</span>
+                <button onClick={() => setConfigEditing(!configEditing)}
+                  style={{ padding: '6px 12px', background: configEditing ? '#3838E7' : '#fff', color: configEditing ? '#fff' : '#3838E7', border: `1px solid ${configEditing ? '#3838E7' : '#E1DFE7'}`, borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
+                  {configEditing ? 'Save' : '✎ Edit configuration'}
+                </button>
+              </div>
+              {[
+                ['Name', workflow?.name || 'Newsletter Signup Automation'],
+                ['Starts', 'As soon as the plan is confirmed'],
+                ['Repeats', 'Does not repeat'],
+              ].map(([label, value]) => (
+                <div key={label} style={{ marginBottom: 14 }}>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>{label}</div>
+                  {configEditing
+                    ? <input defaultValue={value} style={{ width: '100%', padding: '9px 11px', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none' }}/>
+                    : <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23' }}>{value}</div>}
+                </div>
+              ))}
+              <div style={{ borderTop: '1px solid #E1DFE7', paddingTop: 14 }}>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Original prompt</div>
+                {configEditing
+                  ? <textarea defaultValue={workflow?.description || ''} style={{ width: '100%', minHeight: 120, padding: '10px 11px', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', outline: 'none', resize: 'vertical' }}/>
+                  : <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>"{workflow?.description || 'Create an experiment on Page X with two newsletter variations…'}"</p>}
+              </div>
+            </div>
+
+          /* ── Chat tab: prompt-based changes, alongside the config panel ── */
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div style={{ flex: 1, marginBottom: 12 }}>
+                {chatLog.length === 0 ? (
+                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', lineHeight: 1.6, margin: 0 }}>
+                    Describe a change and Kai will update the plan — e.g. “add a third variant”, or “only target mobile visitors”. The canvas stays visible while you do.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {chatLog.map((m, i) => (
+                      <div key={i} style={{ alignSelf: m.from === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%', background: m.from === 'user' ? '#3838E7' : '#F5F5F7', color: m.from === 'user' ? '#fff' : '#1B1B23', padding: '9px 12px', borderRadius: 10, fontFamily: 'Roboto, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
+                        {m.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ border: '1px solid #E1DFE7', borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
+                <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && chatInput.trim()) {
+                      const text = chatInput.trim();
+                      setChatLog(l => [...l, { from: 'user', text }, { from: 'kai', text: 'Updated the plan. Review the affected tasks on the canvas.' }]);
+                      setChatInput('');
+                    }
+                  }}
+                  placeholder="Ask for a change to this automation…"
+                  style={{ flex: 1, border: 'none', outline: 'none', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', background: 'transparent', minWidth: 0 }}/>
+              </div>
+            </div>
+          )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1303,6 +1929,7 @@ function App() {
         {screen === 'home' && <HomeScreen onNavigate={navigate}/>}
         {screen === 'dashboard' && <WorkflowsDashboard onNavigate={navigate}/>}
         {screen === 'new-workflow' && <NewWorkflowScreen onNavigate={navigate}/>}
+        {screen === 'plan-review' && <PlanReviewScreen draft={currentWorkflow} onNavigate={navigate}/>}
         {screen === 'workflow-detail' && <WorkflowDetailView workflow={currentWorkflow} onNavigate={navigate}/>}
       </div>
     </div>
