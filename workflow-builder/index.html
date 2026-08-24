@@ -332,6 +332,31 @@ function Sidebar({ screen, onNavigate }) {
     </button>
   );
 
+  // Chris (24 Aug): a standalone "+New automation" row doesn't add enough
+  // value to earn its own line in the nav. Surface creation as a "+" that
+  // only appears on hover of the Automation row instead.
+  const [automationHover, setAutomationHover] = useState(false);
+  const NavRowWithAdd = ({ icon, label, active, onClick, onAdd }) => (
+    <div onMouseEnter={() => setAutomationHover(true)} onMouseLeave={() => setAutomationHover(false)}
+      style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <button onClick={onClick}
+        style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 8px', borderRadius: 6, background: active ? '#F5F5FF' : 'none', border: 'none', cursor: 'pointer', transition: 'background .12s', minWidth: 0 }}
+        onMouseOver={e => { if (!active) e.currentTarget.style.background = '#F9F9FB'; }}
+        onMouseOut={e => { if (!active) e.currentTarget.style.background = 'none'; }}>
+        <span style={{ color: active ? '#3838E7' : '#5E5D67', display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</span>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: active ? '#3838E7' : '#1B1B23', letterSpacing: '0.25px', whiteSpace: 'nowrap' }}>{label}</span>
+      </button>
+      {automationHover && (
+        <button onClick={onAdd} title="New automation"
+          style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5E5D67' }}
+          onMouseOver={e => e.currentTarget.style.background = '#F1F0F5'}
+          onMouseOut={e => e.currentTarget.style.background = 'none'}>
+          <svg width="14" height="14" viewBox="0 0 9.67 9.67" fill="none"><path d="M0.75 4.83H8.92M4.83 0.75V8.92" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ width: 270, background: '#fff', borderRight: '1px solid #E1DFE7', display: 'flex', flexDirection: 'column', flexShrink: 0, height: '100%' }}>
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 0' }}>
@@ -343,8 +368,8 @@ function Sidebar({ screen, onNavigate }) {
         <div style={{ borderBottom: '1px dashed #E1DFE7', margin: '4px 0 8px' }}/>
 
         {/* Automation — top-level entry in the main nav */}
-        <NavItem icon={<WorkflowIcon color={isAutomate ? '#3838E7' : '#5E5D67'}/>} label="Automation" active={isAutomate} onClick={() => onNavigate('dashboard')}/>
-        <NavItem icon={<svg width="18" height="18" viewBox="0 0 9.67 9.67" fill="none"><path d="M0.75 4.83H8.92M4.83 0.75V8.92" stroke="#5E5D67" strokeWidth="1.6" strokeLinecap="round"/></svg>} label="New automation" active={false} onClick={() => onNavigate('new-workflow')}/>
+        <NavRowWithAdd icon={<WorkflowIcon color={isAutomate ? '#3838E7' : '#5E5D67'}/>} label="Automation" active={isAutomate}
+          onClick={() => onNavigate('dashboard')} onAdd={() => onNavigate('new-workflow')}/>
 
         {/* Separator */}
         <div style={{ borderBottom: '1px dashed #E1DFE7', margin: '8px 0' }}/>
@@ -540,15 +565,22 @@ function AutomationRow({ automation: a, selected, onSelect }) {
   );
 }
 
-// Collapsible group of subtasks in the detail panel. Blocked items carry an
-// "Answer" action so the user can unblock without leaving the dashboard.
-function SubtaskGroup({ kind, title, items, defaultOpen, onAnswer }) {
+// Collapsible group of subtasks. Blocked/review items carry an action that
+// opens the item in chat (see WorkflowDetailView's "reviewing" flow) so the
+// same component and the same interaction work identically whether it's
+// shown on the dashboard or inside the automation itself — per Chris
+// (24 Aug): "the dashboard tasks view and the one inside the edit page are
+// supposed to be identical."
+function SubtaskGroup({ kind, title, items, defaultOpen, onAnswer, onOpen }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const cfg = {
     blocked: { color: '#E03D3D', bg: '#FDEAEA', border: '#F5C2C2', icon: '⊖' },
     review:  { color: '#00875A', bg: '#fff',    border: '#E1DFE7', icon: '✓' },
     running: { color: '#3838E7', bg: '#fff',    border: '#E1DFE7', icon: '◷' },
+    waiting: { color: '#918F9A', bg: '#fff',    border: '#E1DFE7', icon: '○' },
+    done:    { color: '#00B37A', bg: '#fff',    border: '#E1DFE7', icon: '✓' },
   }[kind];
+  const actionable = kind === 'blocked' || kind === 'review';
   if (!items.length) return null;
   return (
     <div style={{ border: `1px solid ${cfg.border}`, background: cfg.bg, borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
@@ -567,13 +599,14 @@ function SubtaskGroup({ kind, title, items, defaultOpen, onAnswer }) {
       {open && (
         <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {items.map(it => (
-            <div key={it.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: '10px 12px' }}>
+            <div key={it.id} onClick={() => onOpen && onOpen(it)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: '10px 12px', cursor: onOpen ? 'pointer' : 'default' }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>{it.label}</div>
                 <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', marginTop: 2 }}>{it.waiting}</div>
               </div>
-              {kind !== 'running' && (
-                <button onClick={() => onAnswer(kind, it)}
+              {actionable && (
+                <button onClick={e => { e.stopPropagation(); onAnswer(kind, it); }}
                   style={{ flexShrink: 0, padding: '6px 14px', background: kind === 'blocked' ? '#3838E7' : '#fff', color: kind === 'blocked' ? '#fff' : '#3838E7', border: kind === 'blocked' ? 'none' : '1px solid #3838E7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
                   {kind === 'blocked' ? 'Answer' : 'Review'}
                 </button>
@@ -586,106 +619,16 @@ function SubtaskGroup({ kind, title, items, defaultOpen, onAnswer }) {
   );
 }
 
-// What "Answer" actually opens. A blocked task asks a question (select an
-// option, or approve/reject something produced); an asset "ready for
-// review" is the same shape without blocking anything. Resolving it here
-// is the whole point — no redirect, no dead end, the panel updates live.
-function AnswerModal({ kind, item, onClose, onSubmit }) {
-  const [choice, setChoice] = useState(null);
-  const [changesNote, setChangesNote] = useState('');
-  const [requestingChanges, setRequestingChanges] = useState(false);
-  const isBlocking = kind === 'blocked';
-  const isSelect = item.type === 'select';
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}
-      onClick={onClose}>
-      <div className="fade-up" onClick={e => e.stopPropagation()}
-        style={{ background: '#fff', borderRadius: 12, padding: 24, width: 420, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: isBlocking ? '#E03D3D' : '#00875A', flexShrink: 0 }}/>
-          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#918F9A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            {isBlocking ? 'Blocking this task' : 'Ready for review'}
-          </span>
-        </div>
-        <h3 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23', margin: '2px 0 3px' }}>{item.label}</h3>
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '0 0 16px' }}>{item.waiting}</p>
-
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', lineHeight: 1.5, margin: '0 0 12px' }}>
-          {item.question || 'Review this before the automation continues.'}
-        </p>
-
-        {isSelect ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-            {item.options.map(opt => (
-              <button key={opt} onClick={() => setChoice(opt)}
-                style={{ textAlign: 'left', padding: '10px 14px', borderRadius: 8, cursor: 'pointer', background: choice === opt ? '#F5F5FF' : '#fff', border: `1px solid ${choice === opt ? '#3838E7' : '#E1DFE7'}`, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>
-                {opt}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ background: '#F9F9FB', border: '1px solid #E1DFE7', borderRadius: 8, padding: '12px 14px', marginBottom: 20, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', fontStyle: 'italic', lineHeight: 1.5 }}>
-            {item.preview}
-          </div>
-        )}
-
-        {requestingChanges && (
-          <div className="fade-up" style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B', marginBottom: 6 }}>What should change?</label>
-            <textarea value={changesNote} onChange={e => setChangesNote(e.target.value)} autoFocus
-              placeholder="e.g. shorten the headline, use the primary CTA color…"
-              style={{ width: '100%', minHeight: 70, padding: '9px 11px', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', outline: 'none', resize: 'vertical' }}/>
-          </div>
-        )}
-
-        {isSelect ? (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={onClose}
-              style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fff', border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', cursor: 'pointer' }}>
-              Cancel
-            </button>
-            <button disabled={!choice} onClick={() => onSubmit({ outcome: 'confirmed', value: choice })}
-              style={{ flex: 2, padding: '10px', borderRadius: 8, background: choice ? '#3838E7' : '#F1F0F5', border: 'none', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: choice ? '#fff' : '#918F9A', cursor: choice ? 'pointer' : 'not-allowed' }}>
-              Confirm & resume task
-            </button>
-          </div>
-        ) : requestingChanges ? (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setRequestingChanges(false)}
-              style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fff', border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', cursor: 'pointer' }}>
-              Back
-            </button>
-            <button disabled={!changesNote.trim()} onClick={() => onSubmit({ outcome: 'changes', value: changesNote.trim() })}
-              style={{ flex: 2, padding: '10px', borderRadius: 8, background: changesNote.trim() ? '#3838E7' : '#F1F0F5', border: 'none', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: changesNote.trim() ? '#fff' : '#918F9A', cursor: changesNote.trim() ? 'pointer' : 'not-allowed' }}>
-              Send back for changes
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setRequestingChanges(true)}
-              style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fff', border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', cursor: 'pointer' }}>
-              Request changes
-            </button>
-            <button onClick={() => onSubmit({ outcome: 'approved' })}
-              style={{ flex: 2, padding: '10px', borderRadius: 8, background: '#3838E7', border: 'none', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}>
-              {isBlocking ? 'Approve & resume task' : 'Approve'}
-            </button>
-          </div>
-        )}
-
-        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '14px 0 0', lineHeight: 1.5 }}>
-          {isBlocking
-            ? 'The automation is waiting on this — resolving it lets the task continue.'
-            : 'This asset was already built. Reviewing it doesn’t block anything else running.'}
-        </p>
-      </div>
-    </div>
-  );
-}
+// Chris (24 Aug): resolving a task via a dashboard pop-up breaks consistency
+// with how PBX already handles this everywhere else, and can't show a real
+// visual preview of what's being approved (a variation, a widget…). So
+// "Answer"/"Review" no longer opens a modal here — it opens the automation
+// and hands off to the chat + preview pane there. See ReviewPreviewPane and
+// the "reviewing" state in WorkflowDetailView.
 
 // The dashboard-side detail panel. Per Fred, this is the PRIMARY place a
-// user resolves required actions — opening the automation is secondary.
+// user *sees* what needs attention — resolving it happens in the automation
+// itself, via chat, per Chris's feedback (24 Aug).
 function AutomationDetailPanel({ automation: a, onClose, onOpen, onAnswer }) {
   const [descOpen, setDescOpen] = useState(false);
   const cfg = AUTOMATION_STATUS[a.status] || AUTOMATION_STATUS.draft;
@@ -752,11 +695,6 @@ function WorkflowsDashboard({ onNavigate }) {
   const [query, setQuery] = useState('');
   const [automations, setAutomations] = useState(AUTOMATIONS);
   const [selectedId, setSelectedId] = useState(null);
-  // What's open right now: which automation, which list ("blocked" /
-  // "review"), and which item — enough to resolve it and update just that
-  // one automation's state.
-  const [answering, setAnswering] = useState(null);
-  const [toast, setToast] = useState(null);
 
   const selectedAutomation = automations.find(a => a.id === selectedId) || null;
 
@@ -765,46 +703,6 @@ function WorkflowsDashboard({ onNavigate }) {
 
   const searched = automations.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
   const filtered = filter === 'all' ? searched : searched.filter(a => a.status === filter);
-
-  function flashToast(text) {
-    setToast(text);
-    setTimeout(() => setToast(null), 3200);
-  }
-
-  // Resolving an answer visibly changes the automation: the item leaves its
-  // list, the counts update, and — if that was the last blocker — the
-  // automation's own status flips from Blocked to Running. That state
-  // change *is* the confirmation; the toast is just a one-line echo of it.
-  function resolveAnswer(result) {
-    const { automationId, kind, item } = answering;
-    setAutomations(prev => prev.map(a => {
-      if (a.id !== automationId) return a;
-      if (kind === 'blocked') {
-        const blocked = a.blocked.filter(b => b.id !== item.id);
-        const nowUnblocked = blocked.length === 0 && a.status === 'blocked';
-        return {
-          ...a,
-          blocked,
-          status: nowUnblocked ? 'running' : a.status,
-          progressLabel: nowUnblocked ? 'Resuming — all blockers cleared' : a.progressLabel,
-        };
-      }
-      // Review items never block; approving removes it, requesting changes
-      // sends it back (represented here as a blocker on the same task).
-      const readyForReview = a.readyForReview.filter(r => r.id !== item.id);
-      const blocked = result.outcome === 'changes'
-        ? [...a.blocked, { id: item.id, label: `Rework: ${item.label}`, waiting: 'Just requested', type: 'approve', question: 'Changes requested:', preview: `"${result.value}"` }]
-        : a.blocked;
-      return { ...a, readyForReview, blocked, status: result.outcome === 'changes' ? 'blocked' : a.status };
-    }));
-
-    const label = item.label;
-    if (kind === 'blocked') flashToast(`Confirmed — “${label}” resumed.`);
-    else if (result.outcome === 'approved') flashToast(`Approved — “${label}”.`);
-    else flashToast(`Sent back for changes — “${label}”.`);
-
-    setAnswering(null);
-  }
 
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#FCFCFD' }}>
@@ -910,19 +808,7 @@ function WorkflowsDashboard({ onNavigate }) {
           automation={selectedAutomation}
           onClose={() => setSelectedId(null)}
           onOpen={() => onNavigate('workflow-detail', selectedAutomation)}
-          onAnswer={(kind, item) => setAnswering({ automationId: selectedAutomation.id, kind, item })}/>
-      )}
-
-      {answering && (
-        <AnswerModal kind={answering.kind} item={answering.item}
-          onClose={() => setAnswering(null)}
-          onSubmit={resolveAnswer}/>
-      )}
-
-      {toast && (
-        <div className="fade-up" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1B1B23', color: '#fff', padding: '10px 18px', borderRadius: 8, fontFamily: 'Roboto, sans-serif', fontSize: 13, zIndex: 2000 }}>
-          {toast}
-        </div>
+          onAnswer={(kind, item) => onNavigate('workflow-detail', { ...selectedAutomation, focusKind: kind, focusItem: item })}/>
       )}
     </div>
   );
@@ -1260,7 +1146,7 @@ function PlanReviewScreen({ draft, onNavigate }) {
 }
 
 // ─── SCREEN 4: WORKFLOW DETAIL ───────────────────────────────────────────────
-function NodeBox({ node, pos, selected, onClick, allNodes, onResolve }) {
+function NodeBox({ node, pos, selected, onClick, allNodes, onResolve, onReview }) {
   // Simple SVG icons for each task type
   const typeIcons = {
     variant:   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3H12V11H2V3Z" stroke="currentColor" strokeWidth="1.1"/><path d="M2 5.5H12" stroke="currentColor" strokeWidth="1.1"/></svg>,
@@ -1304,16 +1190,18 @@ function NodeBox({ node, pos, selected, onClick, allNodes, onResolve }) {
             : node.desc}
         </div>
 
+        {/* Per Chris (24 Aug): resolving these should happen via chat, same
+            as everywhere else in PBX — so this opens the chat + preview
+            flow rather than resolving in one click here. */}
         {status === 'failed' && (
-          <div style={{ display: 'flex', gap: 6, marginTop: 6 }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => onResolve(node.id, 'completed')} style={{ flex: 1, padding: '5px 8px', background: '#fff', border: '1px solid #E03D3D', color: '#E03D3D', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Retry</button>
-            <button onClick={() => onResolve(node.id, 'skipped')} style={{ flex: 1, padding: '5px 8px', background: '#fff', border: '1px solid #E1DFE7', color: '#52515B', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Skip</button>
+          <div style={{ marginTop: 6 }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => onReview(node)} style={{ width: '100%', padding: '5px 8px', background: '#fff', border: '1px solid #E03D3D', color: '#E03D3D', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Resolve in chat</button>
           </div>
         )}
 
         {status === 'action_required' && (
           <div style={{ marginTop: 6 }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => onResolve(node.id, 'completed')} style={{ width: '100%', padding: '5px 8px', background: '#B45309', border: 'none', color: '#fff', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Answer</button>
+            <button onClick={() => onReview(node)} style={{ width: '100%', padding: '5px 8px', background: '#B45309', border: 'none', color: '#fff', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, cursor: 'pointer' }}>Answer in chat</button>
           </div>
         )}
 
@@ -1511,6 +1399,120 @@ function elbowPath(a, b) {
   return `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`;
 }
 
+// Turns a blocked/failed Task into the shape SubtaskGroup and the chat flow
+// both expect. This is what "opens" when a user clicks Answer/Retry — a
+// question to resolve, not a one-click state flip.
+function nodeToItem(node) {
+  if (node.status === 'failed') {
+    return {
+      id: node.id, label: node.label, waiting: 'Failed', type: 'retry',
+      question: `"${node.label}" failed to complete. What would you like to do?`,
+      preview: node.failReason || 'The build step returned an error and could not finish automatically.',
+    };
+  }
+  if (node.id === '5') {
+    return {
+      id: node.id, label: node.label, waiting: 'Needs input', type: 'select',
+      question: 'Which GA4 property should this task report conversions to?',
+      options: ['acme-run-prod (GA4)', 'acme-run-staging (GA4)', 'Skip GA4 for now'],
+    };
+  }
+  return {
+    id: node.id, label: node.label, waiting: 'Needs input', type: 'approve',
+    question: `"${node.label}" is ready — review before it continues.`,
+    preview: node.desc,
+  };
+}
+
+// A completed variant is an asset a human should still look at, even though
+// it isn't blocking anything — Chris's "ready for review" category.
+function variantToReviewItem(node) {
+  return {
+    id: node.id, label: node.label, waiting: 'Built', type: 'approve',
+    question: `Review the ${node.elementType || 'variant'} before it ships.`,
+    preview: node.changeSummary || node.desc,
+    visual: node.elementType,
+  };
+}
+
+// A small mocked browser frame so a variation reads as something visual to
+// approve, not just a line of copy — Chris (24 Aug): "we'll need to be able
+// to visually show widgets, variations, etc. to the user for visual
+// approvals too."
+function VisualMock({ visual, text }) {
+  return (
+    <div style={{ border: '1px solid #E1DFE7', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', background: '#F5F5F7', borderBottom: '1px solid #E1DFE7' }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E1DFE7' }}/>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E1DFE7' }}/>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#E1DFE7' }}/>
+        <span style={{ marginLeft: 8, fontFamily: 'Roboto, sans-serif', fontSize: 10, color: '#918F9A' }}>acme-run.com/checkout</span>
+      </div>
+      <div style={{ position: 'relative', height: 190, background: 'repeating-linear-gradient(45deg, #FCFCFD, #FCFCFD 10px, #F5F5F7 10px, #F5F5F7 20px)' }}>
+        {visual === 'banner' ? (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: '#3838E7', color: '#fff', padding: '10px 14px', fontFamily: 'Roboto, sans-serif', fontSize: 12, fontWeight: 500, textAlign: 'center' }}>
+            {text}
+          </div>
+        ) : (
+          <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', width: '78%', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: '14px 16px', boxShadow: '0 8px 20px rgba(0,0,0,0.08)' }}>
+            <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 12, color: '#1B1B23', marginBottom: 6 }}>{text}</div>
+            <div style={{ display: 'inline-block', padding: '6px 14px', background: '#3838E7', color: '#fff', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11 }}>Sign up</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Replaces the canvas when a task needs the user's input — Chris (24 Aug):
+// "showcasing these issues/assets to review/answer within the PBX chat with
+// the preview pane on the left that replaces the workflow/automation view."
+// The Chat tab (right panel) is what actually resolves it; this pane is the
+// visual context for that conversation.
+function ReviewPreviewPane({ kind, item, onBack }) {
+  const isBlocking = kind === 'blocked';
+  return (
+    <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+      <div className="fade-up" style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: 24, maxWidth: 520, margin: '0 auto' }}>
+        <button onClick={onBack}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#3838E7', marginBottom: 16 }}>
+          <svg width="10" height="8" viewBox="0 0 6 10.5" fill="none"><path d={P.backArrow} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Back to workflow
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: isBlocking ? '#E03D3D' : '#00875A', flexShrink: 0 }}/>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#918F9A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            {isBlocking ? 'Blocking this task' : 'Ready for review'}
+          </span>
+        </div>
+        <h3 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 17, color: '#1B1B23', margin: '2px 0 3px' }}>{item.label}</h3>
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '0 0 16px' }}>{item.waiting}</p>
+
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', lineHeight: 1.5, margin: '0 0 14px' }}>{item.question}</p>
+
+        {item.visual ? (
+          <VisualMock visual={item.visual} text={item.preview}/>
+        ) : item.type === 'select' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {item.options.map(opt => (
+              <div key={opt} style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>{opt}</div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: item.type === 'retry' ? '#FDEAEA' : '#F9F9FB', border: `1px solid ${item.type === 'retry' ? '#F5C2C2' : '#E1DFE7'}`, borderRadius: 8, padding: '12px 14px', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', fontStyle: 'italic', lineHeight: 1.5 }}>
+            {item.preview}
+          </div>
+        )}
+
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '16px 0 0', lineHeight: 1.5 }}>
+          Respond in the Chat tab to resolve this — the canvas will update as soon as you do.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function WorkflowDetailView({ workflow, onNavigate }) {
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -1526,13 +1528,33 @@ function WorkflowDetailView({ workflow, onNavigate }) {
   // Right panel is persistent and tabbed so the canvas and the task statuses
   // are visible at the same time, and prompt-based editing stays available.
   const [panelTab, setPanelTab] = useState('tasks');
-  const [configEditing, setConfigEditing] = useState(false);
   const [chatLog, setChatLog] = useState([]);
   const [chatInput, setChatInput] = useState('');
+  // The item currently being resolved via chat — set, the canvas is
+  // replaced by ReviewPreviewPane and the panel jumps to Chat. This is the
+  // single resolution path for both blocked tasks and ready-for-review
+  // assets, on the canvas and from the dashboard alike (Chris, 24 Aug).
+  const [reviewing, setReviewing] = useState(null);
+  const [requestingChanges, setRequestingChanges] = useState(false);
+  useEffect(() => { setRequestingChanges(false); }, [reviewing]);
+  // Header affordances that replaced the removed Configuration tab — Chris:
+  // "give users a more intuitive way to edit the name and scheduling."
+  const [nameEditing, setNameEditing] = useState(false);
+  const [nameValue, setNameValue] = useState(workflow?.name || 'Newsletter Signup Automation');
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState('now');
 
   const selectedNode = nodes.find(n => n.id === selected);
   const connections = getConnections(nodes);
   const layout = computeLayout(nodes);
+
+  // Arriving from the dashboard's Answer/Review button: jump straight into
+  // the same chat + preview flow, carrying the exact item the user clicked
+  // on the dashboard, whether or not it maps to a node in this graph.
+  useEffect(() => {
+    if (workflow?.focusItem) openReview(workflow.focusKind, workflow.focusItem);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Automation-level status, derived from every Task's status rather than
   // stored separately — this is the "what does completed/blocked mean for
@@ -1587,6 +1609,51 @@ function WorkflowDetailView({ workflow, onNavigate }) {
       }
       return next;
     });
+  }
+
+  // Opens an item (already in {label, waiting, type, question, ...} shape —
+  // see nodeToItem/variantToReviewItem) in the chat + preview flow. Items
+  // carried over from the dashboard for automations without a full graph
+  // work the same way; answerReview just has nothing to cascade.
+  function openReview(kind, item) {
+    setReviewing({ kind, item });
+    setPanelTab('chat');
+    setSelected(null);
+    setChatLog(log => log.some(m => m.reviewItemId === item.id && m.seed)
+      ? log
+      : [...log, { from: 'kai', seed: true, reviewItemId: item.id, text: item.question || `Let's take a look at "${item.label}".` }]);
+  }
+
+  // Resolves whatever's being reviewed. If it maps to a real node, this
+  // drives the same dependency cascade as everywhere else in the model;
+  // dashboard-only items (from other, unmodeled automations) just get a
+  // chat confirmation since there's no graph to update.
+  function answerReview(result) {
+    const { kind, item } = reviewing;
+    const node = nodes.find(n => n.id === item.id);
+    let kaiReply = 'Got it.';
+
+    if (kind === 'blocked' && item.type === 'retry') {
+      if (result.outcome === 'retried') { if (node) resolveNode(node.id, 'completed'); kaiReply = `Retried "${item.label}" — it's completed now.`; }
+      else { if (node) resolveNode(node.id, 'skipped'); kaiReply = `Skipped "${item.label}".`; }
+    } else if (kind === 'blocked') {
+      if (node) resolveNode(node.id, 'completed');
+      kaiReply = result.value ? `Confirmed "${result.value}" — resuming "${item.label}".` : `Confirmed — resuming "${item.label}".`;
+    } else {
+      // Reviewing an already-built asset: approving just closes it out;
+      // requesting changes sends the task itself back to Action required
+      // with the feedback attached, which is what moves it back into the
+      // Blocked group automatically.
+      if (result.outcome === 'changes') {
+        if (node) setNodes(prev => prev.map(n => n.id === node.id ? { ...n, status: 'action_required', reworkNote: result.value } : n));
+        kaiReply = `Sent "${item.label}" back for changes: “${result.value}”.`;
+      } else {
+        kaiReply = `Approved "${item.label}".`;
+      }
+    }
+
+    setChatLog(log => [...log, { from: 'kai', text: kaiReply }]);
+    setReviewing(null);
   }
 
   // Kicks off a queued automation: every task whose dependencies are already
@@ -1674,13 +1741,53 @@ function WorkflowDetailView({ workflow, onNavigate }) {
               Workflows
             </button>
             <span style={{ color: '#C7C5D0', fontFamily: 'Roboto, sans-serif', fontSize: 13 }}>/</span>
-            <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23' }}>
-              {workflow?.name || 'Newsletter Signup Automation'}
-            </span>
+            {/* Chris (24 Aug): the Configuration tab wasn't earning its
+                keep — give users a more direct way to rename and schedule
+                instead of a whole tab for it. */}
+            {nameEditing ? (
+              <input value={nameValue} onChange={e => setNameValue(e.target.value)} autoFocus
+                onBlur={() => setNameEditing(false)}
+                onKeyDown={e => { if (e.key === 'Enter') setNameEditing(false); }}
+                style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23', border: '1px solid #3838E7', borderRadius: 6, padding: '2px 7px', outline: 'none', minWidth: 180 }}/>
+            ) : (
+              <button onClick={() => setNameEditing(true)} title="Rename"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', borderRadius: 6 }}
+                onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+                onMouseOut={e => e.currentTarget.style.background = 'none'}>
+                <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23' }}>{nameValue}</span>
+                <span style={{ color: '#918F9A', fontSize: 12 }}>✎</span>
+              </button>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {saved && <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#00B37A' }}>✓ Saved</span>}
             <span style={{ background: automationStatusColors.bg, color: automationStatusColors.color, fontFamily: 'Roboto, sans-serif', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{automationStatusLabel}</span>
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setScheduleOpen(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
+                onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
+                onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+                ◷ {scheduleMode === 'now' ? 'Runs immediately' : 'Scheduled'}
+              </button>
+              {scheduleOpen && (
+                <div className="fade-up" style={{ position: 'absolute', top: '110%', right: 0, background: '#fff', border: '1px solid #E1DFE7', borderRadius: 8, padding: 12, width: 220, boxShadow: '0 8px 20px rgba(0,0,0,0.1)', zIndex: 50 }}>
+                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B', marginBottom: 8 }}>When should this run?</div>
+                  {[['now', 'Now'], ['later', 'Later']].map(([m, label]) => (
+                    <button key={m} onClick={() => setScheduleMode(m)}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', marginBottom: 6, borderRadius: 6, border: `1px solid ${scheduleMode === m ? '#3838E7' : '#E1DFE7'}`, background: scheduleMode === m ? '#F5F5FF' : '#fff', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', cursor: 'pointer' }}>
+                      {label}
+                    </button>
+                  ))}
+                  {scheduleMode === 'later' && (
+                    <input type="datetime-local" style={{ width: '100%', padding: '7px 9px', border: '1px solid #E1DFE7', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }}/>
+                  )}
+                  <button onClick={() => setScheduleOpen(false)}
+                    style={{ width: '100%', padding: '7px', background: '#3838E7', border: 'none', borderRadius: 6, color: '#fff', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
             <button onClick={handleSave}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#fff', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23', cursor: 'pointer' }}
               onMouseOver={e => e.currentTarget.style.background = '#F5F5FF'}
@@ -1712,8 +1819,15 @@ function WorkflowDetailView({ workflow, onNavigate }) {
       {/* Canvas + side panel */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Canvas column: scrolling grid, with the legend pinned underneath so
-            it can never overlap the cards. */}
+            it can never overlap the cards. Replaced entirely by the review
+            preview pane while a task/asset is being resolved via chat —
+            Chris (24 Aug): the preview pane "replaces the workflow/
+            automation view" rather than sitting alongside it. */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#FCFCFD', minWidth: 0 }}>
+        {reviewing ? (
+          <ReviewPreviewPane kind={reviewing.kind} item={reviewing.item} onBack={() => setReviewing(null)}/>
+        ) : (
+        <>
         <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
           <div className="canvas-grid" style={{ background: '#fff', border: '1px solid #E1DFE7', borderRadius: 10, padding: 28, minHeight: '100%', display: 'inline-block' }}>
             {/* Grid stage — sized to the computed layout so the card grid and
@@ -1773,7 +1887,8 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                 layout.pos[node.id] && (
                   <NodeBox key={node.id} node={node} pos={layout.pos[node.id]} selected={selected === node.id}
                     onClick={() => { setSelected(selected === node.id ? null : node.id); setPanelTab('tasks'); }}
-                    allNodes={nodes} onResolve={resolveNode}/>
+                    allNodes={nodes} onResolve={resolveNode}
+                    onReview={n => openReview('blocked', nodeToItem(n))}/>
                 )
               ))}
             </div>
@@ -1801,6 +1916,8 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             ))}
           </div>
         </div>
+        </>
+        )}
         </div>
 
         {/* Node insertion dialog */}
@@ -1874,12 +1991,13 @@ function WorkflowDetailView({ workflow, onNavigate }) {
         )}
 
         {/* Right panel — persistent + tabbed. Canvas and status stay visible
-            together, and Chat keeps prompt-based editing available alongside
-            the configuration panel. */}
+            together. Configuration was removed as its own tab per Chris
+            (24 Aug) — renaming/scheduling moved into the header instead, and
+            resolving tasks happens here, in Chat. */}
         <div style={{ width: 380, borderLeft: '1px solid #E1DFE7', background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
           {/* Tab bar */}
           <div style={{ display: 'flex', borderBottom: '1px solid #E1DFE7', flexShrink: 0 }}>
-            {[['tasks', 'Tasks'], ['config', 'Configuration'], ['chat', 'Chat']].map(([key, label]) => (
+            {[['tasks', 'Tasks'], ['chat', 'Chat']].map(([key, label]) => (
               <button key={key} onClick={() => { setPanelTab(key); setSelected(null); }}
                 style={{ flex: 1, padding: '13px 0', background: 'none', border: 'none', borderBottom: panelTab === key ? '2px solid #3838E7' : '2px solid transparent', cursor: 'pointer', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: panelTab === key ? '#3838E7' : '#918F9A', marginBottom: -1 }}>
                 {label}
@@ -1952,81 +2070,38 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             </div>
           </div>
 
-          /* ── Tasks tab: every task grouped by state, beside the canvas ── */
-          ) : panelTab === 'tasks' ? (
-            <div>
-              {[
-                { key: 'action_required', title: 'Action required' },
-                { key: 'failed',          title: 'Failed' },
-                { key: 'running',         title: 'Running' },
-                { key: 'not_started',     title: 'Waiting on dependencies' },
-                { key: 'completed',       title: 'Completed' },
-                { key: 'skipped',         title: 'Skipped' },
-              ].map(group => {
-                const items = nodes.filter(n => (n.status || 'not_started') === group.key);
-                if (!items.length) return null;
-                const sc = STATUS_CONFIG[group.key];
-                return (
-                  <div key={group.key} style={{ marginBottom: 18 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: sc.color }}/>
-                      <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, color: '#52515B' }}>{group.title}</span>
-                      <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A' }}>{items.length}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      {items.map(n => (
-                        <div key={n.id} onClick={() => setSelected(n.id)}
-                          style={{ border: '1px solid #E1DFE7', borderRadius: 8, padding: '10px 12px', cursor: 'pointer', background: '#fff' }}
-                          onMouseOver={e => e.currentTarget.style.background = '#FCFCFD'}
-                          onMouseOut={e => e.currentTarget.style.background = '#fff'}>
-                          <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>{n.label}</div>
-                          <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', marginTop: 2 }}>{TASK_TYPES[n.type].label}</div>
-                          {(n.status === 'failed' || n.status === 'action_required') && (
-                            <button onClick={e => { e.stopPropagation(); resolveNode(n.id, 'completed'); }}
-                              style={{ marginTop: 8, padding: '5px 12px', background: '#3838E7', border: 'none', borderRadius: 6, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#fff', cursor: 'pointer' }}>
-                              {n.status === 'failed' ? 'Retry' : 'Answer'}
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          /* ── Tasks tab: same grouped list as the dashboard panel, same
+                 SubtaskGroup component, same Answer/Review action — Chris
+                 (24 Aug): these two views are "supposed to be identical." ── */
+          ) : panelTab === 'tasks' ? (() => {
+            const blockedItems = nodes.filter(n => n.status === 'failed' || n.status === 'action_required').map(nodeToItem);
+            const reviewNodes = nodes.filter(n => n.type === 'variant' && n.status === 'completed');
+            const reviewItems = reviewNodes.map(variantToReviewItem);
+            const runningItems = nodes.filter(n => n.status === 'running').map(n => ({ id: n.id, label: n.label, waiting: 'Running' }));
+            const reviewedIds = new Set(reviewNodes.map(n => n.id));
+            const waitingItems = nodes.filter(n => (n.status || 'not_started') === 'not_started').map(n => ({ id: n.id, label: n.label, waiting: 'Waiting on dependencies' }));
+            const doneItems = nodes.filter(n => (n.status === 'completed' || n.status === 'skipped') && !reviewedIds.has(n.id))
+              .map(n => ({ id: n.id, label: n.label, waiting: n.status === 'skipped' ? 'Skipped' : 'Completed' }));
 
-          /* ── Configuration tab: read-only until explicitly edited ── */
-          ) : panelTab === 'config' ? (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 14, color: '#1B1B23' }}>Configuration</span>
-                <button onClick={() => setConfigEditing(!configEditing)}
-                  style={{ padding: '6px 12px', background: configEditing ? '#3838E7' : '#fff', color: configEditing ? '#fff' : '#3838E7', border: `1px solid ${configEditing ? '#3838E7' : '#E1DFE7'}`, borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
-                  {configEditing ? 'Save' : '✎ Edit configuration'}
-                </button>
+            return (
+              <div>
+                <SubtaskGroup kind="blocked" title={`${blockedItems.length} task${blockedItems.length === 1 ? '' : 's'} need your input`}
+                  items={blockedItems} defaultOpen
+                  onAnswer={(kind, item) => openReview(kind, item)}
+                  onOpen={it => setSelected(it.id)}/>
+                <SubtaskGroup kind="review" title="Assets ready for review" items={reviewItems}
+                  onAnswer={(kind, item) => openReview(kind, item)}
+                  onOpen={it => setSelected(it.id)}/>
+                <SubtaskGroup kind="running" title="Running" items={runningItems} onOpen={it => setSelected(it.id)}/>
+                <SubtaskGroup kind="waiting" title="Waiting on dependencies" items={waitingItems} onOpen={it => setSelected(it.id)}/>
+                <SubtaskGroup kind="done" title="Completed" items={doneItems} onOpen={it => setSelected(it.id)}/>
               </div>
-              {[
-                ['Name', workflow?.name || 'Newsletter Signup Automation'],
-                ['Starts', 'As soon as the plan is confirmed'],
-                ['Repeats', 'Does not repeat'],
-              ].map(([label, value]) => (
-                <div key={label} style={{ marginBottom: 14 }}>
-                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>{label}</div>
-                  {configEditing
-                    ? <input defaultValue={value} style={{ width: '100%', padding: '9px 11px', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', outline: 'none' }}/>
-                    : <div style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23' }}>{value}</div>}
-                </div>
-              ))}
-              <div style={{ borderTop: '1px solid #E1DFE7', paddingTop: 14 }}>
-                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Original prompt</div>
-                {configEditing
-                  ? <textarea defaultValue={workflow?.description || ''} style={{ width: '100%', minHeight: 120, padding: '10px 11px', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', outline: 'none', resize: 'vertical' }}/>
-                  : <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>"{workflow?.description || 'Create an experiment on Page X with two newsletter variations…'}"</p>}
-              </div>
-            </div>
+            );
+          })()
 
-          /* ── Chat tab: prompt-based changes, alongside the config panel ── */
-          ) : (
+          /* ── Chat tab: prompt-based changes, and the only place tasks and
+                 assets get resolved (Chris, 24 Aug) ── */
+          : (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ flex: 1, marginBottom: 12 }}>
                 {chatLog.length === 0 ? (
@@ -2043,16 +2118,57 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                   </div>
                 )}
               </div>
+
+              {/* Quick actions for whatever's being reviewed — the fastest
+                  path is a tap, but typing in the input below works too. */}
+              {reviewing && !requestingChanges && (
+                <div className="fade-up" style={{ marginBottom: 10 }}>
+                  {reviewing.item.type === 'select' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {reviewing.item.options.map(opt => (
+                        <button key={opt} onClick={() => { setChatLog(l => [...l, { from: 'user', text: opt }]); answerReview({ outcome: 'confirmed', value: opt }); }}
+                          style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid #3838E7', background: '#fff', color: '#3838E7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {reviewing.kind === 'blocked' && reviewing.item.type === 'retry' && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Retry' }]); answerReview({ outcome: 'retried' }); }}
+                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E03D3D', background: '#fff', color: '#E03D3D', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Retry</button>
+                      <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Skip' }]); answerReview({ outcome: 'skipped' }); }}
+                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E1DFE7', background: '#fff', color: '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Skip</button>
+                    </div>
+                  )}
+                  {reviewing.item.type === 'approve' && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => setRequestingChanges(true)}
+                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #E1DFE7', background: '#fff', color: '#52515B', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>Request changes</button>
+                      <button onClick={() => { setChatLog(l => [...l, { from: 'user', text: 'Approve' }]); answerReview({ outcome: 'approved' }); }}
+                        style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', background: '#3838E7', color: '#fff', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}>{reviewing.kind === 'blocked' ? 'Approve & resume' : 'Approve'}</button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {reviewing && requestingChanges && (
+                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '0 0 8px' }}>Type what should change below, then press Enter.</p>
+              )}
+
               <div style={{ border: '1px solid #E1DFE7', borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 8, flexShrink: 0 }}>
                 <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter' && chatInput.trim()) {
-                      const text = chatInput.trim();
+                    if (e.key !== 'Enter' || !chatInput.trim()) return;
+                    const text = chatInput.trim();
+                    if (reviewing && requestingChanges) {
+                      setChatLog(l => [...l, { from: 'user', text }]);
+                      answerReview({ outcome: 'changes', value: text });
+                    } else {
                       setChatLog(l => [...l, { from: 'user', text }, { from: 'kai', text: 'Updated the plan. Review the affected tasks on the canvas.' }]);
-                      setChatInput('');
                     }
+                    setChatInput('');
                   }}
-                  placeholder="Ask for a change to this automation…"
+                  placeholder={reviewing && requestingChanges ? 'What should change? Press Enter to send…' : 'Ask for a change to this automation…'}
                   style={{ flex: 1, border: 'none', outline: 'none', fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', background: 'transparent', minWidth: 0 }}/>
               </div>
             </div>
