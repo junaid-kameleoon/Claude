@@ -80,7 +80,7 @@ const P = {
 // state Fred described: Prompt → Plan generation → user validates → Pending
 // → Execution. Draft still exists for automations never submitted.
 const AUTOMATION_STATUS = {
-  'pre-processing': { label: 'Pre-processing', color: '#3838E7', bg: '#EEF0FF', bar: '#3838E7' },
+  processing: { label: 'Processing', color: '#3838E7', bg: '#EEF0FF', bar: '#3838E7' },
   running:          { label: 'Running',        color: '#00B37A', bg: '#E6F9F3', bar: '#00B37A' },
   scheduled:        { label: 'Scheduled',      color: '#3838E7', bg: '#EEF0FF', bar: '#5B5BEF' },
   blocked:          { label: 'Blocked',        color: '#E03D3D', bg: '#FDEAEA', bar: '#E03D3D' },
@@ -97,20 +97,27 @@ const AUTOMATIONS = [
     description: 'Continuously tests redesign hypotheses on the checkout funnel, promoting only variations that beat the original on conversion rate.',
     progressLabel: 'Currently building variations (Task 4/7)',
     blocked: [
-      { id: 'b1', label: 'Confirm the primary audience segment', waiting: 'Waiting 2 days' },
-      { id: 'b2', label: 'Approve variation copy for mobile', waiting: 'Waiting 6 hours' },
+      { id: 'b1', label: 'Confirm the primary audience segment', waiting: 'Waiting 2 days',
+        type: 'select', question: 'Which audience segment should this task target?',
+        options: ['Returning buyers', 'New visitors', 'Cart abandoners'] },
+      { id: 'b2', label: 'Approve variation copy for mobile', waiting: 'Waiting 6 hours',
+        type: 'approve', question: 'This copy will be used for the mobile variation:',
+        preview: '"Grab yours before it’s gone — 20% off ends tonight"' },
     ],
     readyForReview: [
-      { id: 'r1', label: 'Variation A — hero CTA', waiting: 'Built 3 hours ago' },
-      { id: 'r2', label: 'Variation B — sticky banner', waiting: 'Built 3 hours ago' },
-      { id: 'r3', label: 'Audience segment — returning buyers', waiting: 'Built 1 day ago' },
+      { id: 'r1', label: 'Variation A — hero CTA', waiting: 'Built 3 hours ago',
+        preview: 'New hero headline testing urgency messaging against the current CTA.' },
+      { id: 'r2', label: 'Variation B — sticky banner', waiting: 'Built 3 hours ago',
+        preview: 'Sticky top banner promoting the same offer, persistent while scrolling.' },
+      { id: 'r3', label: 'Audience segment — returning buyers', waiting: 'Built 1 day ago',
+        preview: 'Visitors with 2+ prior sessions and no purchase in the last 30 days.' },
     ],
     runningTasks: [
       { id: 'p1', label: 'Building variation 4 of 4', waiting: 'Started 12 minutes ago' },
       { id: 'p2', label: 'Configuring GA4 integration', waiting: 'Started 4 minutes ago' },
     ],
   },
-  { id: '2', name: 'Checkout optimization', createdBy: 'Paul Tremblay', createdAgo: '5 days ago', status: 'pre-processing',
+  { id: '2', name: 'Checkout optimization', createdBy: 'Paul Tremblay', createdAgo: '5 days ago', status: 'processing',
     description: 'Test three new checkout button variants against the current design and promote the best performer.',
     progressLabel: 'Generating the plan', blocked: [], readyForReview: [], runningTasks: [] },
   { id: '3', name: 'Homepage personalization', createdBy: 'Amélie Roux', createdAgo: '1 week ago', status: 'scheduled',
@@ -579,6 +586,104 @@ function SubtaskGroup({ kind, title, items, defaultOpen, onAnswer }) {
   );
 }
 
+// What "Answer" actually opens. A blocked task asks a question (select an
+// option, or approve/reject something produced); an asset "ready for
+// review" is the same shape without blocking anything. Resolving it here
+// is the whole point — no redirect, no dead end, the panel updates live.
+function AnswerModal({ kind, item, onClose, onSubmit }) {
+  const [choice, setChoice] = useState(null);
+  const [changesNote, setChangesNote] = useState('');
+  const [requestingChanges, setRequestingChanges] = useState(false);
+  const isBlocking = kind === 'blocked';
+  const isSelect = item.type === 'select';
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}
+      onClick={onClose}>
+      <div className="fade-up" onClick={e => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: 12, padding: 24, width: 420, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: isBlocking ? '#E03D3D' : '#00875A', flexShrink: 0 }}/>
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#918F9A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            {isBlocking ? 'Blocking this task' : 'Ready for review'}
+          </span>
+        </div>
+        <h3 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 16, color: '#1B1B23', margin: '2px 0 3px' }}>{item.label}</h3>
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '0 0 16px' }}>{item.waiting}</p>
+
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', lineHeight: 1.5, margin: '0 0 12px' }}>
+          {item.question || 'Review this before the automation continues.'}
+        </p>
+
+        {isSelect ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+            {item.options.map(opt => (
+              <button key={opt} onClick={() => setChoice(opt)}
+                style={{ textAlign: 'left', padding: '10px 14px', borderRadius: 8, cursor: 'pointer', background: choice === opt ? '#F5F5FF' : '#fff', border: `1px solid ${choice === opt ? '#3838E7' : '#E1DFE7'}`, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#1B1B23' }}>
+                {opt}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: '#F9F9FB', border: '1px solid #E1DFE7', borderRadius: 8, padding: '12px 14px', marginBottom: 20, fontFamily: 'Roboto, sans-serif', fontSize: 13, color: '#1B1B23', fontStyle: 'italic', lineHeight: 1.5 }}>
+            {item.preview}
+          </div>
+        )}
+
+        {requestingChanges && (
+          <div className="fade-up" style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#52515B', marginBottom: 6 }}>What should change?</label>
+            <textarea value={changesNote} onChange={e => setChangesNote(e.target.value)} autoFocus
+              placeholder="e.g. shorten the headline, use the primary CTA color…"
+              style={{ width: '100%', minHeight: 70, padding: '9px 11px', border: '1px solid #E1DFE7', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#1B1B23', outline: 'none', resize: 'vertical' }}/>
+          </div>
+        )}
+
+        {isSelect ? (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose}
+              style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fff', border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', cursor: 'pointer' }}>
+              Cancel
+            </button>
+            <button disabled={!choice} onClick={() => onSubmit({ outcome: 'confirmed', value: choice })}
+              style={{ flex: 2, padding: '10px', borderRadius: 8, background: choice ? '#3838E7' : '#F1F0F5', border: 'none', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: choice ? '#fff' : '#918F9A', cursor: choice ? 'pointer' : 'not-allowed' }}>
+              Confirm & resume task
+            </button>
+          </div>
+        ) : requestingChanges ? (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setRequestingChanges(false)}
+              style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fff', border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', cursor: 'pointer' }}>
+              Back
+            </button>
+            <button disabled={!changesNote.trim()} onClick={() => onSubmit({ outcome: 'changes', value: changesNote.trim() })}
+              style={{ flex: 2, padding: '10px', borderRadius: 8, background: changesNote.trim() ? '#3838E7' : '#F1F0F5', border: 'none', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: changesNote.trim() ? '#fff' : '#918F9A', cursor: changesNote.trim() ? 'pointer' : 'not-allowed' }}>
+              Send back for changes
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setRequestingChanges(true)}
+              style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fff', border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', cursor: 'pointer' }}>
+              Request changes
+            </button>
+            <button onClick={() => onSubmit({ outcome: 'approved' })}
+              style={{ flex: 2, padding: '10px', borderRadius: 8, background: '#3838E7', border: 'none', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}>
+              {isBlocking ? 'Approve & resume task' : 'Approve'}
+            </button>
+          </div>
+        )}
+
+        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A', margin: '14px 0 0', lineHeight: 1.5 }}>
+          {isBlocking
+            ? 'The automation is waiting on this — resolving it lets the task continue.'
+            : 'This asset was already built. Reviewing it doesn’t block anything else running.'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // The dashboard-side detail panel. Per Fred, this is the PRIMARY place a
 // user resolves required actions — opening the automation is secondary.
 function AutomationDetailPanel({ automation: a, onClose, onOpen, onAnswer }) {
@@ -645,18 +750,60 @@ function WorkflowsDashboard({ onNavigate }) {
   const [filter, setFilter] = useState('all');
   const [view, setView] = useState('list');
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState(null);
+  const [automations, setAutomations] = useState(AUTOMATIONS);
+  const [selectedId, setSelectedId] = useState(null);
+  // What's open right now: which automation, which list ("blocked" /
+  // "review"), and which item — enough to resolve it and update just that
+  // one automation's state.
+  const [answering, setAnswering] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const STATUS_ORDER = ['pre-processing', 'running', 'scheduled', 'blocked', 'ready', 'draft'];
-  const counts = Object.fromEntries(STATUS_ORDER.map(s => [s, AUTOMATIONS.filter(a => a.status === s).length]));
+  const selectedAutomation = automations.find(a => a.id === selectedId) || null;
 
-  const searched = AUTOMATIONS.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
+  const STATUS_ORDER = ['processing', 'running', 'scheduled', 'blocked', 'ready', 'draft'];
+  const counts = Object.fromEntries(STATUS_ORDER.map(s => [s, automations.filter(a => a.status === s).length]));
+
+  const searched = automations.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
   const filtered = filter === 'all' ? searched : searched.filter(a => a.status === filter);
 
-  function handleAnswer(kind, item) {
-    setToast(kind === 'blocked' ? `Opening “${item.label}” to answer…` : `Opening “${item.label}” for review…`);
-    setTimeout(() => setToast(null), 2600);
+  function flashToast(text) {
+    setToast(text);
+    setTimeout(() => setToast(null), 3200);
+  }
+
+  // Resolving an answer visibly changes the automation: the item leaves its
+  // list, the counts update, and — if that was the last blocker — the
+  // automation's own status flips from Blocked to Running. That state
+  // change *is* the confirmation; the toast is just a one-line echo of it.
+  function resolveAnswer(result) {
+    const { automationId, kind, item } = answering;
+    setAutomations(prev => prev.map(a => {
+      if (a.id !== automationId) return a;
+      if (kind === 'blocked') {
+        const blocked = a.blocked.filter(b => b.id !== item.id);
+        const nowUnblocked = blocked.length === 0 && a.status === 'blocked';
+        return {
+          ...a,
+          blocked,
+          status: nowUnblocked ? 'running' : a.status,
+          progressLabel: nowUnblocked ? 'Resuming — all blockers cleared' : a.progressLabel,
+        };
+      }
+      // Review items never block; approving removes it, requesting changes
+      // sends it back (represented here as a blocker on the same task).
+      const readyForReview = a.readyForReview.filter(r => r.id !== item.id);
+      const blocked = result.outcome === 'changes'
+        ? [...a.blocked, { id: item.id, label: `Rework: ${item.label}`, waiting: 'Just requested', type: 'approve', question: 'Changes requested:', preview: `"${result.value}"` }]
+        : a.blocked;
+      return { ...a, readyForReview, blocked, status: result.outcome === 'changes' ? 'blocked' : a.status };
+    }));
+
+    const label = item.label;
+    if (kind === 'blocked') flashToast(`Confirmed — “${label}” resumed.`);
+    else if (result.outcome === 'approved') flashToast(`Approved — “${label}”.`);
+    else flashToast(`Sent back for changes — “${label}”.`);
+
+    setAnswering(null);
   }
 
   return (
@@ -723,7 +870,7 @@ function WorkflowsDashboard({ onNavigate }) {
           ) : view === 'list' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {filtered.map(a => (
-                <AutomationRow key={a.id} automation={a} selected={selected?.id === a.id} onSelect={setSelected}/>
+                <AutomationRow key={a.id} automation={a} selected={selectedId === a.id} onSelect={a => setSelectedId(a.id)}/>
               ))}
             </div>
           ) : (
@@ -739,8 +886,8 @@ function WorkflowsDashboard({ onNavigate }) {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {col.map(a => (
-                        <div key={a.id} onClick={() => setSelected(a)}
-                          style={{ display: 'flex', gap: 10, background: '#fff', border: `1px solid ${selected?.id === a.id ? '#3838E7' : '#E1DFE7'}`, borderRadius: 10, padding: '12px 14px 12px 0', cursor: 'pointer', overflow: 'hidden' }}>
+                        <div key={a.id} onClick={() => setSelectedId(a.id)}
+                          style={{ display: 'flex', gap: 10, background: '#fff', border: `1px solid ${selectedId === a.id ? '#3838E7' : '#E1DFE7'}`, borderRadius: 10, padding: '12px 14px 12px 0', cursor: 'pointer', overflow: 'hidden' }}>
                           <div style={{ width: 4, alignSelf: 'stretch', background: AUTOMATION_STATUS[a.status].bar, flexShrink: 0, borderRadius: '10px 0 0 10px' }}/>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 13, color: '#1B1B23', marginBottom: 4 }}>{a.name}</div>
@@ -758,12 +905,18 @@ function WorkflowsDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {selected && (
+      {selectedAutomation && (
         <AutomationDetailPanel
-          automation={selected}
-          onClose={() => setSelected(null)}
-          onOpen={() => onNavigate('workflow-detail', selected)}
-          onAnswer={handleAnswer}/>
+          automation={selectedAutomation}
+          onClose={() => setSelectedId(null)}
+          onOpen={() => onNavigate('workflow-detail', selectedAutomation)}
+          onAnswer={(kind, item) => setAnswering({ automationId: selectedAutomation.id, kind, item })}/>
+      )}
+
+      {answering && (
+        <AnswerModal kind={answering.kind} item={answering.item}
+          onClose={() => setAnswering(null)}
+          onSubmit={resolveAnswer}/>
       )}
 
       {toast && (
