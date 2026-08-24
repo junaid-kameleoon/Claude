@@ -329,6 +329,15 @@ function Header() {
   );
 }
 
+// An automation still in "Draft" or "Generating plan" has no confirmed
+// graph yet — there's nothing on a canvas to show, so opening one resumes
+// Plan Review instead of jumping into workflow-detail. Shared by every
+// place an automation can be opened from (dashboard panel, sidebar quick
+// list) so none of them silently skips this check (Junaid, 25 Aug).
+function openAutomation(a, onNavigate) {
+  onNavigate(a.status === 'planning' || a.status === 'draft' ? 'plan-review' : 'workflow-detail', a);
+}
+
 // ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 function Sidebar({ screen, onNavigate }) {
   const [pinnedOpen, setPinnedOpen] = useState(true);
@@ -399,7 +408,7 @@ function Sidebar({ screen, onNavigate }) {
           {recentOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {AUTOMATIONS.slice(0, 4).map((a) => (
-                <div key={a.id} onClick={() => onNavigate('workflow-detail', a)} style={{ padding: '5px 4px', borderRadius: 4, cursor: 'pointer' }}
+                <div key={a.id} onClick={() => openAutomation(a, onNavigate)} style={{ padding: '5px 4px', borderRadius: 4, cursor: 'pointer' }}
                   onMouseOver={e => e.currentTarget.style.background = '#FCFCFD'}
                   onMouseOut={e => e.currentTarget.style.background = 'none'}>
                   <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{a.name}</span>
@@ -834,7 +843,7 @@ function WorkflowsDashboard({ onNavigate }) {
         <AutomationDetailPanel
           automation={selectedAutomation}
           onClose={() => setSelectedId(null)}
-          onOpen={() => onNavigate('workflow-detail', selectedAutomation)}
+          onOpen={() => openAutomation(selectedAutomation, onNavigate)}
           onAnswer={(kind, item) => onNavigate('workflow-detail', { ...selectedAutomation, focusKind: kind, focusItem: item })}/>
       )}
     </div>
@@ -1014,6 +1023,26 @@ function PlanReviewScreen({ draft, onNavigate }) {
 
   function submitAnswers() { setPhase('ready'); }
 
+  // The prompt, the clarifying Q&A, and the confirmation itself all become
+  // the Chat tab's starting history once the automation is confirmed —
+  // Junaid (25 Aug): "the original prompt, agent's responses, approval
+  // steps, should all be persistent in the chat," not reset to empty.
+  function buildChatSeed() {
+    const seed = [
+      { from: 'user', text: draft?.description || 'Test three new checkout button variants against the current design and promote the best performer.' },
+      { from: 'kai', text: `Analyzed your request and broke it into ${PLANNED_TASKS.length} tasks.` },
+    ];
+    questions.forEach(q => {
+      if (!answers[q.key]) return;
+      seed.push({ from: 'kai', text: q.q });
+      seed.push({ from: 'user', text: answers[q.key] });
+    });
+    seed.push({ from: 'kai', text: `Plan ready for your review — ${PLANNED_TASKS.length} tasks. Five can start immediately; validation waits for all of them, and launch waits for validation.` });
+    seed.push({ from: 'user', text: 'Confirm plan & queue' });
+    seed.push({ from: 'kai', text: 'Confirmed. The automation is queued and will start executing now.' });
+    return seed;
+  }
+
   const skeleton = phase === 'generating' || phase === 'questions';
 
   return (
@@ -1161,7 +1190,7 @@ function PlanReviewScreen({ draft, onNavigate }) {
                 style={{ flex: 1, padding: '10px', borderRadius: 8, background: '#fff', border: '1px solid #E1DFE7', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#52515B', cursor: 'pointer' }}>
                 Refine
               </button>
-              <button onClick={() => onNavigate('workflow-detail', { name: draft?.name || 'Untitled task', description: draft?.description, justConfirmed: true })}
+              <button onClick={() => onNavigate('workflow-detail', { name: draft?.name || 'Untitled task', description: draft?.description, justConfirmed: true, chatSeed: buildChatSeed() })}
                 style={{ flex: 2, padding: '10px', borderRadius: 8, background: '#3838E7', border: 'none', fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer' }}>
                 Confirm plan &amp; queue
               </button>
@@ -1580,7 +1609,10 @@ function WorkflowDetailView({ workflow, onNavigate }) {
   // Right panel is persistent and tabbed so the canvas and the task statuses
   // are visible at the same time, and prompt-based editing stays available.
   const [panelTab, setPanelTab] = useState('tasks');
-  const [chatLog, setChatLog] = useState([]);
+  // Seeded from the Plan Review conversation when arriving via "Confirm
+  // plan & queue" — the prompt and approval steps that got this automation
+  // here shouldn't vanish just because the screen changed (Junaid, 25 Aug).
+  const [chatLog, setChatLog] = useState(workflow?.chatSeed || []);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
   // Every new message (including a ReviewCard just posted by openReview)
