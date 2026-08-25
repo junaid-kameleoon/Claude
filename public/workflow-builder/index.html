@@ -112,38 +112,33 @@ const AUTOMATIONS = [
     id: '1', name: 'Automated A/B Test on Redesign', createdBy: 'Paul Tremblay', createdAgo: '2 days ago',
     status: 'running',
     description: 'Continuously tests redesign hypotheses on the checkout funnel, promoting only variations that beat the original on conversion rate.',
-    progressLabel: 'Currently building variations (Task 4/7)',
+    progressLabel: 'Reviewing variations before configuration (6 of 11 tasks done)',
     // Persistent from creation — Junaid (25 Aug): the chat shouldn't reset
     // to empty just because you opened the automation from the dashboard
-    // instead of confirming it just now.
+    // instead of confirming it just now. Kept in sync with WORKFLOW_NODES
+    // below, which is the canvas this automation actually opens into —
+    // reworked 25 Aug per Alex Kovalev's task-group proposal.
     chatSeed: [
       { from: 'user', text: 'Continuously test redesign hypotheses on the checkout funnel — keep testing new variations against the original and promote whichever wins on conversion rate.' },
-      { from: 'kai', text: 'Analyzed your request and broke it into 7 tasks: two variants, targeting, goals, traffic + GA4, validation, and finalize.' },
-      { from: 'kai', text: 'Plan ready for your review — 7 tasks. Five can start immediately; validation waits for all of them, and launch waits for validation.' },
+      { from: 'kai', text: 'Analyzed your request and broke it into 11 tasks, grouped into Goals, Variations, and Configuration — with a shared spec written once so every variation stays consistent, and two Validate Configuration checkpoints for you to weigh in on before things move forward.' },
+      { from: 'kai', text: 'Plan ready for your review.' },
       { from: 'user', text: 'Confirm plan & queue' },
       { from: 'kai', text: 'Confirmed. The automation is queued and started executing.' },
-      { from: 'kai', text: 'Built 3 assets so far and they’re ready for your review whenever you have a minute. Two more things need your input — see the Tasks tab.' },
+      { from: 'kai', text: 'Goals, specs, and the popup variation are done — but the banner variation failed to build. I need your call on how to proceed before configuring targeting and traffic.' },
     ],
     blocked: [
-      { id: 'b1', label: 'Confirm the primary audience segment', waiting: 'Waiting 2 days',
-        type: 'select', question: 'Which audience segment should this task target?',
-        options: ['Returning buyers', 'New visitors', 'Cart abandoners'] },
-      { id: 'b2', label: 'Approve variation copy for mobile', waiting: 'Waiting 6 hours',
-        type: 'approve', question: 'This copy will be used for the mobile variation:',
-        preview: '"Grab yours before it’s gone — 20% off ends tonight"' },
+      { id: 'b1', label: 'Create Variant — Banner', waiting: 'Failed',
+        type: 'retry', question: '"Create Variant — Banner" failed to complete. What would you like to do?',
+        preview: 'The build step returned an error and could not finish automatically.' },
+      { id: 'b2', label: 'Validate Configuration', waiting: 'Needs input',
+        type: 'select', question: 'The banner variation failed to build — only the popup is ready. How would you like to proceed?',
+        options: ['Continue with popup only (100% split)', 'Retry the banner variation first', 'Continue and split evenly once fixed'] },
     ],
     readyForReview: [
-      { id: 'r1', label: 'Variation A — hero CTA', waiting: 'Built 3 hours ago',
-        preview: 'New hero headline testing urgency messaging against the current CTA.' },
-      { id: 'r2', label: 'Variation B — sticky banner', waiting: 'Built 3 hours ago',
-        preview: 'Sticky top banner promoting the same offer, persistent while scrolling.' },
-      { id: 'r3', label: 'Audience segment — returning buyers', waiting: 'Built 1 day ago',
-        preview: 'Visitors with 2+ prior sessions and no purchase in the last 30 days.' },
+      { id: 'r1', label: 'Create Variant — Popup', waiting: 'Built',
+        preview: 'Newsletter signup popup with 20% off CTA.' },
     ],
-    runningTasks: [
-      { id: 'p1', label: 'Building variation 4 of 4', waiting: 'Started 12 minutes ago' },
-      { id: 'p2', label: 'Configuring GA4 integration', waiting: 'Started 4 minutes ago' },
-    ],
+    runningTasks: [],
   },
   { id: '2', name: 'Checkout optimization', createdBy: 'Paul Tremblay', createdAgo: '5 days ago', status: 'draft',
     description: 'Test three new checkout button variants against the current design and promote the best performer.',
@@ -230,12 +225,25 @@ const AUTOMATIONS = [
 // start as soon as all of its dependencies are completed. Tasks that don't
 // depend on each other can execute in parallel."
 const TASK_TYPES = {
-  variant:   { label: 'Create Variant',        color: '#E8DCF8' },
-  targeting: { label: 'Configure Targeting',   color: '#DCE8FF' },
+  setup:     { label: 'Create Experiment',     color: '#E0E7FF' },
   goal:      { label: 'Create Goal',           color: '#DCF8DC' },
+  spec:      { label: 'Write Specs',           color: '#F0F0F5' },
+  variant:   { label: 'Create Variant',        color: '#E8DCF8' },
+  validate:  { label: 'Validate Configuration',color: '#FFE4E6' },
+  targeting: { label: 'Configure Targeting',   color: '#DCE8FF' },
   traffic:   { label: 'Configure Traffic',     color: '#FFF3DC' },
-  validate:  { label: 'Validate Configuration',color: '#F0F0F5' },
-  finalize:  { label: 'Finalize',              color: '#FFE4D6' },
+  finalize:  { label: 'Launch',                color: '#FFE4D6' },
+};
+
+// The task-group taxonomy from Alex's proposal (25 Aug): a small, predefined
+// set of group types the Planner can place tasks into — never an arbitrary
+// grouping it invents at runtime. Only types that actually run several
+// tasks in parallel need an entry here; everything else is a standalone
+// node. See the "Proposed v1 Launch Grouping" section of the node canvas.
+const TASK_GROUPS = {
+  goals:         { label: 'Goals' },
+  variations:    { label: 'Variations' },
+  configuration: { label: 'Configuration' },
 };
 
 // Labeled "In progress" rather than "Running" so a Task never reads as the
@@ -253,49 +261,79 @@ const STATUS_CONFIG = {
 // completed normally or was explicitly skipped by the user.
 function isSatisfied(status) { return status === 'completed' || status === 'skipped'; }
 
+// What a Task becomes the moment it's unblocked. A "validate" Task is a
+// human decision point, not something the agent executes — so it goes
+// straight to action_required instead of in_progress (25 Aug).
+function readyStatus(node) { return node.type === 'validate' ? 'action_required' : 'in_progress'; }
+
 // ─── WORKFLOW DATA ──────────────────────────────────────────────────────────
-// Example automation, taken directly from Fred's Aug 21 message:
-// "Create an experiment on Page X with two newsletter variations (popup and
-// banner), target new homepage visitors. Show the variations when the user
-// scrolls 50% of the page content, track CTA clicks and registrations, split
-// traffic equally, and enable GA4."
+// Fred's Aug 21 example ("newsletter variations, popup and banner"),
+// restructured 25 Aug per Alex Kovalev's task-group proposal + the v1
+// launch grouping agreed in the node canvas: Goals before Specs before
+// Variations (goal IDs need to land in the variation code), and
+// Validate Configuration used twice as the one dedicated node for human
+// decisions — reviewing what got built and handling any failures, then a
+// final check before launch — rather than the agent deciding on its own.
+// Only Goals, Variations, and Configuration are true parallel Task Groups
+// (see `group` below and TASK_GROUPS above); everything else is a
+// standalone node that never runs alongside a sibling.
 //
 // dependsOn is the single source of truth for the dependency graph — edges,
 // auto-layout, and the (+) insertion logic are all derived from it.
 let WORKFLOW_NODES = [
   {
-    id: '1', type: 'variant', label: 'Create Variant — Popup', desc: 'Newsletter signup popup, shown at 50% scroll',
-    dependsOn: [], status: 'failed',
-    elementType: 'popup', changeSummary: 'Newsletter signup popup with 20% off CTA'
-  },
-  {
-    id: '2', type: 'variant', label: 'Create Variant — Banner', desc: 'Newsletter signup banner, shown at 50% scroll',
+    id: '1', type: 'setup', label: 'Create Experiment', desc: 'Newsletter signup experiment on the homepage',
     dependsOn: [], status: 'completed',
-    elementType: 'banner', changeSummary: 'Sticky top banner with newsletter signup form'
   },
   {
-    id: '3', type: 'targeting', label: 'Configure Targeting', desc: 'New homepage visitors, trigger at 50% scroll depth',
-    dependsOn: [], status: 'completed',
-    audience: 'new-visitors', triggerCondition: 'scroll depth >= 50%'
+    id: '2', type: 'goal', label: 'Create Goal — CTA clicks', desc: 'Track clicks on the newsletter CTA button',
+    dependsOn: ['1'], status: 'completed', group: 'goals',
+    goalType: 'click', trackedElement: 'CTA button click',
   },
   {
-    id: '4', type: 'goal', label: 'Create Goals', desc: 'Track CTA clicks and registrations',
-    dependsOn: [], status: 'completed',
-    goalType: 'click', trackedElement: 'CTA button + registration form submit'
+    id: '3', type: 'goal', label: 'Create Goal — Registrations', desc: 'Track newsletter signup form submissions',
+    dependsOn: ['1'], status: 'completed', group: 'goals',
+    goalType: 'registration', trackedElement: 'Registration form submit',
   },
   {
-    id: '5', type: 'traffic', label: 'Configure Traffic + GA4', desc: 'Split traffic equally, enable GA4 integration',
-    dependsOn: [], status: 'action_required',
-    trafficSplit: 50, integration: 'ga4'
+    id: '4', type: 'spec', label: 'Write Specs', desc: 'Shared spec for both variations, so selectors stay consistent for goal tracking',
+    dependsOn: ['2', '3'], status: 'completed',
   },
   {
-    id: '6', type: 'validate', label: 'Validate Configuration', desc: 'Check all tasks are complete before finalizing',
-    dependsOn: ['1', '2', '3', '4', '5'], status: 'not_started'
+    id: '5', type: 'variant', label: 'Create Variant — Popup', desc: 'Newsletter signup popup, shown at 50% scroll',
+    dependsOn: ['4'], status: 'completed', group: 'variations',
+    elementType: 'popup', changeSummary: 'Newsletter signup popup with 20% off CTA',
   },
   {
-    id: '7', type: 'finalize', label: 'Finalize & Launch', desc: 'Launch the experiment',
-    dependsOn: ['6'], status: 'not_started',
-    launchMode: 'immediate'
+    id: '6', type: 'variant', label: 'Create Variant — Banner', desc: 'Newsletter signup banner, shown at 50% scroll',
+    dependsOn: ['4'], status: 'failed', group: 'variations',
+    elementType: 'banner', changeSummary: 'Sticky top banner with newsletter signup form',
+  },
+  {
+    id: '7', type: 'validate', label: 'Validate Configuration', desc: 'Review the built variations before configuring targeting and traffic',
+    dependsOn: ['5', '6'], status: 'action_required',
+    question: 'The banner variation failed to build — only the popup is ready. How would you like to proceed?',
+    options: ['Continue with popup only (100% split)', 'Retry the banner variation first', 'Continue and split evenly once fixed'],
+  },
+  {
+    id: '8', type: 'targeting', label: 'Configure Targeting', desc: 'New homepage visitors, trigger at 50% scroll depth',
+    dependsOn: ['7'], status: 'not_started', group: 'configuration',
+    audience: 'new-visitors', triggerCondition: 'scroll depth >= 50%',
+  },
+  {
+    id: '9', type: 'traffic', label: 'Configure Traffic + GA4', desc: 'Split traffic across variations, enable GA4 integration',
+    dependsOn: ['7'], status: 'not_started', group: 'configuration',
+    trafficSplit: 50, integration: 'ga4',
+  },
+  {
+    id: '10', type: 'validate', label: 'Validate Configuration', desc: 'Final check before launch — confirm targeting and traffic are configured correctly',
+    dependsOn: ['8', '9'], status: 'not_started',
+    question: 'Everything is configured — approve to launch, or send it back for changes.',
+  },
+  {
+    id: '11', type: 'finalize', label: 'Launch', desc: 'Launch the experiment',
+    dependsOn: ['10'], status: 'not_started',
+    launchMode: 'immediate',
   },
 ];
 
@@ -1270,6 +1308,8 @@ function PlanReviewScreen({ draft, onNavigate }) {
 function NodeBox({ node, pos, selected, onClick, allNodes, onResolve, onReview }) {
   // Simple SVG icons for each task type
   const typeIcons = {
+    setup:     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 1.5V12.5M3 1.5L11 3.5L3 6.5" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/></svg>,
+    spec:      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 1H9L11 3V13H4V1Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/><path d="M6 6.5H9M6 9.5H9" stroke="currentColor" strokeWidth="1"/></svg>,
     variant:   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3H12V11H2V3Z" stroke="currentColor" strokeWidth="1.1"/><path d="M2 5.5H12" stroke="currentColor" strokeWidth="1.1"/></svg>,
     targeting: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.1"/><circle cx="7" cy="7" r="1.4" fill="currentColor"/></svg>,
     goal:      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 8L6 11L11 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
@@ -1476,6 +1516,10 @@ function getConnections(nodes) {
 // never stored — so there is nothing to "auto-arrange".
 const NODE_W = 252, NODE_H = 118, COL_GAP = 84, ROW_GAP = 26, PAD = 8;
 const COL_PITCH = NODE_W + COL_GAP, ROW_PITCH = NODE_H + ROW_GAP;
+// Dashed group container that wraps a Task Group's cards (Alex Kovalev's
+// grouping proposal, 25 Aug) — GROUP_HEADER_H is the space reserved above
+// the first card for the "{label} N/M" header.
+const GROUP_HEADER_H = 24, GROUP_SIDE_PAD = 14;
 
 function computeLayout(nodes) {
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
@@ -1547,6 +1591,41 @@ function DependencyEdges({ connections, layout, isDone }) {
   );
 }
 
+// Dashed containers wrapping each Task Group's cards, with a "{label} N/M"
+// header — Alex Kovalev's proposal (25 Aug): the workflow is sequential at
+// the top level, but a predefined, named group of tasks inside it can run
+// in parallel. Rendered behind the cards (earlier in the DOM = lower
+// stacking), computed purely from where computeLayout already put each
+// member card — there's nothing to position by hand.
+function TaskGroupBoxes({ nodes, layout }) {
+  const boxes = Object.entries(TASK_GROUPS).map(([key, cfg]) => {
+    const members = nodes.filter(n => n.group === key);
+    const positions = members.map(n => layout.pos[n.id]).filter(Boolean);
+    if (!positions.length) return null;
+    const minX = Math.min(...positions.map(p => p.x));
+    const minY = Math.min(...positions.map(p => p.y));
+    const maxX = Math.max(...positions.map(p => p.x + NODE_W));
+    const maxY = Math.max(...positions.map(p => p.y + NODE_H));
+    return {
+      key, label: cfg.label,
+      doneCount: members.filter(n => isSatisfied(n.status)).length,
+      totalCount: members.length,
+      left: minX - GROUP_SIDE_PAD, top: minY - GROUP_HEADER_H,
+      width: (maxX - minX) + GROUP_SIDE_PAD * 2,
+      height: (maxY - minY) + GROUP_HEADER_H + GROUP_SIDE_PAD,
+    };
+  }).filter(Boolean);
+
+  return boxes.map(g => (
+    <div key={g.key} style={{ position: 'absolute', left: g.left, top: g.top, width: g.width, height: g.height, border: '1.5px dashed #B4AEEA', borderRadius: 12, pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', top: 6, left: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 600, fontSize: 11, color: '#52515B' }}>{g.label}</span>
+        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{g.doneCount}/{g.totalCount}</span>
+      </div>
+    </div>
+  ));
+}
+
 // Read-only task card for the Plan Review graph — no status yet (nothing
 // has run), just what the task is and whether it's blocked on a sibling.
 function PlanNodeCard({ node, pos }) {
@@ -1565,7 +1644,11 @@ function PlanNodeCard({ node, pos }) {
 
 // Turns a blocked/failed Task into the shape SubtaskGroup and the chat flow
 // both expect. This is what "opens" when a user clicks Answer/Retry — a
-// question to resolve, not a one-click state flip.
+// question to resolve, not a one-click state flip. Reads the node's own
+// `question`/`options` rather than special-casing a specific id (25 Aug) —
+// any node can now carry its own human-decision prompt, which is what lets
+// the same "Validate Configuration" node type ask a different question each
+// time it's used in the graph.
 function nodeToItem(node) {
   if (node.status === 'failed') {
     return {
@@ -1574,16 +1657,15 @@ function nodeToItem(node) {
       preview: node.failReason || 'The build step returned an error and could not finish automatically.',
     };
   }
-  if (node.id === '5') {
+  if (node.question && node.options) {
     return {
       id: node.id, label: node.label, waiting: 'Needs input', type: 'select',
-      question: 'Which GA4 property should this task report conversions to?',
-      options: ['acme-run-prod (GA4)', 'acme-run-staging (GA4)', 'Skip GA4 for now'],
+      question: node.question, options: node.options,
     };
   }
   return {
     id: node.id, label: node.label, waiting: 'Needs input', type: 'approve',
-    question: `"${node.label}" is ready — review before it continues.`,
+    question: node.question || `"${node.label}" is ready — review before it continues.`,
     preview: node.desc,
   };
 }
@@ -1762,7 +1844,7 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             const dep = next.find(x => x.id === depId);
             return dep && isSatisfied(dep.status);
           });
-          if (ready) { changed = true; return { ...n, status: 'in_progress' }; }
+          if (ready) { changed = true; return { ...n, status: readyStatus(n) }; }
           return n;
         });
       }
@@ -1828,7 +1910,7 @@ function WorkflowDetailView({ workflow, onNavigate }) {
         const dep = prev.find(x => x.id === id);
         return dep && isSatisfied(dep.status);
       });
-      return ready ? { ...n, status: 'in_progress' } : n;
+      return ready ? { ...n, status: readyStatus(n) } : n;
     }));
   }
 
@@ -2016,6 +2098,10 @@ function WorkflowDetailView({ workflow, onNavigate }) {
             {/* Grid stage — sized to the computed layout so the card grid and
                 the connector layer share one coordinate space. */}
             <div style={{ position: 'relative', width: layout.width, height: layout.height }}>
+              {/* Task Group containers (Alex Kovalev, 25 Aug) — rendered
+                  first so they sit behind the connectors and cards. */}
+              <TaskGroupBoxes nodes={nodes} layout={layout}/>
+
               {/* Right-angle connectors derived from dependsOn — same
                   component as the Plan Review graph (Junaid, 25 Aug), so a
                   satisfied dependency turning solid here is the exact same
