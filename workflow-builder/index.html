@@ -2066,17 +2066,11 @@ function WorkflowDetailView({ workflow, onNavigate }) {
           </div>
         </div>
 
-        {/* Legend strip — outside the scroll area so it never covers a card */}
+        {/* Legend strip — outside the scroll area so it never covers a card.
+            Just status colors now — the task-type legend was naming every
+            step in the footer when each card already labels itself
+            (Junaid, 25 Aug). */}
         <div style={{ borderTop: '1px solid #E1DFE7', background: '#fff', padding: '9px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-            {Object.entries(TASK_TYPES).map(([type, cfg]) => (
-              <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 9, height: 9, borderRadius: 3, background: cfg.color, border: '1px solid #E1DFE7' }}/>
-                <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 11, color: '#918F9A' }}>{cfg.label}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ width: 1, height: 14, background: '#E1DFE7' }}/>
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             {Object.entries(STATUS_CONFIG).filter(([s]) => s !== 'skipped').map(([status, cfg]) => (
               <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -2290,9 +2284,14 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                 {renderNodeForm(selectedNode, handleNodePropertyChange, nodes)}
               </div>
 
-              {(selectedNode.dependsOn || []).length > 0 && (
-                <div style={{ borderTop: '1px solid #E1DFE7', paddingTop: 14 }}>
-                  <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Depends On</div>
+              {/* Always shown, regardless of which task is selected — Junaid
+                  (25 Aug): the sidebar should read the same whether or not
+                  this particular task happens to have dependencies. */}
+              <div style={{ borderTop: '1px solid #E1DFE7', paddingTop: 14 }}>
+                <div style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 11, color: '#52515B', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Depends On</div>
+                {(selectedNode.dependsOn || []).length === 0 ? (
+                  <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: 12, color: '#918F9A', fontStyle: 'italic', margin: 0 }}>No dependencies — can start immediately.</p>
+                ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {selectedNode.dependsOn.map(depId => {
                       const dep = nodes.find(n => n.id === depId);
@@ -2309,8 +2308,8 @@ function WorkflowDetailView({ workflow, onNavigate }) {
                       );
                     })}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
               <button style={{ width: '100%', padding: '9px', background: '#3838E7', border: 'none', borderRadius: 7, fontFamily: 'Roboto, sans-serif', fontWeight: 500, fontSize: 13, color: '#fff', cursor: 'pointer', marginTop: 4 }}
                 onMouseOver={e => e.currentTarget.style.background = '#2828C7'}
                 onMouseOut={e => e.currentTarget.style.background = '#3838E7'}>
